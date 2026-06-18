@@ -1,0 +1,532 @@
+﻿@* @page "/" *@
+@using BlazorCore.Services.AppState
+@* @inject BlazorCore.Services.AppState.IAppStateBase _appState *@
+
+<style>
+    #appfemme {
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+    }
+
+    .tpc-app-visible {
+        opacity: 1 !important;
+    }
+</style>
+<script>
+    function tpc_showApp() {
+        const el = document.getElementById("appfemme");
+
+        if (el) {
+            // kleine Delay sorgt für echten Transition-Trigger
+            setTimeout(() => {
+                el.classList.add("tpc-app-visible");
+            }, 50);
+        }
+    }
+</script>
+
+<!-- Top Toaster Spinner: Hovering above the content, directly below/above the navigation bar -->
+@if (IsShowingSpinner)
+{
+    @* <link rel="stylesheet" href="_content/pFemmeExample.Shared/loading.css" /> *@
+
+    <div class="fixed-top d-flex justify-content-center tpc-spinner-container" style="z-index: 2000; top: 20px;">
+        <div class="bg-white border border-secondary rounded-pill px-4 py-2 d-flex align-items-center gap-3"
+             style="box-shadow: 0 10px 30px rgba(69, 90, 123, 0.45); border-width: 2px !important;">
+
+            <div class="spinner-border spinner-border-sm text-dark" role="status" style="border-width: 0.2em;">
+                <span class="visually-hidden">@_appState!.T("Loading...")</span>
+            </div>
+
+            <span class="small fw-bold text-dark text-uppercase tpc-spinner-text" style="letter-spacing: 1.5px; font-size: 0.75rem;">
+                @_appState.T("Reloading application...")
+            </span>
+        </div>
+    </div>
+}
+
+<!-- Body verwendet den Pergament-Hintergrund und dunklen Text -->
+<div id="appfemme" class="text-light-text" style="min-height: 100vh;">
+    <!-- NAV Section -->
+    <nav class="tpc-floating-navbar sticky-top">
+        <div class="tpc-button-row justify-content-between align-items-center">
+            <a href="#hero" class="tpc-nav-button" title="@_appState.T("Home")">
+                <i class="bi bi-house-heart"></i>
+            </a>
+
+            <a href="#features" class="tpc-nav-button" title="@_appState.T("Learn More")">
+                <i class="bi bi-compass"></i>
+            </a>
+
+            <a href="#preview" class="tpc-nav-button" title="@_appState.T("About the App")">
+                <i class="bi bi-phone"></i>
+            </a>
+
+            <a href="#faq" class="tpc-nav-button" title="@_appState.T("FAQ")">
+                <i class="bi bi-question-circle"></i>
+            </a>
+
+            <a href="#contact" class="tpc-nav-button" title="@_appState.T("Contact")">
+                <i class="bi bi-envelope"></i>
+            </a>
+
+            <P11Button AriaLabel="@_appState.T("Accessibility")"
+                        IconClass="bi bi-universal-access"
+                        OnClick="@(() => _landing.IsOpenModalAccessibility = true)"
+                        CssClass="tpc-nav-button" />
+        </div>
+    </nav>
+
+    <!-- 1. STARTSEITE / Hero Section -->
+    <section id="hero" class="tpc-hero-section hero">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 hero-left">
+                    <div class="hero-content">
+                        <!-- LOGO + TITLE -->
+                        <div class="hero-header mb-5">
+                            <img src="/_content/pFemmeExample.Shared/img/logo_web.png"
+                                    alt="Gentle Cycles"
+                                    class="hero-logo d-none d-md-block" />
+
+                            <div class="hero-title">
+                                <strong style="opacity: 0.6;">pFemme</strong>
+                            </div>
+                        </div>
+                        <!-- DESCRIPTION -->
+                        <p class="hero-description mb-5">
+                            @_appState.T("Track symptoms, discover patterns, and nurture body awareness with compassion.")
+                        </p>
+                        <!-- CTA -->
+                        <div class="hero-actions">
+                            <P11Button Text="@_appState.T("Begin Tracking")"
+                                        ButtonVariant="ButtonVariant.Primary"
+                                        Size="Size.Large"
+                                        IconClass="bi bi-pen"
+                                        OnClick="@(() => _landing.IsVisibleLogin = true)" />
+
+                            <a href="#features" class="hero-link mt-4">
+                                @_appState.T("Learn More")
+                                <i class="bi bi-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                        <div class="row my-5 g-2 justify-content-start text-center">
+                            <div class="col-2">
+                                <a href="https://apps.apple.com/us/developer/daniel-simic/id1733470934" class="tpc-nav-button d-flex flex-column align-items-center text-decoration-none text-reset">
+                                    <i class="bi bi-apple fs-4 mb-1"></i>
+                                </a>
+                            </div>
+                            <div class="col-2">
+                                <a href="https://play.google.com/store/apps/developer?id=True+Perfect+Code" class="tpc-nav-button d-flex flex-column align-items-center text-decoration-none text-reset">
+                                    <i class="bi bi-android2 fs-4 mb-1"></i>
+                                </a>
+                            </div>
+                            <div class="col-2">
+                                <a href="https://apps.microsoft.com/search/publisher?name=True%20Perfect%20Code" class="tpc-nav-button d-flex flex-column align-items-center text-decoration-none text-reset">
+                                    <i class="bi bi-windows fs-4 mb-1"></i>
+                                </a>
+                            </div>
+                            <div class="col-2">
+                                <a href="https://portable.pfemme.de/" class="tpc-nav-button d-flex flex-column align-items-center text-decoration-none text-reset">
+                                    <i class="bi bi-file-earmark-zip fs-4 mb-1"></i>
+                                </a>
+                            </div>
+                            <div class="col-2">
+                                <a href="https://pwa.pfemme.de/" class="tpc-nav-button d-flex flex-column align-items-center text-decoration-none text-reset">
+                                    <i class="bi bi-cloud-download fs-4 mb-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 2. FUNKTIONEN Section -->
+    <section id="features" class="tpc-features-section">
+        <div class="container">
+            <div class="text-center">
+                <h2 class="tpc-section-title text-ink">@_appState.T("Designed For Awareness")</h2>
+                <p class="tpc-section-subtitle">@_appState.T("Simple tools that grow with your understanding")</p>
+            </div>
+            <div class="row g-4">
+                <!-- 1. Daily Logging -->
+                <div class="col-md-4">
+                    <div class="tpc-feature-card">
+                        <i class="bi bi-calendar3" style="font-size: 2.5rem; color: var(--tpc-text-color); margin-bottom: 1.5rem; display: inline-block;"></i>
+                        <h3 class="tpc-feature-title">@_appState.T("Daily Logging")</h3>
+                        <p class="tpc-feature-description">@_appState.T("Record bleeding, pain, and symptoms in seconds. Build a complete picture of your cycle over time.")</p>
+                    </div>
+                </div>
+
+                <!-- 2. Cycle Predictions -->
+                <div class="col-md-4">
+                    <div class="tpc-feature-card">
+                        <i class="bi bi-calendar-check" style="font-size: 2.5rem; color: var(--tpc-text-color); margin-bottom: 1.5rem; display: inline-block;"></i>
+                        <h3 class="tpc-feature-title">@_appState.T("Cycle Predictions")</h3>
+                        <p class="tpc-feature-description">@_appState.T("Receive intelligent predictions for your next period, fertile window, and PMS phases based on your logged data.")</p>
+                    </div>
+                </div>
+
+                <!-- 3. Private & Secure -->
+                <div class="col-md-4">
+                    <div class="tpc-feature-card">
+                        <i class="bi bi-shield-lock" style="font-size: 2.5rem; color: var(--tpc-text-color); margin-bottom: 1.5rem; display: inline-block;"></i>
+                        <h3 class="tpc-feature-title">@_appState.T("Private & Secure")</h3>
+                        <p class="tpc-feature-description">@_appState.T("Register completely without email or verification. Your data stays yours – store locally, in the cloud, or both. Full control, no tracking.")</p>
+                    </div>
+                </div>
+
+                <!-- 4. Smart AI-Cycle Check -->
+                <div class="col-md-4">
+                    <div class="tpc-feature-card">
+                        <i class="bi bi-cpu" style="font-size: 2.5rem; color: var(--tpc-text-color); margin-bottom: 1.5rem; display: inline-block;"></i>
+                        <h3 class="tpc-feature-title">@_appState.T("Smart AI-Cycle Check")</h3>
+                        <p class="tpc-feature-description">@_appState.T("Once per month, our AI asks you a targeted question about your cycle. Learn something new about your body over time.")</p>
+                    </div>
+                </div>
+
+                <!-- 5. Three Clear Health Charts -->
+                <div class="col-md-4">
+                    <div class="tpc-feature-card">
+                        <i class="bi bi-graph-up" style="font-size: 2.5rem; color: var(--tpc-text-color); margin-bottom: 1.5rem; display: inline-block;"></i>
+                        <h3 class="tpc-feature-title">@_appState.T("Three Clear Health Charts")</h3>
+                        <p class="tpc-feature-description">@_appState.T("Visualize your cycle at a glance: bleeding intensity, pain levels, and day-to-day cycle differences – all in three easy-to-read diagrams.")</p>
+                    </div>
+                </div>
+
+                <!-- 6. Multi-Platform & Multi-Language -->
+                <div class="col-md-4">
+                    <div class="tpc-feature-card">
+                        <i class="bi bi-device-ssd" style="font-size: 2.5rem; color: var(--tpc-text-color); margin-bottom: 1.5rem; display: inline-block;"></i>
+                        <h3 class="tpc-feature-title">@_appState.T("Multi-Platform & Multi-Language")</h3>
+                        <p class="tpc-feature-description">@_appState.T("Use the app everywhere: Windows, Web, PWA, Android, iOS, Mac (ARM). Available in 10 languages with full GDPR compliance.")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 3. VORSCHAU Section - Direct form preview -->
+    <section id="preview" class="tpc-preview-section min-vh-100 d-flex align-items-center py-5">
+        <div class="container w-100">
+            <div class="row align-items-center g-4 g-lg-5">
+
+                <div class="col-lg-4 col-12 text-center text-lg-start">
+                    <h2 class="tpc-section-title text-ink mb-4 fs-1">@_appState.T("Track What Matters")</h2>
+                    <p class="tpc-preview-text mb-4 fs-5 lh-base opacity-75">
+                        @_appState.T("Every symptom tells a story. From bleeding intensity to fatigue levels, each entry helps you understand your body's unique language.")
+                    </p>
+                    <p class="tpc-preview-text mb-4 fs-5 lh-base opacity-75">
+                        @_appState.T("No medical jargon. No pressure. Just honest tracking that puts you in control of your wellness journey.")
+                    </p>
+                    <div class="mt-4">
+                        <P11Button Text="@_appState.T("Start Your First Entry")"
+                                    ButtonVariant="ButtonVariant.Primary"
+                                    IconClass="bi bi-plus-circle"
+                                    OnClick="@(() => _landing.IsVisibleLogin = true)" />
+                    </div>
+                </div>
+
+                <div class="col-lg-8 col-12">
+                    <div class="d-flex flex-column gap-3">
+
+                        <div class="row g-3">
+                            <div class="col-md-8 col-12">
+                                <img src="/_content/pFemmeExample.Shared/img/app_image01.png" alt="Img01" class="w-100 h-100 object-fit-cover rounded-4 shadow-sm">
+                            </div>
+                            <div class="col-md-4 col-12">
+                                <img src="/_content/pFemmeExample.Shared/img/app_image06.png" alt="Img02" class="w-100 h-100 object-fit-cover rounded-4 shadow-sm">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 align-items-stretch">
+
+                            <div class="col-md-3 col-12">
+                                <img src="/_content/pFemmeExample.Shared/img/app_image03.png" alt="Img03" class="w-100 h-100 object-fit-cover rounded-4 shadow-sm">
+                            </div>
+
+                            <div class="col-md-6 col-12">
+                                <img src="/_content/pFemmeExample.Shared/img/app_image04.png" alt="Img04" class="w-100 h-100 object-fit-cover rounded-4 shadow-sm">
+                            </div>
+
+                            <div class="col-md-3 col-12">
+                                <img src="/_content/pFemmeExample.Shared/img/app_image05.png" alt="Img05" class="w-100 h-100 object-fit-cover rounded-4 shadow-sm">
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+    
+    <!-- 4. FAQ Section -->
+    <section id="faq" class="tpc-faq-section">
+        <div class="container">
+            <div class="text-center">
+                <h2 class="tpc-section-title text-ink">@_appState.T("Questions & Answers")</h2>
+                <p class="tpc-section-subtitle">@_appState.T("Everything you need to know")</p>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    @foreach (var faq in faqItems)
+                    {
+                        var isOpen = openFaqId == faq.Id;
+                        <div class="tpc-faq-item" @onclick="() => ToggleFaq(faq.Id)">
+                            <div class="tpc-faq-question">
+                                <span>@_appState.T(faq.QuestionKey)</span>
+                                <i class="bi @(isOpen ? "bi-chevron-up" : "bi-chevron-down")" style="font-size: 0.9rem; opacity: 0.6;"></i>
+                            </div>
+                            @if (isOpen)
+                            {
+                                <div class="tpc-faq-answer">
+                                    @_appState.T(faq.AnswerKey)
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 5. Footer Section -->
+    <section id="contact" class="tpc-footer">
+        <div class="container">
+            <div class="text-center mb-0">
+                <h2 class="tpc-section-title text-ink">@_appState.T("Contact")</h2>
+                <p class="tpc-section-subtitle">@_appState.T("Have questions, feedback, or need support? We’d love to hear from you.")</p>
+            </div>
+            <div class="mb-3">
+                <pFemmeExample.Shared.Pages.Common.ContactformEmail ToEmail="office@true-perfect-code.ch" />
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-4 mb-md-0">
+                    <h5 style="font-weight: 500; margin-bottom: 1rem; letter-spacing: 0.5px;">@_appState.T("Legal")</h5>
+                    <ul class="tpc-footer-links">
+                        <li><a href="privacy" class="mb-2">@_appState.T("Privacy Policy")</a></li>
+                        <li><a href="terms" class="mb-2">@_appState.T("Terms and Conditions")</a></li>
+                        <li><a href="imprint" class="mb-2">@_appState.T("Imprint")</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4 mb-md-0">
+                    <h5 style="font-weight: 500; margin-bottom: 1rem; font-size: 0.9rem;">@_appState.T("Information")</h5>
+                    <ul class="tpc-footer-links">
+                        <li><a href="#" @onclick:preventDefault @onclick="() => _landing.IsOpenModalAbout = true">@_appState.T("About")</a></li>
+                        <li><a href="#" @onclick:preventDefault @onclick="() => _landing.IsOpenModalDonate = true">@_appState.T("Donate")</a></li>
+                        <li><a href="#" @onclick:preventDefault @onclick="() => _landing.IsOpenModalCookies = true">@_appState.T("Cookies")</a></li>
+                    </ul>
+                </div>
+                <!-- Schnelle Links -->
+                <div class="col-md-3 mb-4 mb-md-0">
+                    <h5 style="font-weight: 500; margin-bottom: 1rem; font-size: 0.9rem;">@_appState.T("Links")</h5>
+                    <ul class="tpc-footer-links">
+                        <li class="mb-2"><a href="#hero">@_appState.T("Home")</a></li>
+                        <li class="mb-2"><a href="#features">@_appState.T("Learn More")</a></li>
+                        <li class="mb-2"><a href="#preview">@_appState.T("About the App")</a></li>
+                        <li class="mb-2"><a href="#faq">@_appState.T("FAQ")</a></li>
+                        <li class="mb-2"><a href="#contact">@_appState.T("Contact")</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4 mb-md-0">
+                    <h5 style="font-weight: 500; margin-bottom: 1rem; font-size: 0.9rem;">@_appState.T("Get Started")</h5>
+                    <p style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 1rem;">
+                        @_appState.T("Begin your tracking journey today.")
+                    </p>
+                    <P11Button Text="@_appState.T("Create Account")"
+                                ButtonVariant="ButtonVariant.Primary"
+                                Size="Size.Small"
+                                IconClass="bi bi-person-plus"
+                                OnClick="@(() => _landing.IsVisibleLogin = true)" />
+                </div>
+            </div>
+            <div class="tpc-footer-copyright">
+                <span>© @DateTime.Now.Year @_appState.T("Gentle Cycles")</span>
+                <span style="margin: 0 0.5rem;">•</span>
+                <span>@_appState.T("All rights reserved")</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+
+@* L O G I N *@
+@if (_landing.IsVisibleLogin)
+{
+    <pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationLogin @bind-Visible="@_landing.IsVisibleLogin"
+                                                    OnClose="@(() => _landing.IsVisibleLogin = false)"
+                                                    IsOpenButtonHidden="true"
+                                                    CssClassButton="btn-lg px-4 me-sm-3 shadow-lg fw-bold"
+                                                    AccordionHeaderBackgroundVariant1="BackgroundVariant.White"
+                                                    AccordionHeaderBackgroundVariant2="BackgroundVariant.White"
+                                                    LoginText="@(_appState!.NativeDeviceType == NativeDevice.WEB ? _appState.T("Start in browser") : _appState.T("Start app"))" />
+}
+
+@* A B O U T *@
+@if (_landing.IsOpenModalAbout)
+{
+    <P11ModalNative @bind-Visible="@_landing.IsOpenModalAbout" OnClose="() => { }"
+                    Id="@_landing.IdAbout"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitleAbout"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+        <HeaderContent>
+            <h5 id="modalTitleAbout" class="modal-title">@_appState!.T("About")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            <pFemmeExample.Shared.Pages.Common.About OnClose="@(() => _landing.IsOpenModalAbout = false)" CssClassModalContent="tpc-form-bg-01" />
+
+        </BodyContent>
+    </P11ModalNative>
+}
+
+@* D O N A T E *@
+@if (_landing.IsOpenModalDonate)
+{
+    <P11ModalNative @bind-Visible="@_landing.IsOpenModalDonate" OnClose="() => { }"
+                    Id="@_landing.IdDonate"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Donate"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+        <HeaderContent>
+            <h5 id="modalTitle1Donate" class="modal-title">@_appState!.T("Donate")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            <pFemmeExample.Shared.Pages.Common.Donate OnClose="@(() => _landing.IsOpenModalDonate = false)" CssClassModalContent="tpc-form-bg-01" />
+
+        </BodyContent>
+    </P11ModalNative>
+}
+
+@* C O O K I E S *@
+@if (_landing.IsOpenModalCookies)
+{
+    <P11ModalNative @bind-Visible="_landing.IsOpenModalCookies"
+                    OnClose="() => _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.Cookies, false)"
+                    Id="@_landing.IdCookies"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Cookies"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+        <HeaderAction>
+            @switch (_appState!.NativeDeviceType)
+            {
+                case NativeDevice.IPHONE:
+                    <button class="btn btn-link p-0 text-decoration-none fw-bold" style="color: #007aff; font-size: 1rem;" @onclick="_deleteCookies!">@_appState.T("Delete")</button>
+                    break;
+
+                case NativeDevice.ANDROID:
+                    <button class="btn btn-link text-dark p-1" @onclick="_deleteCookies!"><i class="bi bi-trash fs-4"></i></button>
+                    break;
+            }
+        </HeaderAction>
+        <HeaderContent>
+            <h5 id="modalTitle1Cookies" class="modal-title">@_appState!.T("Cookies")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            <pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationCookies OauthTokenEnableDeleteButton="true"
+                                                                             OnProvideDeleteAction="@(action => _deleteCookies = action)" />
+
+        </BodyContent>
+        <FooterContent>
+            <div class="d-flex justify-content-end gap-2 w-100">
+                @if (_appState.NativeDeviceType == NativeDevice.MAC)
+                {
+                    @* <button class="btn btn-sm btn-outline-secondary rounded-2 px-3 border-secondary-subtle text-dark" style="font-size: 0.85rem; min-width: 80px;" @onclick="_cancelCycle!">@_appState.T("Cancel")</button> *@
+                    <button class="btn btn-sm btn-primary rounded-2 px-3 shadow-sm" style="font-size: 0.85rem; min-width: 80px;" @onclick="_deleteCookies!">@_appState.T("Delete all cookies")</button>
+                }
+                else if (_appState!.NativeDeviceType == NativeDevice.WEB || _appState!.NativeDeviceType == NativeDevice.WINDOWS)
+                {
+                    @* <button class="btn btn-secondary" @onclick="_cancelCycle!">@_appState.T("Cancel")</button> *@
+                    <button class="btn btn-primary px-4" @onclick="_deleteCookies!">@_appState.T("Delete all cookies")</button>
+                }
+            </div>
+        </FooterContent>
+    </P11ModalNative>
+}
+
+@* Accessibility *@
+@if (_landing.IsOpenModalAccessibility)
+{
+    <P11Modal @bind-Visible="_landing.IsOpenModalAccessibility"
+              Id="_landing.IdAccessibility"
+              AriaLabelledby="accessibilityModalTitle"
+              CssClassContent="tpc-form-bg-01"
+              Size="Size.Small"
+              ShowDevelopmentErrors="true"
+              OnClose="() => _landing.IsOpenModalAccessibility = false">
+
+        <HeaderContent>
+            <h5 id="accessibilityModalTitle" class="modal-title">@_appState.T("Accessibility Settings")</h5>
+        </HeaderContent>
+
+        <BodyContent>
+            <pFemmeExample.Shared.Pages.Common.Accessibility ClearCurrentCssThemeMonoMode="false"
+                                                      HideColorsSelectionMonoMode="true"
+                                                      VisibleMonoMode="false"
+                                                      OnClickSave="() => _landing.IsOpenModalAccessibility = false"
+                                                      Alignment="@(_appState.LtrRtl == BlazorCore.Services.AppState.LTR_RTL.LTR ?  DropdownAlignment.BottomEnd : DropdownAlignment.BottomStart)"
+                                                      UseCssDefaultMonoMode="false"/>
+        </BodyContent>
+    </P11Modal>
+}
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    private int openFaqId = -1;
+
+    private List<FaqItem> faqItems = new()
+    {
+        new FaqItem { Id = 1, QuestionKey = "Is my data private?", AnswerKey = "Yes. You can register completely anonymously – no email, no verification. Store data locally, in the cloud, or both. Full DSGVO/GDPR compliance with one-click data or account deletion." },
+        new FaqItem { Id = 2, QuestionKey = "How often should I log?", AnswerKey = "Log as often as feels right. Daily tracking gives the clearest patterns, but any consistent habit works." },
+        new FaqItem { Id = 3, QuestionKey = "What symptoms can I track?", AnswerKey = "Bleeding intensity, pain levels, cramps, headaches, fatigue, nausea, and general notes about how you feel." },
+        new FaqItem { Id = 4, QuestionKey = "Should I use local or cloud storage?", AnswerKey = "Both are valid choices. Local storage keeps everything on your device. Cloud storage enables cross-platform sync. You can even use both for backup." },
+        new FaqItem { Id = 5, QuestionKey = "What charts does the app provide?", AnswerKey = "Three clear diagrams: bleeding intensity over time, pain level trends, and day-to-day cycle differences – all easy to understand at a glance." },
+        new FaqItem { Id = 6, QuestionKey = "Which platforms are supported?", AnswerKey = "All major platforms – including desktop, mobile, web, and tablet. Use the app seamlessly anywhere with cross-platform sync when you choose cloud storage." },
+        new FaqItem { Id = 7, QuestionKey = "Is this app free?", AnswerKey = "The core tracking features are completely free. We accept donations to help sustain development." }
+    };
+
+    private void ToggleFaq(int id)
+    {
+        openFaqId = openFaqId == id ? -1 : id;
+    }
+
+    private void scrollToFeatures()
+    {
+        // JavaScript scroll implementation if needed
+    }
+
+    private void scrollToTop()
+    {
+        // JavaScript scroll implementation if needed
+    }
+
+    private class FaqItem
+    {
+        public int Id { get; set; }
+        public string QuestionKey { get; set; } = string.Empty;
+        public string AnswerKey { get; set; } = string.Empty;
+    }
+}

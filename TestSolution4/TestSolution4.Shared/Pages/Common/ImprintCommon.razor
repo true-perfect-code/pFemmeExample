@@ -1,0 +1,223 @@
+﻿
+@if(Language != null)
+{
+    <div class="card" role="region" aria-labelledby="impressum-header" lang="@Language.ToLower()" tabindex="0">
+        @if (!IsHeaderHidden)
+        {
+            <div class="card-header">
+                <h2 id="impressum-header">@Header</h2>
+            </div>
+        }
+        <div class="card-body" aria-live="polite" role="article">
+            @if (BodyBlocks != null)
+            {
+                @for (int i = 0; i < BodyBlocks.Length; i++)
+                {
+                    <p>@BodyBlocks[i]</p>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsHeaderHidden { get; set; } = false;
+
+
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    private string? Language { get; set; }
+    private string? Header = string.Empty;
+    private string? Body = string.Empty;
+    private string[]? BodyBlocks { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var result = await _platform!.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+                    Language = result.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    await _messageBoxService!.ShowOkAsync(
+                        title: _appState?.T("Error") ?? "Error",
+                        message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {(result != null ? result.out_err : "Unknown: Eula")}"
+                    );
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Header = "Our Company Details";
+                Body = 
+$@"Company: True Perfect Code
+Address: Karadjordjeva 2, Lazarevac, Serbia
+Email: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Company Reg. No./VAT ID: 110495934
+Responsible: Daniel S. Simic, Certified IT Engineer (Swiss HF)
+";               
+                break;
+
+            case "DE":
+                Header = "Unsere Unternehmensdetails";
+                Body = 
+$@"Firma: True Perfect Code
+Adresse: Karadjordjeva 2, Lazarevac, Serbien
+E-Mail: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Firmen-Reg.Nr./Umsatzsteuer-ID: 110495934
+Verantwortlich: Daniel S. Simic, dipl. Techniker HF (eidg. anerkannt)
+";  
+                break;
+
+            case "AR":
+                Header = "تفاصيل شركتنا";
+                Body = 
+$@"الشركة: True Perfect Code
+العنوان: Karadjordjeva 2, Lazarevac, Serbia
+البريد الإلكتروني: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+رقم السجل التجاري/رقم ضريبة القيمة المضافة: 110495934
+المسؤول: دانيال إس. سيميتش، فني دبلوم عالي (معترف به اتحادياً)
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Header = "Détails de Notre Entreprise";
+                Body = $@"
+Entreprise : True Perfect Code
+Adresse : Karadjordjeva 2, Lazarevac, Serbie
+E-mail : {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+N° d'entreprise/N° TVA : 110495934
+Responsable : Daniel S. Simic, Ingénieur informaticien diplômé (HF suisse)
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Header = "Dettagli della Nostra Azienda";
+                Body = $@"
+Azienda: True Perfect Code
+Indirizzo: Karadjordjeva 2, Lazarevac, Serbia
+Email: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Numero di registrazione/Partita IVA: 110495934
+Responsabile: Daniel S. Simic, Ingegnere informatico certificato (HF svizzero)
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Header = "我们的公司详情";
+                Body = $@"
+公司:True Perfect Code
+地址:Karadjordjeva 2, Lazarevac, 塞尔维亚
+电子邮箱:{_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+公司注册号/增值税号:110495934
+负责人:Daniel S. Simic,认证IT工程师(瑞士HF)
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Header = "हमारी कंपनी का विवरण";
+                Body = $@"
+कंपनी: True Perfect Code
+पता: Karadjordjeva 2, Lazarevac, सर्बिया
+ईमेल: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+कंपनी पंजीकरण संख्या/वैट आईडी: 110495934
+जिम्मेदार: Daniel S. Simic, प्रमाणित आईटी इंजीनियर (स्विस एचएफ)
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Header = "Detalles de Nuestra Empresa";
+                Body = $@"
+Empresa: True Perfect Code
+Dirección: Karadjordjeva 2, Lazarevac, Serbia
+Correo electrónico: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Número de registro/NIF: 110495934
+Responsable: Daniel S. Simic, Ingeniero informático certificado (HF suizo)
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Header = "Detail Perusahaan Kami";
+                Body = $@"
+Perusahaan: True Perfect Code
+Alamat: Karadjordjeva 2, Lazarevac, Serbia
+Email: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Nomor Registrasi Perusahaan/NPWP: 110495934
+Penanggung Jawab: Daniel S. Simic, Insinyur IT Bersertifikat (HF Swiss)
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Header = "Detalhes da Nossa Empresa";
+                Body = $@"
+Empresa: True Perfect Code
+Endereço: Karadjordjeva 2, Lazarevac, Sérvia
+E-mail: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Número de Registro/NIF: 110495934
+Responsável: Daniel S. Simic, Engenheiro de TI Certificado (HF suíço)
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Header = "Детаљи о нашој компанији";
+                Body = $@"
+Фирма: True Perfect Code
+Адреса: Карађорђева 2, Лазаревац, Србија
+Имејл: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Матични број/ПИБ: 110495934
+Одговорно лице: Даниел С. Симић, дипломирани техничар (швајцарски HF)
+";
+                break;
+
+            case "SRL":
+                Header = "Detalji o našoj kompanij";
+                Body = $@"
+Kompanija: True Perfect Code
+Adresa: Karadjordjeva 2, Lazarevac, Srbija
+Email: {_globalState!.ConfigGeneral.ApplicationName.ToLower()}@true-perfect-code.ch
+Matični broj/PIB: 110495934
+Odgovoran: Daniel S. Simic, Sertifikovani IT inženjer (Švajcarski HF)
+";
+                break;
+        }
+
+        // Split the text into separate blocks based on empty lines
+        BodyBlocks = Body!.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
+    }
+}

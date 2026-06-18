@@ -1,0 +1,34 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Projektmappenelemente/">
+    <File Path=".template.config/template.json" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <File Path="UnitTestsBase.cs" />
+  </Folder>
+  <Project Path="BlazorCore/BlazorCore.csproj" Id="512e4d90-1a98-440b-9278-5febf2a10992" />
+  <Project Path="TestSolution4.Capa/TestSolution4.Capa.csproj" Id="5b0f32cb-7aec-49d6-b243-6837314c3e3d" />
+  <Project Path="TestSolution4.Msix/TestSolution4.Msix.wapproj" Type="c7167f0d-bc9f-4e6e-afe1-012c56b48db5" Id="af4d07f0-9c38-4b48-a141-bcc6e451fcd3">
+    <Deploy />
+  </Project>
+  <Project Path="TestSolution4.Pwa/TestSolution4.Pwa.csproj" Id="ec629c96-45b9-4855-b4f3-57453e7f5fcc" />
+  <Project Path="TestSolution4.Shared/TestSolution4.Shared.csproj" Id="fc0e9cac-c60a-4633-999f-435b0176eb72" />
+  <Project Path="TestSolution4.Web/TestSolution4.Web.csproj" />
+  <Project Path="TestSolution4.Webapi/TestSolution4.Webapi.csproj" Id="d9191050-1bcf-49ef-b372-f22ac5d511a1" />
+  <Project Path="TestSolution4.Wpf/TestSolution4.Wpf.csproj" Id="5e367ab6-2ab7-443b-a785-511467d75cbd">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="TestSolution4.XUnit.Capa/TestSolution4.XUnit.Capa.csproj" Id="dbb5d1ce-9d1d-460c-89f4-c47c49b8a437" />
+  <Project Path="TestSolution4.XUnit.Pwa/TestSolution4.XUnit.Pwa.csproj" Id="879e463a-ac97-4502-b34a-748ebbfaeecf" />
+  <Project Path="TestSolution4.XUnit.Shared/TestSolution4.XUnit.Shared.csproj" Id="dcfc2b3e-a565-4550-8ed2-ad4705b7e268" />
+  <Project Path="TestSolution4.XUnit.Web/TestSolution4.XUnit.Web.csproj" Id="2f7abc6e-c3b9-4805-8fc8-55c148376327" />
+  <Project Path="TestSolution4.XUnit.Wpf/TestSolution4.XUnit.Wpf.csproj" Id="45d78c68-28d9-4896-be5b-6776bf8c673f">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+</Solution>

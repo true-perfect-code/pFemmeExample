@@ -1,0 +1,65 @@
+﻿@using Microsoft.JSInterop
+@using BlazorCore.Services.AppState
+@implements IDisposable
+
+<span title="@GetStatusTitle()" class="d-inline-flex align-items-center">
+    @if (_appState.IsCloudConnected)
+    {
+        <i class="bi bi-globe-americas text-success fs-6"></i>
+        <span class="ms-2 badge text-bg-success d-none d-lg-inline">
+            @_appState.T("Connected")
+        </span>
+    }
+    else
+    {
+        <i class="bi bi-slash-circle-fill text-danger fs-6"></i>
+        <span class="ms-2 badge text-bg-danger d-none d-lg-inline">
+            @_appState.T("Offline")
+        </span>
+    }
+</span>
+
+@code {
+    [Inject]
+    private IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime? _jsRuntime { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Wir abonnieren nur noch das Event des Services.
+        // Sobald der Service via SignalR merkt, dass die Cloud weg ist,
+        // triggert er dieses Event und wir zeichnen uns neu.
+        _appState.OnChange += HandleStateChange;
+    }
+
+    private void HandleStateChange()
+    {
+        // Wir nutzen InvokeAsync, um absolut sicher vor Thread-Fehlern zu sein
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+    private string GetStatusTitle() => _appState.IsCloudConnected
+        ? _appState.T("Cloud Reachable")
+        : _appState.T("Cloud Offline");
+
+    public void Dispose()
+    {
+        // Wichtig, um Memory Leaks zu vermeiden
+        _appState.OnChange -= HandleStateChange;
+
+        if (_jsRuntime != null)
+        {
+            try
+            {
+                // Async ohne Wait - sauber und ohne Blockierung
+                _jsRuntime.InvokeVoidAsync("pE_Web.cloudConnectivity.dispose");
+            }
+            catch { /* Ignoriere Fehler beim Cleanup */ }
+        }
+    }
+}

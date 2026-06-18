@@ -1,0 +1,324 @@
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using p11.UI
+@using p11.UI.Services
+
+
+<h3>pE Demo</h3>
+<br />
+<hr />
+<br />
+
+<AuthorizeView>
+    <Authorized Context="context">
+
+        @* Logout *@
+        <h3>Abmeldung aus der App</h3>
+        @* <BlazorCore.Services.Authentication.AuthenticationLogout Text="Logout"
+                                                         CookiesToClear="@(new List<string> { _globalState!.LocalStorage.identityProvider + pE.Utility.Appl.ApplicationName + _appState!.SecureStorageID })"
+                                                         UseNativeFeatures="@UseNativeFeatures"
+                                                         NavigateTo="/" /> *@
+
+
+        <br /> <br />
+
+
+        @* Passwort ändern *@
+        <h3>Passwort ändern</h3>
+        @* <BlazorCore.Services.Authentication.AuthenticationChangePassword Texts="@_changePasswordTexts" UseNativeFeatures=@UseNativeFeatures /> *@
+
+
+        <br /> <hr /> <br />
+
+
+        @* Notifikation *@
+        <h3>Lokale Notifikation (aktivieren in 20 Sekunden)</h3>
+        <P11Textarea TValue="string"
+                        Label="Ihre Benachrichtigungsbeldung"
+                        Description="Schreiben Sie hier einen Text"
+                        @bind-Value="@NotificationMessage" />
+        <P11Button 
+            Text="Send"
+            OnClick="@(async() => {
+                if (!string.IsNullOrEmpty(NotificationMessage))
+                {
+                    LocalNotification!.ScheduleNotification("id", "Erinnerung", NotificationMessage, DateTime.Now.AddSeconds(20) );
+                    await ToastService!.ShowSuccessAsync("Lokale Benachrichtigung erfolgreich geplant!", "Erfolgreich", position: ToastPosition.BottomEnd);
+                    NotificationMessage = string.Empty; 
+                }
+                else
+                           await ToastService!.ShowErrorAsync("Bitte geben Sie eine lokale Benachrichtigung ein!", "Achtung", position: ToastPosition.BottomEnd);
+            })" 
+            ButtonVariant="ButtonVariant.Primary" />
+        <br /> <hr /> <br />
+
+
+        @* Bild aus Verzeichnis / Kamera *@
+        <h3>Bild laden (Speicher / Kamera)</h3>
+        <TestSolution4.Shared.Pages.Common.Media.Media ButtonMinWidth="40px"
+                                 Size="Size.Large"
+                                 PreviewModalTitle="Bild"
+                                 ImageQuality="5"
+                                 CropToSquare="true"
+                                 ButtonOrientation="ButtonOrientation.Horizontal"
+                                 ImageDataUrl="@ImageData"
+                                 ThumbnailDataUrl="@ThumbnailData"
+                                 ThumbnailSize="64"
+                                 ImageDataUrlChanged="@( (newValue) => ImageData = newValue )" />
+        <br /> <hr /> <br />
+
+
+        @* Otp Setup *@
+        <h3>OTP-Setup</h3>
+        @* <TestSolution4.Shared.Pages.Common.Otp.OtpSetup Visible="true"
+                                  QrWidth="250"
+                                  Texts="@otpSetupTexts" /> *@
+        <br /> <hr /> <br />
+
+
+        @* 2FA *@
+        <h3>2FA</h3>
+        <TestSolution4.Shared.Pages.Common.Otp.Otp
+            FocusDelayMilliseconds="80" />
+            @* OnSecretEntered="@((secret) => { string otpcode = secret})" /> *@
+        <br /> <hr /> <br />
+
+        @* Pin *@
+        <h3>Pin</h3>
+        <TestSolution4.Shared.Pages.Common.Otp.Otp
+            FocusDelayMilliseconds="80" />
+            @* OnSecretEntered="@((secret) => { string otpcode = secret})" /> *@
+        <br /> <hr /> <br />
+
+
+        @* Impressum *@
+        <h3>Impressum anzeige</h3>
+        <P11AccordionNative>
+            <Title>
+                <span>öffnen</span>
+            </Title>
+            <ChildContent>
+                <label for="idLanguage1" class="form-label">Sprache</label>
+                <P11Select TItem="string" TValue="string"
+                           Id="idLanguage1"
+                           @bind-Value="@LanguageImprint"
+                           name="languageImprint"
+                           PlaceholderText="Sprache auswählen"
+                           AriaLabel="Sprache auswählen" >
+                    <option value="sr-Cyrl">Српски</option>
+                    <option value="sr-Latn">Srpski</option>
+                    <option value="en-US">English</option>
+                    <option value="de-DE">Deutsch</option>
+                </P11Select>
+
+                <hr />
+
+                <Imprint />
+
+            </ChildContent>
+        </P11AccordionNative>
+        <br /> <hr /> <br />
+
+
+        @* Datenschutz *@
+        <h3>Datenschutz anzeige</h3>
+        <P11AccordionNative>
+            <Title>
+                <span>öffnen</span>
+            </Title>
+            <ChildContent>
+                <label for="idLanguage2" class="form-label">Sprache</label>
+                <P11Select TItem="string" TValue="string"
+                           Id="idLanguage2"
+                           @bind-Value="@LanguagePolicy"
+                           name="languagePolicy"
+                           PlaceholderText="Sprache auswählen"
+                           AriaLabel="Sprache auswählen" >
+                    <option value="sr-Cyrl">Српски</option>
+                    <option value="sr-Latn">Srpski</option>
+                    <option value="en-US">English</option>
+                    <option value="de-DE">Deutsch</option>
+                </P11Select>
+
+                <hr />
+
+                <Privacy />
+
+            </ChildContent>
+        </P11AccordionNative>
+        <br /> <hr /> <br />
+
+
+        @* AGB *@
+        <h3>AGB anzeige</h3>
+        <P11AccordionNative>
+            <Title>
+                <span>öffnen</span>
+            </Title>
+            <ChildContent>
+                <label for="idLanguage3" class="form-label">Sprache</label>
+                <P11Select TItem="string" TValue="string"
+                           Id="idLanguage3"
+                           @bind-Value="@LanguageTerm"
+                           name="languageAGB"
+                           PlaceholderText="Sprache auswählen"
+                           AriaLabel="Sprache auswählen" >
+                    <option value="sr-Cyrl">Српски</option>
+                    <option value="sr-Latn">Srpski</option>
+                    <option value="en-US">English</option>
+                    <option value="de-DE">Deutsch</option>
+                </P11Select>
+
+                <hr />
+
+                <Terms />
+
+            </ChildContent>
+        </P11AccordionNative>
+        <br /> <hr /> <br />
+
+
+        @* Settings *@
+        <div class="col-12 col-md-6 mx-auto">
+            <h3>Einstellungen</h3>
+            <BlazorCore.Services.AppState.AppStateSettings />
+        </div>
+        <br /> <hr /> <br />
+
+
+        @* Sprachübersetzung *@
+        <h3>Sprachübersetzung</h3>
+        <label for="idLanguage4" class="form-label">Sprache</label>
+        <P11Select TItem="string" TValue="string"
+                    Id="idLanguage4"
+                    @bind-Value="@LanguageTranslation"
+                    OnChanged="OnChanged_Translation"
+                    name="languageTranslation"
+                    PlaceholderText="Sprache auswählen"
+                    AriaLabel="Sprache auswählen" >
+                    <option value="sr-Cyrl">Српски</option>
+                    <option value="sr-Latn">Srpski</option>
+                    <option value="en-US">English</option>
+                    <option value="de-DE">Deutsch</option>
+        </P11Select>
+        <br />
+        <P11Label Text="@_appState!.T("English")" /><br />
+        <P11Label Text="@_appState!.T("Hi, how are you!")" /><br />
+        <P11Label Text="@_appState!.T("Hello")" /><br />
+
+        <br /><br /><br />
+        
+
+    </Authorized>
+    <NotAuthorized>
+
+        @* Login *@
+        @* <BlazorCore.Services.Authentication.AuthenticationLogin Visible="@showLoginModal"
+                                                        VisibleChanged="(visible) => showLoginModal = visible"
+                                                        LoginModel="@loginModel"
+                                                        Texts="@customLoginTexts"
+                                                        UseNativeFeatures="@UseNativeFeatures"
+                                                        IsLoading="@isLoading" /> *@
+        <br /><br /><br />
+
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Inject] 
+    BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; } // Logout
+
+    [Inject]
+    BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; } // Logout
+
+    [Inject]
+    BlazorCore.Services.LocalNotification.ILocalNotification? LocalNotification { get; set; } // Notification
+
+    [Inject]
+    IToastService? ToastService { get; set; } // Notificationm, OTP-Setup
+
+
+
+    // Login
+    private bool showLoginModal = false;
+    private bool isLoading = false;
+    private BlazorCore.Services.Authentication.LoginModel loginModel = new();
+    private bool UseNativeFeatures = false;
+
+    //private BlazorCore.Services.Authentication.LoginTextModel? customLoginTexts;
+
+
+    // Notification
+    private  string NotificationMessage = string.Empty;
+
+
+    // Bild
+    private string ImageData = string.Empty;
+    private string ThumbnailData = string.Empty;
+
+
+    // Otp Setup
+    //private BlazorCore.Services.Otp.OtpSetupTextModel? otpSetupTexts;
+
+
+    // Otp revoke
+    private BlazorCore.Services.Otp.OtpRevokeTextModel? _revokeTexts;
+
+
+    // Impressum
+    private string LanguageImprint = string.Empty;
+    private string LanguagePolicy = string.Empty;
+    private string LanguageTerm = string.Empty;
+
+
+    // Change password
+    //private BlazorCore.Services.Authentication.ChangePasswordTextModel? _changePasswordTexts;
+
+    // Sprachübersetzung
+    private string LanguageTranslation = string.Empty;
+    private string LanguageText = string.Empty;
+
+
+    protected override void OnInitialized()
+    {
+        if(_appState != null)
+        {
+            LanguageImprint = _globalState!.ConfigGeneral.DefaultLanguage;
+            LanguagePolicy = _globalState!.ConfigGeneral.DefaultLanguage;
+            LanguageTerm = _globalState!.ConfigGeneral.DefaultLanguage;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                await Task.Delay(10);
+
+                UseNativeFeatures = _appState?.IsNativeApp ?? false;
+
+                // Sprachübersetzung
+                LanguageTranslation = _appState!.SelectedLanguage;
+                //LanguageText = _appState!.T("If you activate 2FA, you must specify here how the app should proceed if it is used offline. You can specify that the app is started regardless of the 2FA setting, that the app only starts with an additional user 2FA password verification if 2FA is set, or that the app is not started at all in offline mode if 2FA is set.");
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
+    }
+
+    // Sprachübersetzung
+    private void OnChanged_Translation(string? newLanguage)
+    {
+        _appState!.LoadTranslations(routesStateHasChanged: true, newLanguage ?? "en-US");
+    }
+
+
+
+}

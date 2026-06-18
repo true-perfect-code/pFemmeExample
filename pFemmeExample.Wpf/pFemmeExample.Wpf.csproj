@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseWPF>true</UseWPF>
+		<SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+		<ApplicationIcon>icon.ico</ApplicationIcon>
+		<Platforms>AnyCPU;x64</Platforms>
+
+		<Title>pFemmeExample Desktop</Title>
+		<Product>pFemmeExample</Product>
+		<Description>pFemmeExample - Desktop Version (Store/Portable)</Description>
+		<Company>https://true-perfect-code.ch/</Company>
+		<Authors>D. Simic, J. Simic, A. Simic</Authors>
+		<Copyright>Copyright © 2026</Copyright>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<NeutralLanguage>en</NeutralLanguage>
+		<ApplicationManifest></ApplicationManifest>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="Assets\splash.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="icon.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.1.66" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="10.0.51" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\pFemmeExample.Shared\pFemmeExample.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <SplashScreen Include="Assets\splash.png" />
+	</ItemGroup>
+
+</Project>
+

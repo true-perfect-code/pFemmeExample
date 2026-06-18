@@ -1,0 +1,266 @@
+﻿@using pFemmeExample.Shared.Models
+
+<div class="tpc-form-preview-card px-2 py-1" style="background: var(--tpc-body); border-radius: 28px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06); border: 1px solid var(--tpc-border-color);">
+
+    <div class="d-flex flex-column">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="border-color: var(--tpc-border-color) !important;">
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                        <span style="font-weight: 500;">@_appState.T("Bleeding")</span>
+                        <span class="d-block" style="font-size: 0.7rem; opacity: 0.6;">@_appState.T("Is there bleeding?")</span>
+                    </div>
+                    <div style="transform: scale(1.2);">
+                        <P11Checkbox @bind-Value="_item_edit.bleeding"
+                                     AriaLabel="@_appState.T("Is there bleeding?")"
+                                     IsSwitch="true"
+                                     ShowDevelopmentErrors="true" />
+                    </div>
+                </div>
+                <span style="font-size: 0.8rem; opacity: 0.6;">@(_item_edit.RecordDate?.ToString("dddd, MMMM dd") ?? "No date selected")</span>
+            </div>
+        </div>
+
+        @if(_item_edit.bleeding)
+        {
+            <div class="col-12">
+                <div class="py-2">
+                    <span class="d-block mb-2" style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Intensity - bleeding strength")</span>
+                    <P11ButtonRadio TValue="int"
+                                    @bind-Value="_item_edit.intensity"
+                                    Label=""
+                                    ButtonVariant="ButtonVariant.OutlinePrimary"
+                                    ButtonSize="Size.Small"
+                                    CssClassGroup="rounded-pill-group d-flex gap-2">
+                        <P11ButtonRadioOption TValue="int" Value="0" Text="@_appState.T("Few")" CssClass="rounded-pill" />
+                        <P11ButtonRadioOption TValue="int" Value="1" Text="@_appState.T("Mild")" CssClass="rounded-pill" />
+                        <P11ButtonRadioOption TValue="int" Value="2" Text="@_appState.T("Severe")" CssClass="rounded-pill" />
+                    </P11ButtonRadio>
+                </div>
+            </div>
+        }
+
+        <div class="col-12">
+            <div class="py-2">
+                <span class="d-block mb-2" style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Pain - pain strength")</span>
+                <P11ButtonRadio TValue="int"
+                                @bind-Value="_item_edit.pain"
+                                Label=""
+                                ButtonVariant="ButtonVariant.OutlinePrimary"
+                                ButtonSize="Size.Small"
+                                CssClassGroup="d-flex gap-2">
+                    <P11ButtonRadioOption TValue="int" Value="0" Text="@_appState.T("None")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="1" Text="@_appState.T("Mild")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="2" Text="@_appState.T("Severe")" CssClass="rounded-pill" />
+                </P11ButtonRadio>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="py-2">
+                <span class="d-block mb-2" style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Headache")</span>
+                <P11ButtonRadio TValue="int"
+                                @bind-Value="_item_edit.headache"
+                                Label=""
+                                ButtonVariant="ButtonVariant.OutlinePrimary"
+                                ButtonSize="Size.Small"
+                                CssClassGroup="d-flex gap-2">
+                    <P11ButtonRadioOption TValue="int" Value="0" Text="@_appState.T("None")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="1" Text="@_appState.T("Mild")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="2" Text="@_appState.T("Severe")" CssClass="rounded-pill" />
+                </P11ButtonRadio>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="py-2">
+                <span class="d-block mb-2" style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Fatigue")</span>
+                <P11ButtonRadio TValue="int"
+                                @bind-Value="_item_edit.fatigue"
+                                Label=""
+                                ButtonVariant="ButtonVariant.OutlinePrimary"
+                                ButtonSize="Size.Small"
+                                CssClassGroup="d-flex gap-2">
+                    <P11ButtonRadioOption TValue="int" Value="0" Text="@_appState.T("None")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="1" Text="@_appState.T("Mild")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="2" Text="@_appState.T("Severe")" CssClass="rounded-pill" />
+                </P11ButtonRadio>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="py-2">
+                <span class="d-block mb-2" style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Nausea")</span>
+                <P11ButtonRadio TValue="int"
+                                @bind-Value="_item_edit.nausea"
+                                Label=""
+                                ButtonVariant="ButtonVariant.OutlinePrimary"
+                                ButtonSize="Size.Small"
+                                CssClassGroup="d-flex gap-2">
+                    <P11ButtonRadioOption TValue="int" Value="0" Text="@_appState.T("None")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="1" Text="@_appState.T("Mild")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="2" Text="@_appState.T("Severe")" CssClass="rounded-pill" />
+                </P11ButtonRadio>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="py-2">
+                <span class="d-block mb-2" style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Cramps - abdominal pain")</span>
+                <P11ButtonRadio TValue="int"
+                                @bind-Value="_item_edit.cramps"
+                                Label=""
+                                ButtonVariant="ButtonVariant.OutlinePrimary"
+                                ButtonSize="Size.Small"
+                                CssClassGroup="d-flex gap-2">
+                    <P11ButtonRadioOption TValue="int" Value="0" Text="@_appState.T("None")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="1" Text="@_appState.T("Mild")" CssClass="rounded-pill" />
+                    <P11ButtonRadioOption TValue="int" Value="2" Text="@_appState.T("Severe")" CssClass="rounded-pill" />
+                </P11ButtonRadio>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="py-2">
+                <span class="d-block mb-2" style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Notes")</span>
+                <div style="padding: 0.75rem; border-radius: 16px;">
+                    <P11Textarea TValue="string"
+                                 Label=""
+                                 Description=""
+                                 Rows="2"
+                                 Placeholder="@_appState.T("Additional notes, symptom description...")"
+                                 @bind-Value="_item_edit.Details" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    [Parameter]
+    public Models.CyclesModel? CycleData { get; set; }
+
+    [Parameter]
+    public EventCallback<Func<Task>> OnProvideSaveAction { get; set; }
+
+    [Parameter]
+    public EventCallback<Func<Task>> OnProvideCancelAction { get; set; }
+
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.CyclesService? _cyclesService { get; set; }
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    private pFemmeExample.Shared.Models.CyclesModel _item_edit { get; set; } = new();
+    private pFemmeExample.Shared.Models.CyclesModel _item_original { get; set; } = new();
+
+    private List<pFemmeExample.Shared.Models.CyclesModel> list { get; set; } = new();
+
+    private CyclesModel formModel = new CyclesModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Daten laden
+        if (CycleData != null)
+        {
+            // Erzeuge zwei völlig voneinander entkoppelte Klone für das Tracking
+            _item_edit = (Models.CyclesModel)CycleData.Clone();
+            _item_original = (Models.CyclesModel)CycleData.Clone();
+        }
+
+        // Wir "registrieren" die HandleSave/Cancel-Methode beim Parent (Modal)
+        if (OnProvideSaveAction.HasDelegate)
+        {
+            await OnProvideSaveAction.InvokeAsync(OnSave);
+        }
+        if (OnProvideCancelAction.HasDelegate)
+        {
+            await OnProvideCancelAction.InvokeAsync(OnClose);
+        }
+    }
+
+    private bool IsDirty()
+    {
+        if (_item_edit == null || _item_original == null) return false;
+        return !_item_edit.Equals(_item_original);
+    }
+
+    private async Task OnClose()
+    {
+        if (IsDirty())
+        {
+            // Nutze den P11 MessageBoxService für die Abfrage im White-Label-Design
+            MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+                 title: _appState.T("Save data?"),
+                 message: _appState.T("Data has been modified. Do you want to save the changes?"),
+                 yestext: _appState.T("Yes"),
+                 notext: _appState.T("No")
+             );
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    await OnSave();
+                    return;
+                case MessageBoxResult.No:
+                case MessageBoxResult.None:
+                    break;
+            }
+        }
+
+        // Wenn nicht Dirty oder User zugestimmt hat: Sicher schließen
+        await _eventAggregatorProject.ChangeModalNativeAsync(Services.EventAggregatorProject.ModalNativeProjectType.Cycle, false);
+    }
+
+    // private async Task OnSave(CyclesModel item)
+    private async Task OnSave()
+    {
+        try
+        {
+            if (!_item_edit.bleeding) _item_edit.intensity = 0;
+
+            var result = await _cyclesService!.Save(_item_edit);
+
+            if (result != null && string.IsNullOrEmpty(result.out_err))
+            {
+                _item_edit = new();
+
+                // Message
+                await _eventAggregatorProject.RefreshingCyclesCal();
+
+                // Rout Close-Event
+                await _eventAggregatorProject.ChangeModalNativeAsync(Services.EventAggregatorProject.ModalNativeProjectType.Cycle, false);
+            }
+            else
+            {
+                string err = result?.out_err ?? string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T("An unexpected error occurred.") +
+                             (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Description") + ": " + err)
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState.T("Error"),
+                message: _appState.T("An unexpected error has occurred. Please contact support.") +
+                         " " + _appState.T("Info") + ": " + BlazorCore.ErrorHelper.GetErrorContext(ex.Message)
+            );
+        }
+    }
+
+
+}

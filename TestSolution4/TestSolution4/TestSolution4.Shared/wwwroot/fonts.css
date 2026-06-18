@@ -1,0 +1,416 @@
+
+/* Comfortaa */
+@font-face {
+    font-family: 'Comfortaa';
+    src: url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Medium.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Comfortaa';
+    src: url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Comfortaa';
+    src: url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Light.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Comfortaa';
+    src: url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Comfortaa';
+    src: url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-SemiBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Comfortaa/Comfortaa-SemiBold.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+/* Comfortaa */
+
+/* Cinzel */
+@font-face {
+    font-family: 'Cinzel';
+    src: url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Medium.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cinzel';
+    src: url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Black.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cinzel';
+    src: url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cinzel';
+    src: url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-ExtraBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-ExtraBold.woff') format('woff');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cinzel';
+    src: url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-SemiBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-SemiBold.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cinzel';
+    src: url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cinzel/Cinzel-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+/* Cinzel */
+
+/* OpenDyslexic */
+@font-face {
+    font-family: 'OpenDyslexicAlta';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexicMono';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicMono-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicMono-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-Italic.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-Italic.woff') format('woff');
+    font-weight: 500;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexicAlta';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexicAlta';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-BoldItalic.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-BoldItalic.woff') format('woff');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexicAlta';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-Italic.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexicAlta-Italic.woff') format('woff');
+    font-weight: 500;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-BoldItalic.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-BoldItalic.woff') format('woff');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Dyslexic/OpenDyslexic-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+/* OpenDyslexic */
+
+/* Atkinson Hyperlegible */
+@font-face {
+    font-family: 'Atkinson Hyperlegible';
+    src: url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Italic.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Italic.woff') format('woff');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Atkinson Hyperlegible';
+    src: url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Atkinson Hyperlegible';
+    src: url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Atkinson Hyperlegible';
+    src: url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-BoldItalic.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/AtkinsonHyperlegible/AtkinsonHyperlegible-BoldItalic.woff') format('woff');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+/* Atkinson Hyperlegible */
+
+/* Lexend */
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Black.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-ExtraBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-ExtraBold.woff') format('woff');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Light.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-ExtraLight.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-ExtraLight.woff') format('woff');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Medium.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-SemiBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-SemiBold.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Lexend';
+    src: url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Thin.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Lexend/Lexend-Thin.woff') format('woff');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+/* Lexend */
+
+/* Amiri Quran */
+@font-face {
+    font-family: 'Amiri Quran';
+    src: url('/_content/TestSolution4.Shared/fonts/AmiriQuran/AmiriQuran-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/AmiriQuran/AmiriQuran-Regular.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+/* Amiri Quran */
+
+/* Cairo */
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-ExtraLight.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-ExtraLight.woff') format('woff');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-ExtraBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-ExtraBold.woff') format('woff');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Light.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Black.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Medium.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-SemiBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-SemiBold.woff') format('woff');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cairo';
+    src: url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Cairo/Cairo-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+/* Cairo */
+
+/* Tajawal */
+@font-face {
+    font-family: 'Tajawal';
+    src: url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Bold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    src: url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Black.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    src: url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Regular.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    src: url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Light.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Light.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    src: url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-ExtraLight.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-ExtraLight.woff') format('woff');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    src: url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Medium.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    src: url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-ExtraBold.woff2') format('woff2'), url('/_content/TestSolution4.Shared/fonts/Tajawal/Tajawal-ExtraBold.woff') format('woff');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+/* Tajawal */
+
+
+
+/* DEFAUL */
+:root {
+    --bs-body-font-family: 'Comfortaa', serif !important;
+    --bs-headings-font-family: 'Comfortaa', serif !important;
+}

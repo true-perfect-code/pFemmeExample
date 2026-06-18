@@ -1,0 +1,42 @@
+/* -------------------------------------------- */
+/* VARIABLES MONOCHROME THEME                   */
+/* -------------------------------------------- */
+:root {
+    /* true perfect code (tpc) */
+    --tpc-btn-color: #FFF !important; /* Weiss */
+    --tpc-btn-color-active: #FFF !important; /* Weiss */
+    --tpc-btn-color-hover: #f0f0f0 !important; /* Weiss hell */
+    --tpc-btn-background: #333 !important; /* Dunkel */
+    --tpc-btn-background-active: #a3a3a3 !important; /* Dunkel heller */
+    --tpc-btn-background-hover: #4a4a4a !important; /* Dunkel heller*/
+    --tpc-btn-focus-shadow-rgb: 0 4px 12px rgba(191, 190, 187, 0.4) !important; /* Weiss */
+    --tpc-btn-hover-shadow-rgb: 0 4px 12px rgba(191, 190, 187, 0.4) !important; /* Weiss */
+    --tpc-btn-border-radius: 6px !important; /* Gerundete buttons */
+    --tpc-body: #FFF !important; /* Weiss */
+    --tpc-background: #333 !important; /* Dunkel */
+    --tpc-background-checked: #333 !important; /* Dunkel */
+    --tpc-background-active: #a3a3a3 !important; /* Dunkel heller */
+    --tpc-text-color: #000 !important; /* Schwarz */
+    --tpc-text-color-hover: #000 !important; /* Schwarz */
+    --tpc-border-color: #8f8f8f !important; /* Grau */
+    --tpc-border-color-focus: #6b6b6b !important; /* Grau tiefer */
+    --tpc-border-color-active: #6b6b6b !important; /* Grau tiefer */
+    --tpc-border-color-hover: #7a7a7a !important; /* Grau tiefer */
+    --tpc-border-color-checked: #525252 !important; /* Grau tiefer */
+    /* Bootstrap */
+    --bs-body-bg: var(--tpc-body) !important;
+    --btn-shadow: var(--tpc-btn-focus-shadow-rgb) !important;
+    --btn-hover-shadow: var(--tpc-btn-hover-shadow-rgb) !important;
+}
+
+.tpc-landing-hero-bg {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-form-bg-01 {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-img {
+    filter: grayscale(100%) !important;
+}

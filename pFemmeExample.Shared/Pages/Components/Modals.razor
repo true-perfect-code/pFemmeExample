@@ -1,0 +1,819 @@
+﻿@using BlazorCore.Services.EventAggregator
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using pFemmeExample.Shared.Services.EventAggregatorProject
+
+<AuthorizeView>
+    <Authorized Context="context">
+
+        @* C A L E N D A R *@
+        @if (_home.IsOpenModalCyclesCal)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalCyclesCal" OnClose="() => { }"
+                            Id="@_home.IdCyclesCal"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1CyclesCal"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1CyclesCal" class="modal-title">@_appState!.T("Cycles Calendar")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Components.CyclesCal />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* C Y C L E *@
+        @if (_home.IsOpenModalCycle)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalCycle" OnClose="_func.CancelCycle!"
+                            Id="@_home.IdCycle"
+                            ShowCloseButton="false"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1Cycle"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderAction>
+                    @switch (_appState!.NativeDeviceType)
+                    {
+                        case NativeDevice.IPHONE:
+                            <button class="btn btn-link p-0 text-decoration-none fw-bold" style="color: #007aff; font-size: 1rem;" @onclick="_func.SaveCycle!">@_appState.T("Save")</button>
+                            break;
+
+                        case NativeDevice.ANDROID:
+                            <button class="btn btn-link text-dark p-1" @onclick="_func.SaveCycle!"><i class="bi bi-floppy fs-4"></i></button>
+                            break;
+                    }
+                </HeaderAction>
+                <HeaderContent>
+                    <h5 id="modalTitle1Cycle" class="modal-title">@_appState!.T("Cycle")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Components.Cycle CycleData="@_home.SelectedCycle"
+                                                          OnProvideSaveAction="@(action => _func.SaveCycle = action)"
+                                                          OnProvideCancelAction="@(action => _func.CancelCycle = action)" />
+
+                </BodyContent>
+                <FooterContent>
+                    <div class="d-flex justify-content-end gap-2 w-100">
+                        @if (_appState.NativeDeviceType == NativeDevice.MAC)
+                        {
+                            <button class="btn btn-sm btn-outline-secondary rounded-2 px-3 border-secondary-subtle text-dark" style="font-size: 0.85rem; min-width: 80px;" @onclick="_func.CancelCycle!">@_appState.T("Cancel")</button>
+                            <button class="btn btn-sm btn-primary rounded-2 px-3 shadow-sm" style="font-size: 0.85rem; min-width: 80px;" @onclick="_func.SaveCycle!">@_appState.T("Save")</button>
+                        }
+                        else if (_appState!.NativeDeviceType == NativeDevice.WEB || _appState!.NativeDeviceType == NativeDevice.WINDOWS)
+                        {
+                            <button class="btn btn-secondary" @onclick="_func.CancelCycle!">@_appState.T("Cancel")</button>
+                            <button class="btn btn-primary px-4" @onclick="_func.SaveCycle!">@_appState.T("Save")</button>
+                        }
+                    </div>
+                </FooterContent>
+            </P11ModalNative>
+        }
+
+        @* A S K   A I *@
+        @if (_home.IsOpenModalAskAI)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalAskAI" OnClose="() => { }"
+                            Id="@_home.IdAskAI"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1AskAI"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1AskAI" class="modal-title">@_appState!.T("Ask AI")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Components.AskAI />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* D A T A  I N F O S *@
+        @if (_home.IsOpenModalCyclesInfo)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalCyclesInfo" OnClose="() => { }"
+                            Id="@_home.IdCyclesInfo"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1CyclesInfo"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1CyclesInfo" class="modal-title">@_appState!.T("Cycles Info")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Components.CyclesInfo />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* S Y N C H R O N I Z A T I O N  *@
+        @if (_home.IsOpenModalSynchronization)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalSynchronization" OnClose="() => { }"
+                            Id="@_home.IdSynchronization"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1Synchronization"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1Synchronization" class="modal-title">@_appState!.T("Synchronization")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Components.Synchronization />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+
+
+
+        @* A C C O U N T *@
+        @if (_home.IsOpenModalAccount)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalAccount" OnClose="() => { }"
+                            Id="@_home.IdAccount"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1Account"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1Account" class="modal-title">@_appState.T("Account")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    @* <pFemmeExample.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelpAccount = true"
+                                                              OnClickOpenDokuInfo="() => _home.IsOpenHelp2FA = true" /> *@
+
+                    <pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationForm OnChangeVisible="(bool visible) => _home.IsOpenModalAccount = visible"
+                                                                                  OnClickCancel="() => _home.IsOpenModalAccount = false"
+                                                                                  OnClick2FASetup="OnClick_Open2FASetup"
+                                                                                  OnClick2FARevoke="OnClick_Open2FARevoke"
+                                                                                  CssClassModalContent="tpc-form-bg-01" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* S E T T I N G S *@
+        @if (_home.IsOpenModalSettings)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalSettings" OnClose="() => { }"
+                            Id="@_home.IdSettings"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1Settings"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderAction>
+                    @switch (_appState!.NativeDeviceType)
+                    {
+                        case NativeDevice.IPHONE:
+                            <button class="btn btn-link p-0 text-decoration-none fw-bold" style="color: #007aff; font-size: 1rem;" @onclick="_func.SaveSettings!">@_appState.T("Save")</button>
+                            break;
+
+                        case NativeDevice.ANDROID:
+                            <button class="btn btn-link text-dark p-1" @onclick="_func.SaveSettings!"><i class="bi bi-check2 fs-4"></i></button>
+                            break;
+                    }
+                </HeaderAction>
+                <HeaderContent>
+                    <h5 id="modalTitle1Settings" class="modal-title">@_appState.T("Settings")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    @* <pFemmeExample.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelpSettings = true" /> *@
+
+                    <pFemmeExample.Shared.Pages.Common.AppState.AppStateSettings OnProvideSaveAction="@(action => _func.SaveSettings = action)" OnClickCancel="() => _home.IsOpenModalSettings = false" />
+
+                </BodyContent>
+
+                <FooterContent>
+                    <div class="d-flex justify-content-end gap-2 w-100">
+                        @if (_appState.NativeDeviceType == NativeDevice.MAC)
+                        {
+                            @* <button class="btn btn-sm btn-outline-secondary rounded-2 px-3 border-secondary-subtle text-dark" style="font-size: 0.85rem; min-width: 80px;" @onclick="_func.CancelCycle!">@_appState.T("Cancel")</button> *@
+                            <button class="btn btn-sm btn-primary rounded-2 px-3 shadow-sm" style="font-size: 0.85rem; min-width: 80px;" @onclick="_func.SaveSettings!">@_appState.T("Save")</button>
+                        }
+                        else if (_appState!.NativeDeviceType == NativeDevice.WEB || _appState!.NativeDeviceType == NativeDevice.WINDOWS)
+                        {
+                            @* <button class="btn btn-secondary" @onclick="_func.CancelCycle!">@_appState.T("Cancel")</button> *@
+                            <button class="btn btn-primary px-4" @onclick="_func.SaveSettings!">@_appState.T("Save")</button>
+                        }
+                    </div>
+                </FooterContent>
+
+            </P11ModalNative>
+        }
+
+        @* D O N A T E *@
+        @if (_home.IsOpenModalDonate)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalDonate" OnClose="() => { }"
+                            Id="@_home.IdDonate"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle1Donate"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1Donate" class="modal-title">@_appState!.T("Donate")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Common.Donate OnClose="@(() => _home.IsOpenModalDonate = false)" CssClassModalContent="tpc-form-bg-01" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* 2 F A   S E T U P *@
+        @if (_home.IsOpenModal2FASetup)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModal2FASetup" OnClose="() => { }"
+                            Id="@_home.Id2FASetup"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle12FASetup"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle12FASetup" class="modal-title">@_appState.T("2FA / Otp Setup")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelp2FA = true" />
+
+                    <pFemmeExample.Shared.Pages.Common.Otp.OtpSetup OnClickCancel="() => _home.IsOpenModal2FASetup = false" QrWidth="250" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* 2 F A   R E V O K E *@
+        @if (_home.IsOpenModal2FARevoke)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModal2FARevoke" OnClose="() => { }"
+                            Id="@_home.Id2FARevoke"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitle12FARevoke"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle12FARevoke" class="modal-title">@_appState.T("2FA / Otp Revoke")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelp2FA = true" />
+
+                    <pFemmeExample.Shared.Pages.Common.Otp.Otp OnSecretEntered="OnClick_2FARevoke" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* H E L P   2 F A / 2 F A  R E V O K E *@
+        @if (_appState != null && _appState!.IsPhone)
+        {
+            @if (_home.IsOpenHelp2FA)
+            {
+                <P11ModalNative @bind-Visible="@_home.IsOpenHelp2FA" OnClose="async () => { }"
+                                Id="@_home.IdHelp2FA"
+                                IsHeaderHide="@_home.IsHeaderHide"
+                                IsFooterHide="@_home.IsFooterHide"
+                                NativeDevice="@_appState!.NativeDeviceType"
+                                ShowHeaderSeparator="true"
+                                CloseButtonText="@_appState.T("Back")"
+                                CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                                AriaLabelledby="specific-position-panel-settings"
+                                CssClassContent="tpc-form-bg-01"
+                                Size="Size.Large"
+                                ShowDevelopmentErrors="true">
+                    <HeaderContent>
+                        <h5 id="specific-position-panel-settings" class="modal-title">@_appState.T("Help 2FA")</h5>
+                    </HeaderContent>
+                    <BodyContent>
+
+                        <pFemmeExample.Shared.Pages.Help.Help2FA />
+
+                    </BodyContent>
+                </P11ModalNative>
+            }
+        }
+        else
+        {
+            <P11FloatingPanel Id="@_home.IdHelp2FA"
+                              Title="@_appState!.T("Help 2FA")"
+                              @bind-Visible="@_home.IsOpenHelp2FA"
+                              EnableDragDrop="true"
+                              OnClose="@(() => _home.IsOpenHelp2FA = false)">
+                <ChildContent>
+                    <pFemmeExample.Shared.Pages.Help.Help2FA />
+                </ChildContent>
+            </P11FloatingPanel>
+        }
+
+        @* I M P R E S S U M *@
+        @if (_home.IsOpenModalImprint)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalImprint" OnClose="() => { }"
+                            Id="@_home.IdImprint"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitleImpressum"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitleImpressum" class="modal-title">@_appState!.T("Imprint")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Common.ImprintCommon />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* D A T E N S C H U T Z *@
+        @if (_home.IsOpenModalPrivacy)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalPrivacy" OnClose="() => { }"
+                            Id="@_home.IdPrivacy"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitlePrivacy"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitlePrivacy" class="modal-title">@_appState!.T("Privacy")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Common.PrivacyCommon />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* A G B *@
+        @if (_home.IsOpenModalTerms)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalTerms" OnClose="() => { }"
+                            Id="@_home.IdTerms"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="modalTitleTerms"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitleTerms" class="modal-title">@_appState!.T("Terms")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <pFemmeExample.Shared.Pages.Common.TermsCommon />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+    </Authorized>
+    <NotAuthorized>
+
+    </NotAuthorized>
+</AuthorizeView>
+
+@* C O O K I E S *@
+@if (_home.IsOpenModalCookies)
+{
+    <pFemmeExample.Shared.Pages.Common.Cookies />
+}
+
+@* A B O U T *@
+@if (_home.IsOpenModalAbout)
+{
+    <P11ModalNative @bind-Visible="@_home.IsOpenModalAbout" OnClose="() => { }"
+                    Id="@_home.IdAbout"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitleAbout"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+        <HeaderContent>
+            <h5 id="modalTitleAbout" class="modal-title">@_appState!.T("About")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            <pFemmeExample.Shared.Pages.Common.About OnClose="@(() => _home.IsOpenModalAbout = false)" CssClassModalContent="tpc-form-bg-01" />
+
+        </BodyContent>
+    </P11ModalNative>
+}
+
+
+@code{
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Otp.IOtpBase? _otp { get; set; }
+
+    public HomeModel _home = new();
+    private FuncModel _func = new();
+
+    public class HomeModel
+    {
+        // Spezifisch
+        public List<List<string>> ContainerExportimport = new List<List<string>>();
+        public Common.Authentication.AuthenticationLogout? LogoutComponent;
+        public double CurrentWindowWidth = 0;
+        //public string Avatar = "_content/pE/img/avatar.jpg";
+
+        // Modals & Drawers
+        public bool IsOpenModalAdmin { get; set; } = false;
+        public bool IsOpenModalSettings { get; set; } = false;
+        public bool IsOpenDrawerMenu { get; set; } = false;
+        public bool IsOpenModalAccount { get; set; } = false;
+        public bool IsOpenModalSharing { get; set; } = false;
+        public bool IsOpenModal2FASetup { get; set; } = false;
+        public bool IsOpenModal2FARevoke { get; set; } = false;
+        public bool IsOpenModalExportImport { get; set; } = false;
+        public bool IsOpenModalImprint { get; set; } = false;
+        public bool IsOpenModalPrivacy { get; set; } = false;
+        public bool IsOpenModalTerms { get; set; } = false;
+        public bool IsOpenModalAbout { get; set; } = false;
+        public bool IsOpenModalDonate { get; set; } = false;
+        public bool IsOpenModalCyclesCal { get; set; } = false;
+        public bool IsOpenModalCycle { get; set; } = false;
+        public bool IsOpenModalAskAI { get; set; } = false;
+        public bool IsOpenModalCyclesInfo { get; set; } = false;
+        public bool IsOpenModalSynchronization { get; set; } = false;
+        public bool IsOpenModalCookies { get; set; } = false;
+
+        // Help
+        public bool IsOpenHelp { get; set; } = false;
+        public bool IsOpenHelpSettings { get; set; } = false;
+        public bool IsOpenHelpAccount { get; set; } = false;
+        public bool IsOpenHelpSharing { get; set; } = false;
+        public bool IsOpenHelpExportImport { get; set; } = false;
+        public bool IsOpenHelp2FA { get; set; } = false;
+
+        // Dropdown
+        public bool IsOpenDropdownAccount { get; set; } = false;
+
+        // IDs
+        public Guid IdDrawerMenu { get; set; } = Guid.NewGuid();
+        public Guid IdSettings { get; set; } = Guid.NewGuid();
+        public Guid IdAccount { get; set; } = Guid.NewGuid();
+        public Guid IdSharing { get; set; } = Guid.NewGuid();
+        public Guid IdExportImport { get; set; } = Guid.NewGuid();
+        public Guid Id2FASetup { get; set; } = Guid.NewGuid();
+        public Guid Id2FARevoke { get; set; } = Guid.NewGuid();
+        public Guid IdAdmin { get; set; } = Guid.NewGuid();
+        public Guid IdHelp { get; set; } = Guid.NewGuid();
+        public Guid IdHelpSettings { get; set; } = Guid.NewGuid();
+        public Guid IdHelpAccount { get; set; } = Guid.NewGuid();
+        public Guid IdHelpSharing { get; set; } = Guid.NewGuid();
+        public Guid IdHelpExportImport { get; set; } = Guid.NewGuid();
+        public Guid IdHelp2FA { get; set; } = Guid.NewGuid();
+        public Guid IdAbout { get; set; } = Guid.NewGuid();
+        public Guid IdImprint { get; set; } = Guid.NewGuid();
+        public Guid IdPrivacy { get; set; } = Guid.NewGuid();
+        public Guid IdTerms { get; set; } = Guid.NewGuid();
+        public Guid IdDonate { get; set; } = Guid.NewGuid();
+        public Guid IdCyclesCal { get; set; } = Guid.NewGuid();
+        public Guid IdCycle { get; set; } = Guid.NewGuid();
+        public Guid IdAskAI { get; set; } = Guid.NewGuid();
+        public Guid IdCyclesInfo { get; set; } = Guid.NewGuid();
+        public Guid IdSynchronization { get; set; } = Guid.NewGuid();
+        public Guid IdCookies { get; set; } = Guid.NewGuid();
+
+        // Allgemein
+        public bool IsHeaderHide { get; set; } = false;
+        public bool IsFooterHide { get; set; } = false;
+
+        // Data
+        public Models.CyclesModel? SelectedCycle { get; set; }
+
+    }
+
+    public class FuncModel
+    {
+        // Settings
+        public Func<Task>? SaveSettings;
+
+        // Export(Import
+        public Func<Task>? SaveExportImport;
+
+        // Cycle
+        public Func<Task>? SaveCycle;
+        public Func<Task>? CancelCycle;
+    }
+
+
+    protected override void OnInitialized()
+    {
+        _appState.UpdateIsRootPageLoaded(true);
+
+        _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+        //_appState.OnHideModalNativeHeaderFooter += HandleHideModalNativeHeaderFooter;
+
+        // Common
+        _eventAggregator.OnModalNativeChanged += HandleModalNativeChanged;
+
+        // Custom
+        _eventAggregatorProject.OnModalNativeChanged += HandleModalNativeProjectChanged;
+
+
+
+    }
+    public void Dispose()
+    {
+        _appState.Log("[BLAZOR Home.razor.cs Dispose] START");
+
+        _appState.UpdateIsRootPageLoaded(false);
+
+        _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+        //_appState.OnHideModalNativeHeaderFooter -= HandleHideModalNativeHeaderFooter;
+
+        // Common
+        _eventAggregator.OnModalNativeChanged -= HandleModalNativeChanged;
+
+        // Custom
+        _eventAggregatorProject.OnModalNativeChanged -= HandleModalNativeProjectChanged;
+
+        _appState.Log("[BLAZOR Home.razor.cs Dispose] START");
+    }
+
+    protected void HandleStateChange()
+    {
+        // InvokeAsync erzwingt den Wechsel auf den UI-Thread,
+        // bevor StateHasChanged ausgeführt wird.
+        InvokeAsync(StateHasChanged);
+
+        _appState!.Log($"[Blazor Home.razor] HandleStateChange, _appState.T(Add a new todo)", data: _appState.T("Add a new todo"));
+    }
+
+    #region Event-Aggregator
+    private async Task HandleModalNativeChanged(ModalNativeEventArgs e)
+    {
+        switch (e.Modal)
+        {
+            case ModalNativeType.About:
+                _home.IsOpenModalAbout = e.IsOpen ?? false;
+                break;
+
+            case ModalNativeType.Account:
+                _home.IsOpenModalAccount = e.IsOpen ?? false;
+                break;
+
+            case ModalNativeType.Settings:
+                _home.IsOpenModalSettings = e.IsOpen ?? false;
+                break;
+
+            case ModalNativeType.SettingsToggle:
+                _home.IsOpenModalSettings = !_home.IsOpenModalSettings;
+                break;
+
+            case ModalNativeType.Donate:
+                _home.IsOpenModalDonate = e.IsOpen ?? false;
+                break;
+
+            case ModalNativeType.Cookies:
+                _home.IsOpenModalCookies = e.IsOpen ?? false;
+                break;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleModalNativeProjectChanged(ModalNativeProjectEventArgs e)
+    {
+        switch (e.Modal)
+        {
+            case ModalNativeProjectType.CyclesCal:
+                _home.IsOpenModalCyclesCal = e.IsOpen ?? false;
+                break;
+
+            case ModalNativeProjectType.Cycle:
+                _home.IsOpenModalCycle = e.IsOpen ?? false;
+                if ((e.IsOpen ?? false) && e.Data != null && e.Data is Models.CyclesModel cycleData)
+                    _home.SelectedCycle = cycleData;
+                else
+                    await _eventAggregatorProject.FireAfterCycleData(); // If Cycle close is triggered, refresh trends
+                break;
+
+            case ModalNativeProjectType.AskAI:
+                _home.IsOpenModalAskAI = e.IsOpen ?? false;
+                break;
+
+            case ModalNativeProjectType.CyclesInfo:
+                _home.IsOpenModalCyclesInfo = e.IsOpen ?? false;
+                break;
+
+            case ModalNativeProjectType.Synchronization:
+                _home.IsOpenModalSynchronization = e.IsOpen ?? false;
+                break;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+    #endregion
+
+    #region Otp_2FA
+    protected async Task OnClick_Open2FASetup()
+    {
+        try
+        {
+            _home.IsOpenModalAccount = false;
+            StateHasChanged();
+
+            // Benutzer fragen, ob er sicher 2FA Setup starten will
+            MessageBoxResult result = await _messageBoxService.ShowYesNoCancelAsync(
+                title: _appState.T("2FA Setup"),
+                message: _appState.T("Have you completed all preparations for setting up 2FA (e.g., installed an authenticator app on your phone)?"),
+                yestext: _appState.T("Yes"),
+                notext: _appState.T("No"),
+                canceltext: _appState.T("More info")
+            );
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    _appState.UpdateIs2FAActivated(true);
+                    _home.IsOpenModal2FASetup = true;
+                    break;
+
+                case MessageBoxResult.No:
+                    _home.IsOpenModalAccount = true;
+                    break;
+
+                case MessageBoxResult.Cancel:
+                    await Task.Delay(700);
+                    _home.IsOpenModalAccount = true;
+                    _home.IsOpenHelp2FA = true;
+                    break;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    protected async Task OnClick_Open2FARevoke()
+    {
+        try
+        {
+            _home.IsOpenModalAccount = false;
+            StateHasChanged();
+            await Task.Delay(200);
+
+            _home.IsOpenModal2FARevoke = true;
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    protected async Task OnClick_2FARevoke((string OtpUserDigitInput, string OtpBackupCode, string Account, string Password) result)
+    {
+        if (_otp == null) return;
+
+        try
+        {
+            if (!string.IsNullOrEmpty(result.OtpUserDigitInput) || !string.IsNullOrEmpty(result.OtpBackupCode))
+            {
+                BlazorCore.Services.Otp.OtpParametersModel _otpParameters = new();
+                _otpParameters.OtpUserDigitInput = result.OtpUserDigitInput;
+                _otpParameters.OtpBackupCode = result.OtpBackupCode;
+                _otpParameters.Account = result.Account;
+                _otpParameters.Password = result.Password;
+                _otpParameters.AuthUsers_UnixTS = _appState.UnixTS;
+                var resultDelete = await _otp.DeleteOtpKey(_otpParameters);
+                if (resultDelete != null && string.IsNullOrEmpty(resultDelete.out_err) && resultDelete.out_value_str != null)
+                {
+                    if (resultDelete.out_value_str.Contains("updated:"))
+                    {
+                        await _toastService!.ShowSuccessAsync(_appState.T("Data has been successfully saved."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 1000);
+
+                        _appState.UpdateIs2FAActivated(false);
+                        _home.IsOpenModal2FARevoke = false;
+                        _home.IsOpenModalAccount = true;
+                        StateHasChanged();
+                        await Task.Delay(200);
+                    }
+                    else
+                    {
+                        _home.IsOpenModal2FARevoke = false;
+
+                        await _messageBoxService.ShowOkAsync(
+                            title: _appState.T("Warning"),
+                            message: _appState.T("2FA could not be disabled. If you have any problems, please contact support.")
+                        );
+                    }
+                }
+            }
+            else
+            {
+                _home.IsOpenModal2FARevoke = false;
+
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Warning"),
+                    message: _appState.T("2FA cannot be disabled because neither the backup code nor the 6-digit OTP code has been entered.")
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+    #endregion
+
+
+}

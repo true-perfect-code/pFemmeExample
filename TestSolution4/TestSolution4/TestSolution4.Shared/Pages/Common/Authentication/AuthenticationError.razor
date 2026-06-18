@@ -1,0 +1,234 @@
+﻿@using p11.UI
+
+@code {
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter]
+    public string ErrorCode { get; set; } = string.Empty;
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                if (string.IsNullOrWhiteSpace(ErrorCode))
+                    return;
+
+                // Enum aus String erzeugen
+                if (Enum.TryParse<BlazorCore.MSG_CODES>(ErrorCode, ignoreCase: true, out var code))
+                {
+                    await HandleMsgCodeAsync(code);
+                }
+                else if (int.TryParse(ErrorCode, out int raw))
+                {
+                    // alternativ: wenn backend mal Zahlen liefert
+                    if (Enum.IsDefined(typeof(BlazorCore.MSG_CODES), raw))
+                    {
+                        await HandleMsgCodeAsync((BlazorCore.MSG_CODES)raw);
+                    }
+                }
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task HandleMsgCodeAsync(BlazorCore.MSG_CODES value)
+    {
+        if (_appState != null)
+        {
+            switch (value)
+            {
+                case BlazorCore.MSG_CODES.no_userotp:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Warning"),
+                        message: _appState.T("2FA is enabled, but neither the OTP code nor the backup code has been entered.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_user:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Warning"),
+                        message: _appState.T("User account and/or password not found.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.locked:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Warning"),
+                        message: _appState.T("After 5 failed login attempts, you will be locked out for approximately 15 minutes. Please try again later.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.error_no_otp_empty:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Server not providing otp code. If you continue to experience problems, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.error_resetloginattempts:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("An error occurred while resetting the number of failed attempts for otp/2FA. If you have any problems, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.verifytotp_failed:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Warning"),
+                        message: _appState.T("2FA authentication failed. After 5 failed attempts, you will be locked out (lockout duration approx. 15 minutes).")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.error_selectotp:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("An error occurred while attempting to retrieve the OTP code from the database. If you continue to experience problems, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.deleteotp_failed:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Warning"),
+                        message: _appState.T("Disabling otp/2FA failed. After 5 failed attempts, you will be locked out (lockout duration approx. 15 minutes).")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.empty_email_passwordhash:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("User account hash and/or password hash are not available!")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.empty_secret:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("A secret key for OTP could not be generated. If problems persist, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.mssql_result_wrong_format:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Login return value is in the wrong format. If you encounter further problems, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.empty_mssql_result:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Database returns no results. If problems persist, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.empty_json:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Json data string is empty. If problems persist, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.record_exists_no_adding:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Warning"),
+                        message: _appState.T("The data record already exists.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_feedback_value:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Feedback request provides no value.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_feedback_result:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Feedback results provide no value.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_storeurl_value:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Store-Urls request provides no value.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_storeurl_result:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("Store-Urls results provide no value.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_case:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("An exception occurred in a case split that was not handled. If problems persist, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_connection:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("There is no connection to the database. If you continue to experience problems, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_result:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("A database request returns no results! If you continue to experience problems, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.empty_pollingid:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("The pooling ID is missing from the database! If you are unable to log in via an external provider, please contact support.")
+                    );
+                    break;
+
+                case BlazorCore.MSG_CODES.no_userid:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("The user ID could not be determined. If you encounter any problems, please contact support.")
+                    );
+                    break;
+
+                default:
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T("An error has occurred. Description:") + " " + value
+                    );
+                    break;
+            }
+        }
+    }
+
+
+}

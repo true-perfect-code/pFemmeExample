@@ -1,0 +1,1415 @@
+﻿@using Microsoft.JSInterop
+@using System.Text.Json
+@using p11.UI
+@using p11.UI.Services
+@using BlazorCore.Services.Authentication
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
+@inject IServiceProvider ServiceProvider
+
+
+@if (!IsOpenButtonHidden)
+{
+    <P11Button CssClass="@CssClassButton" Text="@LoginText" OnClick="() => Visible = true" />
+}
+
+@if (Visible)
+{
+    <P11ModalNative @bind-Visible="Visible" OnClose="OnCloseModal"
+                    Id="@_idGuid"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    CssClassContent="@CssClassModalContent"
+                    AriaLabelledby="modalTitleLogin"
+                    ShowDevelopmentErrors="true"
+                    Size="Size.Medium"
+                    ShowHeaderSeparator="true"
+                    Position="ModalPosition.Centered"
+                    CloseOnOutsideClick="false"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    ShowCloseButton="true">
+
+        <HeaderContent>
+            <h5 id="modalTitleLogin" class="modal-title">@_appState!.T("Login")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            @if (MsgCodes != BlazorCore.MSG_CODES.Unknown && MsgCodes != BlazorCore.MSG_CODES.no_user)
+            {
+                <BlazorCore.Pages.AlertMsgCodes MsgCode="@MsgCodes" OnFinished="() => MsgCodes = BlazorCore.MSG_CODES.Unknown" />
+            }
+
+            @if (VisibleLanguageSelection && _appState?.Catalog.Languages != null)
+            {
+                <label for="idLanguage" class="form-label">@_appState!.T("Select a language")</label>
+                <P11Select TItem="string" TValue="string"
+                           Id="idLanguage"
+                           @bind-Value="Login.Language"
+                           name="language"
+                           PlaceholderText="@_appState!.T("Select a language")"
+                           AriaLabel="@_appState!.T("Select a language")"
+                           ValidationFor="() => LoginModel.Language">
+                    @foreach (var lang in _appState.Catalog.Languages)
+                    {
+                        <option value="@lang.Key">@lang.Value</option>
+                    }
+                </P11Select>
+                <hr />
+            }
+
+            @if (_appState != null && _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)
+            {
+                <Component />
+            }
+
+            @if (_appState!.IsCloudConnected)
+            {
+                <P11AccordionNative CssClassSummary="d-flex justify-content-between align-items-center p-3 cursor-pointer">
+                    <Title>
+                        <span>@_appState!.T("Sign in with") <img src="/_content/BlazorCore/img/ips.jpg" style="margin-left: 25px; margin-bottom: 3px;" alt="identity providers" height="30"></span>
+                    </Title>
+                    <ChildContent>
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <P11Button IsDisabled="@(_appState != null && _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)" HtmlType="HtmlType.Button" style="width: 110px;" Text="@_appState!.T("Microsoft")" OnClick="@(async () => { Login.Idp = IdentityProvider.Microsoft; await OnLoginClicked(); })" ButtonVariant="ButtonVariant.Primary" />
+                            <P11Button IsDisabled="@(_appState != null && _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)" HtmlType="HtmlType.Button" style="width: 110px;" Text="@_appState!.T("Google")" OnClick="@(async () => { Login.Idp = IdentityProvider.Google; await OnLoginClicked(); })" ButtonVariant="ButtonVariant.Primary" />
+                            <P11Button IsDisabled="@(_appState != null && _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)" HtmlType="HtmlType.Button" style="width: 110px;" Text="@_appState!.T("Apple")" OnClick="@(async () => { Login.Idp = IdentityProvider.Apple; await OnLoginClicked(); })" ButtonVariant="ButtonVariant.Primary" />
+                        </div>
+                    </ChildContent>
+                </P11AccordionNative>
+            }
+
+            <P11AccordionNative CssClassSummary="d-flex justify-content-between align-items-center p-3 cursor-pointer" CssClass="mt-3">
+                <Title>
+                    <span>@_appState!.T("Sign in anonymously")</span>
+                </Title>
+                <ChildContent>
+
+                    @if (!(_appState!.IsNativeApp ?? false))
+                    {
+                        <script>
+                            window.loginHelper = {
+                                submitLoginForm: function () {
+                                    const form = document.getElementById("idLoginForm");
+                                    if (form) {
+                                        form.submit(); // echtes HTML Submit
+                                    }
+                                }
+                            }
+                        </script>
+                        <!-- Diese Form sendet die Daten direkt an den Endpunkt -->
+                        <form id="idLoginForm" action="@ApiEndpoint" method="post">
+                            <P11Input Label="@_appState!.T("Account")"
+                                      id="account"
+                                      Name="account"
+                                      autocomplete="off"
+                                      @bind-Value="Login.Account"
+                                      placeholder="@_appState!.T("Please enter your account name.")" />
+
+                            <P11Input Label="@_appState!.T("Password")"
+                                      id="idPassword"
+                                      Name="password"
+                                      autocomplete="off"
+                                      @bind-Value="Login.Password"
+                                      placeholder="@_appState!.T("Please enter your password.")"
+                                      InputType="password" />
+
+                            <P11Checkbox @bind-Value="Login.Register"
+                                         Label="@(_appState!.T("Register") + (_isDisabled ? " " + _appState!.T("internet required") : ""))"
+                                         Disabled="@_isDisabled"
+                                         name="register" />
+
+                            @if (Login.Register)
+                            {
+                                <P11Checkbox @bind-Value="Login.Termseula"
+                                             Disabled="@_isDisabled"
+                                             Label="@(_appState!.T("I have read and accept the Terms-Conditions and the License Agreement below.") + (_isDisabled ? " " + _appState!.T("internet required") : ""))"
+                                             name="termseula" />
+                            }
+
+                            <P11Input id="otpuserdigitinput"
+                                      InputType="hidden"
+                                      Name="otpuserdigitinput"
+                                      autocomplete="off"
+                                      @bind-Value="Login.OtpUserDigitInput" />
+
+                            <P11Input id="otpbackupcode"
+                                      InputType="hidden"
+                                      Name="otpbackupcode"
+                                      autocomplete="off"
+                                      @bind-Value="Login.OtpBackupCode" />
+
+                            <div class="mt-4 d-flex justify-content-end gap-2">
+                                <P11Button Text="@(Login.Register? _appState!.T("Register") : _appState!.T("Login"))"
+                                           OnClick="OnLoginClickedHtmlForm"
+                                           CssClass="btn btn-primary"
+                                           IsLoading="@_isLoadingLoginButton"
+                                           ButtonVariant="ButtonVariant.Primary"
+                                           IsDisabled="@(Login.Register && !Login.Termseula)" />
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <!-- Der Blazor MAUI-Teil bleibt unverändert, da hier die C#-Logik ausgeführt werden soll -->
+                        <div>
+                            <EditForm Model="Login" OnValidSubmit="OnLoginClicked">
+
+                                <DynamicValidationValidator TextSelectLanguage="@_appState!.T("Please select a language.")"
+                                                            TextAccountRequired="@_appState!.T("Account is required.")"
+                                                            TextPasswordRequired="@_appState!.T("Password is required.")" />
+
+                                <P11Input Label="@_appState!.T("Account")"
+                                          id="idAccount"
+                                          name="account"
+                                          autocomplete="username"
+                                          @bind-Value="Login.Account"
+                                          placeholder="@_appState!.T("Please enter your account name.")"
+                                          InputType="text"
+                                          ValidationFor="() => Login.Account" />
+                                <ValidationMessage For="() => Login.Account" />
+
+                                <P11Input Label="@_appState!.T("Password")"
+                                          id="idPassword"
+                                          name="password"
+                                          autocomplete="current-password"
+                                          @bind-Value="Login.Password"
+                                          placeholder="@_appState!.T("Please enter your password.")"
+                                          InputType="password"
+                                          ValidationFor="() => Login.Password" />
+                                <ValidationMessage For="() => Login.Password" />
+
+                                <P11Checkbox @bind-Value="Login.Register"
+                                             Disabled="@_isDisabled"
+                                             Label="@(_appState!.T("Register") + (_isDisabled ? " " + _appState!.T("internet required") : ""))"
+                                             name="register" />
+
+                                @if (Login.Register)
+                                {
+                                    <P11Checkbox @bind-Value="Login.Termseula"
+                                                 Disabled="@_isDisabled"
+                                                 Label="@(_appState!.T("I have read and accept the Terms-Conditions and the License Agreement below.") + (_isDisabled ? " " + _appState!.T("internet required") : ""))"
+                                                 name="termseula" />
+                                }
+
+                                <div class="mt-4 d-flex justify-content-end gap-2">
+                                    <P11Button Text="@(Login.Register? _appState!.T("Register") : _appState!.T("Login"))"
+                                               HtmlType="HtmlType.Submit"
+                                               IsDisabled="@(Login.Register && !Login.Termseula ? true : false)"
+                                               ButtonVariant="ButtonVariant.Primary"
+                                               IsLoading="@_isLoadingLoginButton"
+                                               OnClick="@(e => { })" />
+                                </div>
+                            </EditForm>
+                        </div>
+                    }
+
+                    <!-- Terms / EULA -->
+                    @if (Login.Register)
+                    {
+                        <AuthenticationTermsEula Visible="@Login.Register" IsAcceptButtonHidden="true" />
+                    }
+
+                </ChildContent>
+            </P11AccordionNative>
+
+        </BodyContent>
+    </P11ModalNative>
+}
+
+@code {
+    [Inject] 
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Otp.IOtpBase? _otp { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+
+    [Inject] 
+    private BlazorCore.Services.LocalQueryExecutor.ILocalQueryExecutor? _localQueryExecutor { get; set; }
+
+    [Inject] 
+    private BlazorCore.Services.LocalStorage.ILocalStorage? _localStorage { get; set; }
+
+    [Inject] 
+    private BlazorCore.Services.LocalJsonFile.ILocalJsonFile? _localJsonFile { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Authentication.IAuthenticationBase? _authentication { get; set; }
+
+    [Inject]
+    private NavigationManager? _navigationManager { get; set; }
+
+    [Inject]
+    private IMessageBoxService? _messageBoxService { get; set; }
+
+    [Inject]
+    private IJSRuntime? _jsRuntime { get; set; }
+
+
+
+    [Parameter] public string? LoginText { get; set; }
+
+    [Parameter] public string CssClassButton { get; set; } = "";
+
+    [Parameter] public bool Visible { get; set; } = false;
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public bool IsOpenButtonHidden { get; set; } = false;
+    [Parameter] public LoginModel Login { get; set; } = new();
+    [Parameter] public bool EnableRegister { get; set; } = false;
+    [Parameter] public bool VisibleLanguageSelection { get; set; } = false;
+
+    //[Parameter] public bool UseNativeFeatures { get; set; } = false;
+    [Parameter] public bool CustomizedLoginFlow { get; set; } = false;
+
+    [Parameter] public EventCallback<LoginModel> OnLogin { get; set; }
+
+    [Parameter] public string ApiEndpoint { get; set; } = "/api/login";
+    [Parameter] public string NavigateTo { get; set; } = "/";
+
+    [Parameter] public string CssClassModalContent { get; set; } = "";
+    [Parameter] public BackgroundVariant AccordionHeaderBackgroundVariant1 { get; set; } = BackgroundVariant.Light;
+    [Parameter] public BackgroundVariant AccordionHeaderBackgroundVariant2 { get; set; } = BackgroundVariant.Light;
+
+    private Guid _idGuid = Guid.NewGuid();
+    private bool _isDisabled = false;
+    private bool _isLoadingLoginButton = false;
+    //private BlazorCore.Services.Realm.IRealmBase? _realm;
+    private HubConnection? _hubConnection;
+    private CancellationTokenSource? _pollingCts; // Hierher verschieben!
+    private BlazorCore.MSG_CODES MsgCodes = BlazorCore.MSG_CODES.Unknown;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(10);
+
+        if(LoginText  == null)
+        {
+            LoginText = _appState!.T("Login");
+        }
+
+        _eventAggregator!.RoutesStateHasChanged(); // Wegen der Anzeige vom Loading-Status auf Routes.razor
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Durch ?. wird nur aufgerufen, wenn nicht null. 
+        // Das ist threadsicherer als ein separates if-Statement.
+
+        if (_hubConnection != null)
+        {
+            try 
+            {
+                await _hubConnection.StopAsync();
+                await _hubConnection.DisposeAsync();
+            } catch { /* Ignorieren beim Schließen */ }
+        }
+
+        _pollingCts?.Cancel();
+        _pollingCts?.Dispose();
+
+        _hubConnection = null;
+        _pollingCts = null;
+    }
+
+    public async Task OnLoginClicked()
+    {
+        if (_appState?.Catalog.LocalStorage == null || _platformStorage == null || _otp == null || _globalState == null) return;
+
+        // JS-LOG
+        await _appState!.Log("[AuthenticationLogin OnLoginClicked] START");
+        await _appState.Log($"[AuthenticationLogin OnLoginClicked] User account={Login.Account}");
+        await _appState.Log($"[AuthenticationLogin OnLoginClicked] Is register={Login.Register}");
+        await _appState.Log($"[AuthenticationLogin OnLoginClicked] Terms/eula={Login.Termseula}");
+        await _appState.Log($"[AuthenticationLogin OnLoginClicked] IdP={Login.Idp}");
+        await _appState.Log($"[AuthenticationLogin OnLoginClicked] IsNativeApp={_appState!.IsNativeApp}");
+        await _appState.Log($"[AuthenticationLogin OnLoginClicked] IsInternetConnected={_appState.IsInternetConnected}");
+        await _appState.Log($"[AuthenticationLogin OnLoginClicked] StorageLocation={_appState.StorageLocation}");
+
+        try
+        {
+            // Falls Useraccount vorhanden, in die AppState legen, damit lokale DB verschlüsselt werden kann
+            if (_appState != null && !string.IsNullOrEmpty(Login.Account))
+            {
+                // Zufallsgenerator initialisieren, da Useraccount hier bekannt
+                // Bemerkung:   Gilt nur für Capacitor, WebApi und Web werden über 
+                //              'pE.Utility.UnixTsGeneratorWebApi.Generate();' generiert,
+                //              da dort kein lokaler Useraccount bekannt ist und DeviceID immer gleich ist (Server)  
+                _appState.InitializeUnixTSUser(Login.Account);
+                _appState.InitializeUnixTSDeviceId(_platform!.GetDeviceInfo());
+
+                _appState.UpdateUserAccount(Login.Account);
+            }
+
+            if (!CustomizedLoginFlow) // Falls Login nicht hier erfolgen soll sondern im Parent
+            {
+                _isLoadingLoginButton = true;
+                StateHasChanged();
+
+                // Identity Provider wegen 2FA Anzeige hier setzen
+                _appState!.UpdateIdP(Login.Idp.ToString().ToLower());
+
+                if (_globalState != null && (_appState!.IsNativeApp ?? false) && Login.Idp != BlazorCore.Services.Authentication.IdentityProvider.TPC)
+                {
+                    // Identity Provider in SecureStorage setzen. ACHTUNG: hier ohne SecureStorageID, weil AppState.SecureStorageID nicht initialisiert ist!
+                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.idp, ((int)Login.Idp).ToString());
+
+                    // Gerätart und Plattform ermitteln
+                    string deviceTypePlatform = await _platform!.GetIdiomPlatform(); // z.B. "Desktop-WinUI"
+                    await _appState.Log($"[AuthenticationLogin OnLoginClicked] nativ TPC: deviceTypePlatform = {deviceTypePlatform}", data: deviceTypePlatform);
+
+                    // Generiere die pollingId
+                    string pollingId = Guid.NewGuid().ToString();
+                    await _appState.Log($"[AuthenticationLogin OnLoginClicked] nativ TPC: pollingId = {pollingId}", data: pollingId);
+
+                    // Bündele die Client-Informationen: deviceTypePlatform|IdP|pollingId => dies wird zum WebApi Server weitergeleitet
+                    var stateData = $"{deviceTypePlatform}|{Login.Idp}|{pollingId}";
+                    await _appState.Log($"[AuthenticationLogin OnLoginClicked] nativ TPC: stateData", data: stateData);
+
+                    // Kodierung in Base64 wegen Url
+                    var stateDataBytes = System.Text.Encoding.UTF8.GetBytes(stateData);
+                    var stateDataBase64 = Convert.ToBase64String(stateDataBytes);
+
+                    // Auth-URL mit einheitlichem Endpunkt
+                    var authUrl = $"{_globalState.ConfigGeneral.ApplicationApiUrl}/auth/external?state={Uri.EscapeDataString(stateDataBase64)}";
+                    await _appState.Log($"[AuthenticationLogin OnLoginClicked] nativ TPC: authUrl = {authUrl}", data: authUrl);
+
+                    BlazorCore.Services.Dam.ClientStorageModel? tokendata = new();
+
+                    // Browser öffnen
+                    await _platform!.AuthenticateAsync(authUrl);
+
+                    // Polling-Loop starten
+                    _pollingCts = new CancellationTokenSource();
+
+                    // // Polling-Methode aufrufen
+                    // tokendata = await PollForAuthResult(pollingId, _pollingCts.Token); // Max 15 Sekunden
+                    // Wir rufen jetzt die Hybrid-Methode auf, die intern SignalR UND Polling nutzt
+                    tokendata = await StartHybridAuth(pollingId, _pollingCts.Token);
+
+                    if (tokendata != null && string.IsNullOrEmpty(tokendata.out_err))
+                    {
+                        if (string.IsNullOrEmpty(tokendata.WebApiToken))
+                        {
+                            await _messageBoxService!.ShowOkAsync(
+                               title: _appState!.T("Error"),
+                               message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} no_token"
+                            );
+                            _appState.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.READY);
+                            _eventAggregator!.RoutesStateHasChanged();
+                        }
+                        else
+                        {
+                            // Speichermodus hier auf CLOUD setzen, da man sich über externen Identity Provider angemeldet hat
+                            await _messageBoxService!.ShowOkAsync(
+                                title: _appState.T("Info"),
+                                message: _appState.T("You have successfully logged in via an external identity provider.")
+                            );
+
+                            using (var aes = BlazorCore.Services.ServerShared.SecurityServerFactory.Create())
+                            {
+                                BlazorCore.Services.AppState.PepperClientInfo peppers = new();
+                                peppers.ApplicationName = _globalState.ConfigGeneral.ApplicationName;
+                                // Wir setzen 'pepper' statisch (App-Name), um anschliessend aktuelle User-Credential zu hashen
+                                peppers.ApplicationNamePepper = await aes.DecryptPepperAsync();
+                                await _appState.Log("[AuthenticationLogin OnLoginClicked] Generate  peppers.ApplicationNamePepper:", data: peppers.ApplicationNamePepper);
+
+                                // Weil hier weder Account noch Passwort vorhanden sind (Anmeldung über ext. ID Provider)
+                                // verwenden wir hier tokendata.WebApiToken und tokendata.UnixTS als Password und Account
+                                peppers.PasHash = await aes.HashCredentialsAsync(tokendata.WebApiToken, tokendata.UnixTS, peppers.ApplicationNamePepper!);
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] Generate  peppers.PasHash: {tokendata.WebApiToken}");
+
+                                // peppers.AccountHash = await aes.HashUsernameAsync(Login.Account, peppers.ApplicationNamePepper!);
+                                peppers.AccountHash = await aes.HashUsernameAsync(tokendata.UnixTS, peppers.ApplicationNamePepper!);
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] Generate  peppers.AccountHash: {tokendata.UnixTS}");
+
+                                byte[]? pepperPin;
+                                string pepperPinString = await aes.GenerateDeterministicPepperAsync($"dynamicpepper: {peppers.PasHash} {_globalState!.ConfigGeneral.ApplicationName} {peppers.AccountHash}");
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] Generate  pepperPinString: {pepperPinString}");
+
+                                pepperPin = await aes.DecryptPepperAsync(pepperPinString);
+                                // tokendata.Email = await aes.HashUsernameAsync(Login.Account, pepperPin);
+                                tokendata.Email = await aes.HashUsernameAsync(tokendata.UnixTS, pepperPin);
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] pepperPin: {pepperPin}, EmailEncrypt: {tokendata.Email}");
+                            }
+
+                            string jsonString = System.Text.Json.JsonSerializer.Serialize(tokendata);
+                            _appState.ResetUserCredential();
+
+                            // Identity Claims erstellen (Secure Storage)
+                            var resultLogin = await _authentication!.Login(jsonString);
+                            if (resultLogin != null && string.IsNullOrEmpty(resultLogin.out_err) && resultLogin.out_value_bool)
+                            {
+                                await _authentication!.GetAuthenticationStateAsync();
+
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] Navigate to: {NavigateTo}");
+
+                                _appState!.ResetUserCredential(); // Wegen Wpf
+                                _appState.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.Unknown); // Wegen Wpf
+
+                                _navigationManager!.NavigateTo(NavigateTo, true);
+                            }
+                            else
+                            {
+                                if (resultLogin != null && !string.IsNullOrEmpty(resultLogin.out_err))
+                                {
+                                    await _messageBoxService!.ShowOkAsync(
+                                        title: _appState?.T("Error") ?? "Error",
+                                        message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {resultLogin.out_err}"
+                                    );
+                                }
+
+                                _appState!.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.READY);
+                                _eventAggregator!.RoutesStateHasChanged();
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    switch (Login.Idp)
+                    {
+                        case BlazorCore.Services.Authentication.IdentityProvider.TPC:
+
+                            await _appState.Log("[AuthenticationLogin OnLoginClicked] START");
+
+                            if(_globalState == null)
+                            {
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] _globalState == null");
+                                return;
+                            }
+
+                            // Registrierung ohne Internetverbindung und CLOUD-Speicherlokation nicht zulassen
+                            if (!_globalState.ConfigGeneral.AllowLocalRegistration
+                                && Login.Register
+                                && (!_appState.IsInternetConnected || _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL))
+                            {
+                                MessageBoxResult resultStorageLocation = await _messageBoxService!.ShowYesNoAsync(
+                                    title: _appState!.T("Registration"),
+                                    message: _appState.T("Registration is only possible if you have Internet access and have selected Cloud or Cloud/Local as the storage location!") + " " + _appState!.T("Would you like to set the storage location to cloud/local?"),
+                                    yestext: _appState!.T("Cloud/Local"),
+                                    notext: _appState!.T("Cancel")
+                                );
+
+                                switch (resultStorageLocation)
+                                {
+                                    case MessageBoxResult.Yes:
+                                        // Cookie/SecureStorage auf Cloud/Local setzen
+                                        await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL).ToString());
+                                        _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL);
+                                        StateHasChanged();
+                                        break;
+
+                                    case MessageBoxResult.No:
+                                    case MessageBoxResult.None:
+                                        await _messageBoxService!.ShowOkAsync(
+                                            title: _appState.T("Info"),
+                                            message: _appState.T("Another way to create a new account is through the web browser app!")
+                                        );
+                                        break;
+                                }
+
+                                _isLoadingLoginButton = false;
+                                return;
+                            }
+
+                            // // Prüfen, ob 2FA Anmeldung angezeigt werden soll
+                            BlazorCore.Services.Otp.OtpParametersModel otpParameters = new();
+                            string EmailEncrypt = Login.Account;
+                            string decryptPin = string.Empty;
+                            string decryptEmail = string.Empty;
+
+                            //string pinId = string.Empty;
+
+                            otpParameters.Account = Login.Account;
+                            otpParameters.Password = Login.Password;
+
+                            // Verschlüsselung
+                            BlazorCore.Services.AppState.PepperClientInfo peppers = new();
+
+                            //using (ServerShared.SecurityServer aes = new())
+                            using (var aes = BlazorCore.Services.ServerShared.SecurityServerFactory.Create())
+                            {
+                                // ---
+                                // Hiermit einmalig verschlüsselten Papper generieren
+                                //string encryptedPepper = await aes.GenerateEncryptedPepperAsync();
+                                // ---
+
+                                peppers.ApplicationName = _globalState.ConfigGeneral.ApplicationName;
+
+                                // Wir setzen 'pepper' statisch (App-Name), um anschliessend aktuelle User-Credential zu hashen
+                                peppers.ApplicationNamePepper = await aes.DecryptPepperAsync();
+                                await _appState.Log("[AuthenticationLogin OnLoginClicked] Generate  peppers.ApplicationNamePepper:", data: peppers.ApplicationNamePepper);
+
+                                peppers.PasHash = await aes.HashCredentialsAsync(Login.Password, Login.Account, peppers.ApplicationNamePepper!);
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] Generate  peppers.PasHash: {peppers.PasHash}");
+
+                                peppers.AccountHash = await aes.HashUsernameAsync(Login.Account, peppers.ApplicationNamePepper!);
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] Generate  peppers.AccountHash: {peppers.AccountHash}");
+
+                                byte[]? pepperPin;
+                                string pepperPinString = await aes.GenerateDeterministicPepperAsync($"dynamicpepper: {peppers.PasHash} {_globalState.ConfigGeneral.ApplicationName} {peppers.AccountHash}");
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] Generate  pepperPinString: {pepperPinString}");
+
+                                pepperPin = await aes.DecryptPepperAsync(pepperPinString);
+                                EmailEncrypt = await aes.HashUsernameAsync(Login.Account, pepperPin);
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] pepperPin: {pepperPin}, EmailEncrypt: {EmailEncrypt}");
+                            }
+
+                            bool enabled2FA = !Login.Register;
+                            if (_appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)
+                            {
+                                // Falls Pin Abfrage bei der lokalen Anmeldung erfolgen soll (um Umgehung von Cloud-2FA auszuschliessen)
+
+                                // Ausloggen, wenn Manipulationsverdacht
+                                // bool forceLogout = false;
+
+                                // // Prüfen ob Pin Cookie vorhanden
+                                // var resultPin = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.pin);
+                                // await _appState.Log($"[AuthenticationLogin OnLoginClicked] Generate  resultPin:", data: resultPin);
+
+                                // await Task.Yield(); await Task.Delay(_globalState.ConfigGeneral.TaskDelay_Capacitor);
+                                // if (resultPin != null && string.IsNullOrEmpty(resultPin.out_err) && !string.IsNullOrEmpty(resultPin.out_value_str))
+                                // {
+                                //     //using (ServerShared.SecurityServer aes = new())
+                                //     //{
+                                //     // Pin Cookie prüfen, um zu schauen, ob Pin überhaupt gesetzt ist
+                                //     (string pinid, string pinname, string pinval) resultPinVal = await BlazorCore.Services.ServerShared.CookiePins.GetPinCookieValue(resultPin.out_value_str, peppers);
+                                //     if (resultPinVal.pinname == "-1" || resultPinVal.pinval == "-1")
+                                //         forceLogout = true;
+
+                                //     await _appState.Log($"[AuthenticationLogin OnLoginClicked] pinid: {resultPinVal.pinid}, pinname: {resultPinVal.pinname}, pinval: {resultPinVal.pinval}, forceLogout: {forceLogout}, enabled2FA: true");
+
+                                //     decryptPin = resultPinVal.pinval;
+                                //     decryptEmail = resultPinVal.pinname;
+                                //     //pinId = resultPinVal.pinid;
+                                //     enabled2FA = true;
+                                //     //}
+                                // }
+                                // else
+                                //     forceLogout = true;
+
+                                // if (forceLogout )
+                                // {
+                                //     // Meldung an User, dass es um einen Manipulationsverdacht handelt und er sich über Cloud anmelden soll
+                                //     await SetCloudStorage();
+
+                                //     // Wegen Manipulation ist eine erneute Anmeldung mit Account/Passwort angabe (Login) nötig
+                                //     await _platformStorage.RemoveAsync(_appState.Catalog.LocalStorage.oauth_token);
+
+                                //     // Zur Hauptseite weiterleiten
+                                //     _navigationManager!.NavigateTo(NavigateTo, true);
+                                // }
+
+                                enabled2FA = false;
+                            }
+                            else
+                            {
+                                // Server abfragen
+                                enabled2FA = await _otp.CheckServerLoginState(otpParameters);
+                            } 
+
+                            await _appState.Log($"[AuthenticationLogin OnLoginClicked] Enabled 2FA: {enabled2FA}", data: enabled2FA);
+                            if (enabled2FA && !Login.Register)
+                            {
+                                StateHasChanged();
+
+                                (string OtpUserDigitInput, string OtpBackupCode, string Account, string Password) result = await _messageBoxService!.ShowAsync<pFemmeExample.Shared.Pages.Common.Otp.Otp, (string OtpUserDigitInput, string OtpBackupCode, string Account, string Password)>(
+                                    new
+                                    {
+                                        EmailHash = Login.Account,
+                                        PasswordHash = Login.Password,
+                                        FocusDelayMilliseconds = 150,
+                                        Pin = decryptPin,
+                                    },
+                                    title: (string.IsNullOrEmpty(decryptPin) ? @_appState!.T("OTP Code") : @_appState!.T("PIN")),
+                                    CssClassModalContent = "tpc-form-bg-01",
+                                    showCloseButton: false
+                                );
+
+                                if (result.OtpUserDigitInput != null)
+                                    otpParameters.OtpUserDigitInput = result.OtpUserDigitInput;
+
+                                if (result.OtpBackupCode != null)
+                                    otpParameters.OtpBackupCode = result.OtpBackupCode;
+                            }
+                            // Falls Pin Abfrage bei der lokalen Anmeldung erfolgen soll (um Umgehung von Cloud-2FA auszuschliessen)
+                            // else if (Login.Register)
+                            // {
+                            //     // Pin-Cookie Management
+                            //     List<BlazorCore.Services.AppState.PinsModel> list_pin = new();
+                            //     string pinId = string.Empty;
+
+                            //     // Verschlüsselung/Entschlüsselung aktivieren
+                            //     //using (ServerShared.SecurityServer aes = new())
+                            //     using (var aes = BlazorCore.Services.ServerShared.SecurityServerFactory.Create())
+                            //     {
+                            //         // Pepper für Pin Verschöüsselung/Entschlüsselung bestimmen, damit Pin-Eintrag im Cookie verschlüsselt/entschlüsselt werden kann
+                            //         // byte[]? pepperPin;
+                            //         // pepperPin = await aes.DecryptPepperAsync($"dynamicpepper: {peppers.PasHash} {pE.Utility.Appl.ApplicationName} {peppers.AccountHash}");
+                            //         byte[]? pepperPin;
+                            //         string pepperPinString = await aes.GenerateDeterministicPepperAsync($"dynamicpepper: {peppers.PasHash} {_globalState.ConfigGeneral.ApplicationName} {peppers.AccountHash}");
+                            //         pepperPin = await aes.DecryptPepperAsync(pepperPinString);
+
+                            //         // Prüfen ob Pin Cookie vorhanden
+                            //         var resultPin = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.pin);
+                            //         await Task.Yield(); await Task.Delay(_globalState.ConfigGeneral.TaskDelay_Capacitor);
+                            //         if (resultPin != null && string.IsNullOrEmpty(resultPin.out_err) && !string.IsNullOrEmpty(resultPin.out_value_str))
+                            //         {
+                            //             // Pin Cookie prüfen, um zu schauen, ob Pin überhaupt gesetzt ist
+                            //             try
+                            //             {
+                            //                 (string pinid, string pinname, string pinval) resultPinVal = await BlazorCore.Services.ServerShared.CookiePins.GetPinCookieValue(resultPin.out_value_str, peppers);
+                            //                 if (resultPinVal.pinid != "-1" && resultPinVal.pinname != "-1" && resultPinVal.pinval != "-1")
+                            //                 {
+                            //                     pinId = resultPinVal.pinid;
+                            //                 }
+
+                            //                 // Pin-Liste aus Cookie holen und Pin aktualisieren/einfügen
+                            //                 list_pin = await BlazorCore.Services.ServerShared.CookiePins.GetPinPinstatusCookieList(resultPin.out_value_str, peppers);
+                            //                 if (list_pin.Any(x => x.Nonce == pinId))
+                            //                 {
+                            //                     // aktualisieren (unwahrscheinlich, weil Registrierung, es sei, der lokale User existierte schon mal)
+                            //                     list_pin.Where(x => x.Nonce == pinId).FirstOrDefault()!.Pin = "";
+                            //                 }
+                            //                 else
+                            //                 {
+                            //                     // Neu einfügen, da Registrierung
+                            //                     list_pin.Add(new BlazorCore.Services.AppState.PinsModel()
+                            //                     {
+                            //                         EmailHash = await aes.EncryptBase32SecretAsync(Login.Account, pepperPin),
+                            //                         Pin = "",
+                            //                         Nonce = Guid.NewGuid().ToString()
+                            //                     });
+                            //                 }
+                            //             }
+                            //             catch
+                            //             {
+                            //                 // Pin-Cookie löschen
+                            //                 await _platformStorage.RemoveAsync(_appState.Catalog.LocalStorage.pin);
+
+                            //                 // Neu einfügen, da Registrierung
+                            //                 list_pin.Add(new BlazorCore.Services.AppState.PinsModel()
+                            //                 {
+                            //                     EmailHash = await aes.EncryptBase32SecretAsync(Login.Account, pepperPin),
+                            //                     Pin = "",
+                            //                     Nonce = Guid.NewGuid().ToString()
+                            //                 });
+                            //             }
+                            //         }
+                            //         else
+                            //         {
+                            //             // Pin-Cookie existiert auf dem lokalen Gerät nicht (keie andere Benutzer).
+                            //             list_pin.Add(new BlazorCore.Services.AppState.PinsModel()
+                            //             {
+                            //                 EmailHash = await aes.EncryptBase32SecretAsync(Login.Account, pepperPin),
+                            //                 Pin = "",
+                            //                 Nonce = Guid.NewGuid().ToString()
+                            //             });
+                            //         }
+
+                            //         // Liste zu Json serialisieren
+                            //         string json = System.Text.Json.JsonSerializer.Serialize(
+                            //             list_pin,
+                            //             BlazorCore.JsonContext.Default.ListPinsModel);
+
+                            //         // Cookie-Verschlüsseln
+                            //         // Bemerkung: Schlüssel kommt aus der App, keine wirkliche Sicherheit, 
+                            //         // jedoch geht es nicht anderes, da im Cookie alle Benutzer enthalten sind
+                            //         string jsonEncrypt = await aes.EncryptBase32SecretAsync(json, peppers.ApplicationNamePepper);
+
+                            //         // Pin-Cookie löschen
+                            //         await _platformStorage.RemoveAsync(_appState.Catalog.LocalStorage.pin);
+
+                            //         // Pin-Cookie neu erstellen
+                            //         await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.pin, jsonEncrypt);
+                            //     }
+                            // }
+
+                            string unixts = _appState!.GenerateUniqueId();
+                            Dictionary<string, string> db_para = new()
+                            {
+                                { "@Case_", "Register>>AuthUsers" },
+                                { "@UnixTS", Login.Register ? unixts : string.Empty },
+                                { "@EmailHash", Login.Account! },
+                                { "@PasswordHash", Login.Password! },
+                                { "@Int__Registration", Login.Register ? "1" : "0" },
+                                { "@TermsAccepted", Login.Termseula ? "1" : "0" },
+                                { "@IdP", "tpc" },
+                                { "@active", "1" },
+                                { "@OtpBackupCode", otpParameters.OtpBackupCode }, // wegen 2FA
+                                { "tmp_userinputiode", otpParameters.OtpUserDigitInput }, // wegen 2FA
+                            };
+
+                            await _appState!.Log($"[AuthenticationLogin OnLoginClicked] _appState.StorageLocation={_appState.StorageLocation}");
+
+                            // Wir unterscheiden hier zwischen lokalem Speichermodus und Cloud/lokal
+                            BlazorCore.Services.Dam.ClientStorageModel tokendata = new();
+                            // var memoryStorage = ServiceProvider.GetService<BlazorCore.Services.MemoryStorage.IMemoryStorageBase>();
+                            switch (_appState.StorageLocation)
+                            {
+                                // Prüfen, ob lokale DB und Benutzer existieren
+                                case BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL:
+                                    switch (_globalState.ConfigGeneral.LocalStorageType)
+                                    {
+                                        // --- SQLITE ---
+                                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.LOCAL_DB_AUTO:
+                                            // In pFemme nutzen wir an Stelle von SQLite-DB die lokale Json-Storage
+                                            break;
+
+                                        // --- JSON ---
+                                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.JSON_HYBRID:
+                                        // --- MEMORY ---
+                                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.MEMORY:
+                                            if (_localStorage != null && _localQueryExecutor != null && _localJsonFile != null)
+                                            {
+                                                pFemmeExample.Shared.Db.LocalDbQueryRegistry.Register(_localQueryExecutor, _localStorage, _localJsonFile, _appState);
+                                                await _localStorage.InitializeAsync(EmailEncrypt);
+                                            }
+                                            break;
+                                    }
+
+                                    // Lokale DB ist initialisiert und User existiert - hier weite rnur mit lokalen Ausführung
+                                    db_para[BlazorCore.Services.Dam.DB_CMD.NO_CLOUD] = BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString();
+                                    if (_globalState.ConfigGeneral.AllowLocalRegistration)
+                                        db_para[BlazorCore.Services.Dam.DB_CMD.ALLOW_LOCAL_REGISTRATION] = BlazorCore.Services.Dam.DB_CMD.ALLOW_LOCAL_REGISTRATION.ToString();
+                                    tokendata = await _dam!.GetTokenTPC(db_para)!;
+                                    break;
+
+                                // Web-Anmeldung
+                                case BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD:
+                                    db_para[BlazorCore.Services.Dam.DB_CMD.NO_LOCAL] = BlazorCore.Services.Dam.DB_CMD.NO_LOCAL.ToString();
+                                    tokendata = await _dam!.GetTokenTPC(db_para)!;
+                                    break;
+
+                                case BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL:
+                                    db_para[BlazorCore.Services.Dam.DB_CMD.NO_LOCAL] = BlazorCore.Services.Dam.DB_CMD.NO_LOCAL.ToString(); // Nur Cloud-Abfrage, lokal erfolgt weiter unten, um Diskrepanzen zwischen cloud/Lokal zu vermeiden
+                                    tokendata = await _dam!.GetTokenTPC(db_para)!;
+                                    db_para.Remove(BlazorCore.Services.Dam.DB_CMD.NO_LOCAL);
+                                    break;
+                            }
+
+                            await _appState.Log("[AuthenticationLogin OnLoginClicked] db_para", data: db_para);
+                            await _appState.Log("[AuthenticationLogin OnLoginClicked] tokendata", data: tokendata);
+
+
+                            if (tokendata != null && string.IsNullOrEmpty(tokendata.out_err) && !string.IsNullOrEmpty(tokendata.WebApiToken))
+                            {
+                                // Einen lokalen User nur dann erstellen, wenn CLOUD_LOCAL Speichermodus eingestellt ist
+                                if (_platform != null && _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL)
+                                {
+                                    // Initialize SqLite-JsonHybrid-Memory storage
+                                    switch (_globalState.ConfigGeneral.LocalStorageType)
+                                    {
+                                        // --- SQLITE ---
+                                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.LOCAL_DB_AUTO:
+                                            // In pFemme nutzen wir an Stelle von SQLite-DB die lokale Json-Storage
+                                            break;
+
+                                        // --- JSON ---
+                                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.JSON_HYBRID:
+                                        // --- MEMORY ---
+                                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.MEMORY:
+                                            if (_localStorage != null && _localQueryExecutor != null && _localJsonFile != null)
+                                            {
+                                                pFemmeExample.Shared.Db.LocalDbQueryRegistry.Register(_localQueryExecutor, _localStorage, _localJsonFile, _appState);
+                                                await _localStorage.InitializeAsync(EmailEncrypt);
+                                            }
+                                            break;
+                                    }
+
+                                    await _appState.Log("[AuthenticationLogin OnLoginClicked] CreateLocalAccount");
+                                    await CreateLocalAccount(
+                                        email: Login.Account,
+                                        pas: Login.Password,
+                                        unixts: tokendata.UnixTS, // Hier Cloud-UnixTS nehmen!
+                                        idp: "tpc"
+                                    );
+                                }
+
+                                // Email setzen => wegen lokaler DB, jedoch verschlüsselt
+                                tokendata.Email = EmailEncrypt;
+
+                                string jsonString = System.Text.Json.JsonSerializer.Serialize(
+                                    tokendata,
+                                    BlazorCore.JsonContext.Default.ClientStorageModel
+                                );
+                                await _appState.Log($"[AuthenticationLogin OnLoginClicked] jsonString: {jsonString}");
+
+                                _appState!.ResetUserCredential();
+                                await _appState.Log("[AuthenticationLogin OnLoginClicked] ResetUserCredential");
+
+                                // Identity speichern (Secure Storage)
+                                var resultLogin = await _authentication!.Login(jsonString);
+                                await _appState.Log("[AuthenticationLogin OnLoginClicked] resultLogin", data: resultLogin);
+
+                                if (resultLogin != null && string.IsNullOrEmpty(resultLogin.out_err) && resultLogin.out_value_bool)
+                                {
+                                    await _appState.Log("[AuthenticationLogin OnLoginClicked] GetAuthenticationStateAsync");
+
+                                    // Identity Claims erstellen
+                                    // await _authentication!.GetAuthenticationStateAsync();
+
+                                    await _appState.Log($"[AuthenticationLogin OnLoginClicked] Navigate to: {NavigateTo}");
+
+                                    _appState!.ResetUserCredential(); // Wegen Wpf (weil Service weiterhin 'lebt')
+                                    _appState.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.Unknown); // Wegen Wpf
+
+                                    _navigationManager!.NavigateTo(NavigateTo, true);
+                                }
+                                else
+                                {
+                                    if (resultLogin != null && !string.IsNullOrEmpty(resultLogin.out_err))
+                                    {
+                                        await _messageBoxService!.ShowOkAsync(
+                                            title: _appState?.T("Error") ?? "Error",
+                                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {resultLogin.out_err}"
+                                        );
+                                    }
+                                }
+                            }
+                            else // Anmeldung fehlgeschlagen
+                            {
+                                Login.Account = string.Empty;
+                                Login.Password = string.Empty;
+
+                                if (tokendata != null && _messageBoxService != null)
+                                {
+                                    MsgCodes = BlazorCore.MSG_CODES.Unknown;
+
+                                    if (Enum.TryParse<BlazorCore.MSG_CODES>(
+                                            tokendata.out_err,
+                                            ignoreCase: true,
+                                            out MsgCodes))
+                                    {
+                                        switch (MsgCodes)
+                                        {
+                                            case BlazorCore.MSG_CODES.no_user:
+                                                await SetLocalStorage();
+                                                break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        await _messageBoxService.ShowOkAsync(
+                                            title: _appState!.T("Error"),
+                                            message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} 'int.TryParse(tokendata.out_err, out int rawCode)' tokendata.out_err={tokendata.out_err}"
+                                        );
+                                    }
+                                }
+                                else
+                                {
+                                    await _messageBoxService!.ShowOkAsync(
+                                        title: _appState!.T("Error"),
+                                        message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {_appState.T("Server query returns no results. If the problems persist, please contact support.")}"
+                                    );
+                                }
+
+                                // Damit Landingpage angezeigt werden kann
+                                _appState.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.READY);
+                                _eventAggregator!.RoutesStateHasChanged();
+                            }
+                            break;
+
+                        case BlazorCore.Services.Authentication.IdentityProvider.Microsoft:
+                        case BlazorCore.Services.Authentication.IdentityProvider.Google:
+                        case BlazorCore.Services.Authentication.IdentityProvider.Apple:
+                            _appState!.ResetUserCredential(); // Wegen Wpf
+                            _appState.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.Unknown); // Wegen Wpf
+                            _navigationManager!.NavigateTo("login/" + Login.Idp.ToString().ToLower(), forceLoad: true);
+                            break;
+                    }
+                }
+
+                _isLoadingLoginButton = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService!.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+
+        if(_appState != null)
+            await _appState.Log("[AuthenticationLogin OnLoginClicked] START");
+    }
+
+    private async Task SetLocalStorage()
+    {
+        if (_appState?.Catalog.LocalStorage == null || _platformStorage == null) return;
+
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor SetLocalStorage()] START");
+
+        try
+        {
+            //_platform.GetCurrPlatform() != Platform.PLATFORMS.WASM
+            var platform = _platform!.GetCurrPlatform();
+
+            switch(platform)
+            {
+                case BlazorCore.Services.Platform.PLATFORMS.WASM:
+                    // Cookie/SecureStorage auf Cloud setzen
+                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString());
+                    _appState!.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD);
+                    StateHasChanged();
+
+                    await _messageBoxService!.ShowOkAsync(
+                        title: _appState!.T("Login"),
+                        message: _appState.T("User account and/or password not found.")
+                    );
+                    return;
+
+                // Windows, Capacitor
+                default: 
+                    MessageBoxResult resultStorageLocation = await _messageBoxService!.ShowYesNoCancelAsync(
+                                    title: _appState!.T("Login"),
+                                    message: _appState.T("User account and/or password not found.") + " " + _appState!.T("Register the account or, if the account is available locally, set the storage location to “Local” and try to log in with a local account."),
+                                    yestext: _appState!.T("Local"),
+                                    notext: _appState!.T("Cloud/Local"),
+                                    canceltext: _appState!.T("Cloud")
+                                );
+
+                    switch (resultStorageLocation)
+                    {
+                        case MessageBoxResult.Yes:
+                            // Cookie/SecureStorage auf Local setzen
+                            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL).ToString());
+                            _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL);
+                            StateHasChanged();
+                            break;
+
+                        case MessageBoxResult.No:
+                            // Cookie/SecureStorage auf Cloud/Local setzen
+                            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL).ToString());
+                            _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL);
+                            StateHasChanged();
+                            break;
+
+                        case MessageBoxResult.Cancel:
+                            // Cookie/SecureStorage auf Cloud setzen
+                            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString());
+                            _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD);
+                            StateHasChanged();
+                            break;
+
+                        case MessageBoxResult.None:
+                            break;
+                    }
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService!.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor SetLocalStorage()] END");
+    }
+
+    private async Task SetCloudStorage()
+    {
+        if (_appState?.Catalog.LocalStorage == null || _platformStorage == null) return;
+
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor SetCloudStorage()] START");
+
+        try
+        {
+            //_platform.GetCurrPlatform() != Platform.PLATFORMS.WASM
+            var platform = _platform!.GetCurrPlatform();
+
+            switch (platform)
+            {
+                case BlazorCore.Services.Platform.PLATFORMS.WASM:
+                    // Cookie/SecureStorage auf Cloud setzen
+                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString());
+                    _appState!.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD);
+                    StateHasChanged();
+
+                    await _messageBoxService!.ShowOkAsync(
+                        title: _appState!.T("Login"),
+                        message: _appState.T("Local login is not possible due to suspected manipulation attempts! To confirm your identity, please log in via the cloud and delete your PIN in Settings!")
+                    );
+                    return;
+
+                // Windows, Capacitor
+                default:
+                    MessageBoxResult resultStorageLocation = await _messageBoxService!.ShowYesNoCancelAsync(
+                                    title: _appState!.T("Login"),
+                                    message: _appState.T("Local login is not possible due to suspected manipulation attempts! To confirm your identity, please log in via the cloud and delete your PIN in Settings!"),
+                                    yestext: _appState!.T("Local"),
+                                    notext: _appState!.T("Cloud/Local"),
+                                    canceltext: _appState!.T("Cloud")
+                                );
+
+                    switch (resultStorageLocation)
+                    {
+                        case MessageBoxResult.Yes:
+                            // Cookie/SecureStorage auf Local setzen
+                            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL).ToString());
+                            _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL);
+                            StateHasChanged();
+                            break;
+
+                        case MessageBoxResult.No:
+                            // Cookie/SecureStorage auf Cloud/Local setzen
+                            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL).ToString());
+                            _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL);
+                            StateHasChanged();
+                            break;
+
+                        case MessageBoxResult.Cancel:
+                            // Cookie/SecureStorage auf Cloud setzen
+                            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString());
+                            _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD);
+                            StateHasChanged();
+                            break;
+
+                        case MessageBoxResult.None:
+                            break;
+                    }
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService!.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor SetCloudStorage()] END");
+    }
+
+    private async Task<bool> CheckLocalAccount(string email, string pas)
+    {
+        bool result = false;
+
+        // JS-LOG
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor CheckLocalAccount()] START");
+
+        Dictionary<string, string> db_para = new()
+        {
+            { "@Case_", "ExistsEmailHashPasswordHash>>AuthUsers" },
+            { "@EmailHash", email! },
+            { "@PasswordHash", pas },
+            { BlazorCore.Services.Dam.DB_CMD.NO_CLOUD, BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString() } // Wird nur auf lokal ausgeführt
+        };
+
+        var resultCheckUser = await _dam!.Scalar(db_para);
+
+        await _appState!.Log($"[BLAZOR AuthenticationLogin.razor CheckLocalAccount()] ExistsEmailHashPasswordHash>>AuthUsers: email={email}, pas={pas}, resultCheckUser:", data: resultCheckUser);
+
+        if (resultCheckUser != null && string.IsNullOrEmpty(resultCheckUser.out_err))
+        {
+            result = resultCheckUser.out_value_bool;
+        }
+        else
+        {
+            var err = resultCheckUser != null && resultCheckUser.out_err != null ? resultCheckUser.out_err : "CheckLocalAccount>>Scalar";
+            await _appState.Log(err);
+            await _messageBoxService!.ShowOkAsync(
+               title: _appState!.T("Error"),
+               message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} err"
+            );
+        }
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor CheckLocalAccount()] END");
+
+        return result;
+    }
+
+    private async Task CreateLocalAccount(string email, string pas, string unixts, string idp)
+    {
+        if (_globalState == null || _appState == null || _dam == null || _messageBoxService == null) return;
+
+        // JS-LOG
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor CreateLocalAccount()] START");
+
+        if (!await CheckLocalAccount(email, pas))
+        {
+            // Lokalen Benutzer erstellen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "Register>>AuthUsers" },
+                { "@UnixTS", unixts },
+                { "@EmailHash", email },
+                { "@PasswordHash", pas },
+                { "@Int__Registration", "1" },
+                { "@Int__TwoFA", "0" },
+                { "@active", "1" },
+                { "@IdP", idp },
+                { BlazorCore.Services.Dam.DB_CMD.NO_CLOUD, BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString() },
+            };
+
+            if (_globalState.ConfigGeneral.AllowLocalRegistration)
+                db_para[BlazorCore.Services.Dam.DB_CMD.ALLOW_LOCAL_REGISTRATION] = BlazorCore.Services.Dam.DB_CMD.ALLOW_LOCAL_REGISTRATION.ToString();
+
+            // Lokaler Aufruf muss über GetTokenTPC erfolgen (nicht zu verwechseln mit GetTokenIDP)
+            await _appState.Log("[BLAZOR AuthenticationLogin.razor CreateLocalAccount()] db_para", data: db_para);
+            BlazorCore.Services.Dam.ClientStorageModel result_sqlite = await _dam!.GetTokenTPC(db_para);
+            await _appState.Log("[BLAZOR AuthenticationLogin.razor CreateLocalAccount()] result_sqlite", data: result_sqlite);
+
+            if (result_sqlite != null && string.IsNullOrEmpty(result_sqlite.out_err))
+            {
+                //Benutzer wurde erfolgreich lokal erstellt
+            }
+            else
+            {
+                await _appState.Log($"[BLAZOR AuthenticationLogin.razor CreateLocalAccount()] Err={result_sqlite!.out_err}");
+                await _messageBoxService!.ShowOkAsync(
+                    title: _appState!.T("Error"),
+                    message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {_appState.T("The local user could not be created. If the problem persists, please contact support.")}"
+                );
+            }
+        }
+
+        await _appState!.Log("[BLAZOR AuthenticationLogin.razor CreateLocalAccount()] END");
+    }
+
+    private async Task OnCloseModal()
+    {
+        Visible = false; // lokal
+        await VisibleChanged.InvokeAsync(Visible);
+
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+    
+    private async Task<BlazorCore.Services.Dam.ClientStorageModel?> PollForAuthResult(string pollingId, CancellationToken cancellationToken, int maxSeconds = 30)
+    {
+        BlazorCore.Services.Dam.ClientStorageModel result = new BlazorCore.Services.Dam.ClientStorageModel
+        {
+            WebApiToken = string.Empty,
+            UnixTS = string.Empty,
+        };
+
+        bool userWantsToContinue = true;
+
+        try
+        {
+            while (userWantsToContinue)
+            {
+                // 1. Die eigentliche Polling-Runde (z.B. 60 Sekunden)
+                for (int i = 0; i < maxSeconds; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await Task.Delay(1000, cancellationToken);
+
+                    var db_para = new Dictionary<string, string>
+                    {
+                        { "@Case_", "SelectByIdPClientIdent>>AuthUsers" },
+                        { "@IdPClientIdent", pollingId },
+                        { BlazorCore.Services.Dam.DB_CMD.NO_LOCAL, BlazorCore.Services.Dam.DB_CMD.NO_LOCAL.ToString() }
+                    };
+
+                    BlazorCore.Services.Dam.ClientStorageModel result_idptoken = await _dam!.GetTokenIDP(db_para);
+
+                    // ERFOLGS-FALL:
+                    if (result_idptoken != null && !string.IsNullOrEmpty(result_idptoken.WebApiToken))
+                    {
+                        result.WebApiToken = result_idptoken.WebApiToken;
+                        result.UnixTS = result_idptoken.UnixTS;
+
+                        // Hier springen wir komplett aus der Methode zurück
+                        // Damit ist auch die while-Schleife beendet.
+                        return result;
+                    }
+                }
+
+                // 2. TIMEOUT-FALL (nach 60 Sek nichts gefunden):
+                // Wir fragen den User, ob er nochmal 60 Sekunden will
+                MessageBoxResult boxResult = await _messageBoxService!.ShowYesNoAsync(
+                    title: _appState!.T("Info"),
+                    message: _appState.T("Your sign-in process took longer than expected, and authentication was stopped. Would you like to continue account verification now?"),
+                    yestext: _appState!.T("Yes"),
+                    notext: _appState!.T("No")
+                );
+
+                if (boxResult != MessageBoxResult.Yes)
+                {
+                    // User hat "No" oder das "X" geklickt -> Schleife abbrechen
+                    userWantsToContinue = false;
+                }
+                // Wenn "Yes", geht die while-Schleife von vorne los (neue 60 Sekunden)
+            }
+        }
+        catch (OperationCanceledException) { /* Abbruch durch System */ }
+        catch (Exception ex)
+        {
+            await _messageBoxService!.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+
+        // Wenn wir hier landen, wurde entweder "No" geklickt oder ein Fehler trat auf
+        // result enthält dann immer noch die leeren Strings von oben.
+        return result;
+    }
+
+    private async Task<BlazorCore.Services.Dam.ClientStorageModel?> StartHybridAuth(string pollingId, CancellationToken cancellationToken)
+    {
+        await _appState!.Log("[BLAZOR pE] START StartHybridAuth");
+
+        var tcs = new TaskCompletionSource<BlazorCore.Services.Dam.ClientStorageModel?>();
+
+        // 1. SignalR Setup
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(_globalState!.ConfigWebapi.url_AuthHub, options =>
+            {
+                options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets | Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<BlazorCore.Services.Dam.AuthTicketDto>("ReceiveAuthTicket", dto =>
+        {
+            System.Diagnostics.Debug.WriteLine("SignalR: Ticket erhalten!");
+
+            tcs.TrySetResult(new BlazorCore.Services.Dam.ClientStorageModel
+            {
+                WebApiToken = dto.WebApiToken,
+                UnixTS = dto.UnixTS
+            });
+        });
+
+        try
+        {
+            await _hubConnection.StartAsync(cancellationToken);
+            await _hubConnection.InvokeAsync("SubscribeToAuth", pollingId, cancellationToken);
+
+            // 2. Das intelligente Fallback-Polling
+            _ = Task.Run(async () =>
+            {
+                try 
+                {
+                    // Gib SignalR 3 Sekunden Zeit, bevor wir die DB belasten
+                    await Task.Delay(2000, cancellationToken); 
+
+                    // Falls SignalR in der Zeit schon fertig war, brechen wir hier ab
+                    if (tcs.Task.IsCompleted || cancellationToken.IsCancellationRequested) return;
+
+                    System.Diagnostics.Debug.WriteLine("SignalR zu langsam oder offline. Starte Polling...");
+
+                    var fallbackResult = await PollForAuthResult(pollingId, cancellationToken, maxSeconds: 60);
+
+                    if (fallbackResult != null && !string.IsNullOrEmpty(fallbackResult.WebApiToken))
+                    {
+                        tcs.TrySetResult(fallbackResult);
+                    }
+                }
+                catch (OperationCanceledException) { /* Task wurde sauber beendet */ }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Fallback-error: {ex.Message}"); }
+            }, cancellationToken);
+
+            // Warten auf das erste verfügbare Ergebnis
+            var finalResult = await tcs.Task;
+            return finalResult;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"SignalR connection error: {ex.Message}");
+            // Sofortiger Fallback, falls SignalR gar nicht erst verbinden kann
+            return await PollForAuthResult(pollingId, cancellationToken);
+        }
+        finally
+        {
+            // WICHTIG: Verbindung immer schließen, sobald wir ein Ergebnis haben
+            if (_hubConnection != null) 
+            {
+                await _hubConnection.StopAsync();
+                await _hubConnection.DisposeAsync();
+            }
+        }
+    }
+
+    private async Task OnLoginClickedHtmlForm()
+    {
+        if (_otp == null) return;
+
+        try
+        {
+            _isLoadingLoginButton = true;
+            StateHasChanged();
+            await Task.Delay(10);
+
+
+            BlazorCore.Services.Otp.OtpParametersModel otpParameters = new();
+            otpParameters.Account = Login.Account;
+            otpParameters.Password = Login.Password;
+            var enabled2FA = await _otp.CheckServerLoginState(otpParameters);
+            if (enabled2FA)
+            {
+                (string OtpUserDigitInput, string OtpBackupCode, string Account, string Password) result = await _messageBoxService!.ShowAsync<pFemmeExample.Shared.Pages.Common.Otp.Otp, (string OtpUserDigitInput, string OtpBackupCode, string Account, string Password)>(
+                    new
+                    {
+                        EmailHash = Login.Account,
+                        PasswordHash = Login.Password,
+                        FocusDelayMilliseconds = 150
+                    },
+                    title: "2FA",
+                    CssClassModalContent = "tpc-form-bg-01"
+                );
+
+                if (result.OtpUserDigitInput != null)
+                    Login.OtpUserDigitInput = result.OtpUserDigitInput;
+
+                if (result.OtpBackupCode != null)
+                    Login.OtpBackupCode = result.OtpBackupCode;
+            }
+
+            StateHasChanged();
+            await Task.Delay(10);
+
+            // Echtes HTML Submit ausführen
+            await _jsRuntime!.InvokeVoidAsync("loginHelper.submitLoginForm");
+
+            await Task.Delay(300);
+            _appState!.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.LOADING);
+            _eventAggregator!.RoutesStateHasChanged(); // Wegen der Anzeige vom Loading-Status auf Routes.razor
+
+            _isLoadingLoginButton = false;
+
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService!.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    
+}

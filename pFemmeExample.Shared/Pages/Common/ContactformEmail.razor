@@ -1,0 +1,193 @@
+﻿@implements IDisposable
+@using p11.UI
+
+<div class="h-100 d-flex flex-column p-4 border rounded shadow-sm">
+
+    <div class="mb-3">
+        <P11Input TValue="string"
+                  @bind-Value="_data.ReplyTo"
+                  Label="@_appState.T("E-Mail")"
+                  UseFloatingLabel="true" />
+    </div>
+
+    <div class="mb-3">
+        <P11Input TValue="string"
+                  @bind-Value="_data.Subject"
+                  Label="@_appState.T("Title")"
+                  UseFloatingLabel="true" />
+    </div>
+
+    <!-- wächst dynamisch -->
+    <div class="mb-3 flex-grow-1 d-flex flex-column">
+        <P11Textarea TValue="string"
+                     class="flex-grow-1"
+                     Label="@_appState.T("Message")"
+                     Description="@_appState.T("Enter your message here.")"
+                     @bind-Value="_data.Body" />
+    </div>
+
+    <!-- bleibt unten -->
+    <div class="mt-auto">
+        <P11Button Text="@_appState.T("Send message")"
+                   OnClick="OnSend"
+                   IsLoading="@IsSending" />
+    </div>
+
+</div>
+
+@code {
+
+    // ================================
+    // INJECTIONS
+    // ================================
+
+    [Inject] private BlazorCore.Services.Email.IEmailBase EmailService { get; set; } = default!;
+    [Inject] private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+    [Inject] private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+    [Inject] private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    // ================================
+    // PARAMETER (Plug & Play!)
+    // ================================
+
+    [Parameter] public string ToEmail { get; set; } = string.Empty;
+    [Parameter] public string SubjectPrefix { get; set; } = "Website contact form: ";
+    [Parameter] public EventCallback<bool> OnSendCompleted { get; set; }
+
+    // ================================
+    // STATE
+    // ================================
+
+    private BlazorCore.Services.Email.EmailMessageModel _data = new();
+    private bool IsSending = false;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        _eventAggregator.OnRefreshLandingpage += HandleStateChange;
+        _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+    }
+
+    protected void HandleStateChange()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _eventAggregator.OnRefreshLandingpage -= HandleStateChange;
+        _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+    }
+
+    // ================================
+    // LOGIC
+    // ================================
+
+    private async Task OnSend()
+    {
+        // Validation
+        if (!string.IsNullOrWhiteSpace(_data.ReplyTo))
+        {
+            if (!IsValidEmail(_data.ReplyTo))
+            {
+                await _messageBoxService.ShowOkAsync(
+                    _appState.T("Info"),
+                    _appState.T("Reply email is not valid.")
+                );
+                return;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(ToEmail))
+        {
+            await _messageBoxService.ShowOkAsync(
+                _appState.T("Info"),
+                _appState.T("Target email is empty.")
+            );
+            return;
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(_data.ReplyTo))
+            {
+                if (!IsValidEmail(_data.ReplyTo))
+                {
+                    await _messageBoxService.ShowOkAsync(
+                        _appState.T("Info"),
+                        _appState.T("Reply email is not valid.")
+                    );
+                    return;
+                }
+            }
+            _data.ToEmail = ToEmail;
+        }
+
+        if (string.IsNullOrWhiteSpace(_data.Subject) || string.IsNullOrWhiteSpace(_data.Body))
+        {
+            await _messageBoxService.ShowOkAsync(
+                _appState.T("Info"),
+                _appState.T("Title or message is empty.")
+            );
+            return;
+        }
+
+        if (_data.Body.Length > 2000)
+        {
+            await _messageBoxService.ShowOkAsync(
+                _appState.T("Info"),
+                _appState.T("Message too long.")
+            );
+            return;
+        }
+
+        try
+        {
+            IsSending = true;
+
+            _data.Subject = $"{SubjectPrefix} {_data.Subject}";
+
+            await EmailService.SendEmailAsync(_data);
+
+            await _messageBoxService.ShowOkAsync(
+                _appState.T("Success"),
+                _appState.T("Message sent successfully.")
+            );
+
+            // Reset sauber (kein neues Objekt → weniger Blazor Side Effects)
+            _data.ReplyTo = "";
+            _data.Subject = "";
+            _data.Body = "";
+
+            if (OnSendCompleted.HasDelegate)
+                await OnSendCompleted.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                _appState.T("Error"),
+                $"{_appState.T("Error sending message")}: {ex.Message}"
+            );
+
+            if (OnSendCompleted.HasDelegate)
+                await OnSendCompleted.InvokeAsync(false);
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+}

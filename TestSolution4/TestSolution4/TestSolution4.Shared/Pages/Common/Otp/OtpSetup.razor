@@ -1,0 +1,238 @@
+﻿@using p11.UI
+@using BlazorCore.Services.Otp
+@using BlazorCore.Services.Platform
+@using System.Reflection
+
+
+
+@if(_appState != null)
+{
+    <p class="mb-4">@_appState!.T("Scan this QR code with your authentication app.")</p>
+
+    <div class="row justify-content-center">
+        <div style="@(string.IsNullOrEmpty(QrWidth) ? "width: 250px; height: 250px;" : "width: " + QrWidth.ToLower().Replace("px", "") + "px; height: " + QrWidth.ToLower().Replace("px", "") + "px;"))">
+            @if (!string.IsNullOrEmpty(SetupData.QrSvg))
+            {
+                @((MarkupString)SetupData.QrSvg)
+            }
+            else
+            {
+                <div class="text-center mt-5">
+                    <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">@_appState!.T("Loading...")</span>
+                    </div>
+                    <div class="mt-3 text-secondary fw-semibold">
+                        @_appState?.T("QR code preparation...")
+                    </div>
+                </div>                
+            }
+        </div>
+    </div>
+
+    <div class="d-flex flex-column">
+        <P11Label CssClass="mb-0" Text="@_appState!.T("Authenticator URI")" />
+        <div class="input-group w-100">
+            <P11Input Value="@SetupData.OtpUri"
+                        CssClass="mb-0 flex-fill"
+                        AriaLabel="@_appState!.T("Otp Uri")"
+                        ReadOnly="true" />
+            <P11Button ButtonVariant="ButtonVariant.Secondary"
+                        OnClick="@(async () => {
+                            await _toastService!.ShowSuccessAsync(@_appState!.T("Copied to clipboard!"), @_appState.T("Info"), position: ToastPosition.BottomEnd);
+                            await CopyToClipboard(SetupData.OtpUri);
+                        })"
+                        IconClass="bi bi-clipboard"
+                        AriaLabel="@_appState!.T("Copy URI")" />
+        </div>
+    </div>
+
+    <div class="alert alert-warning my-2" style="background-color: #fce1ca;">
+        <div class="mb-2"><strong>@_appState!.T("QR backup code")</strong></div>
+            <div class="d-flex">
+                <div class="input-group w-100">
+                    <P11Input Value="@SetupData.BackupCode"
+                                CssClass="mb-0 flex-fill"
+                                ReadOnly="true"
+                                AriaLabel="@_appState!.T("QR backup code")" />
+                    <P11Button ButtonVariant="ButtonVariant.Secondary"
+                                OnClick="@(async () => {
+                                    await _toastService!.ShowSuccessAsync(@_appState.T("Copied to clipboard!"), @_appState.T("Info"), position: ToastPosition.BottomEnd);
+                                    await CopyToClipboard(SetupData.BackupCode);
+                                })"
+                                IconClass="bi bi-clipboard"
+                                AriaLabel="@_appState!.T("Copy backup code")" />
+                </div>
+            </div>
+    </div>
+
+    <p>@_appState!.T("Note: This code is displayed only once. Ensure you save the backup code in a secure location.")</p>
+
+    @if(_appState != null && !_appState!.IsPhone)
+    {
+        <div class="d-flex w-100 gap-4 mt-4">
+            <P11Button Text="@_appState.T("Close")" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" CssClass="flex-fill" />
+        </div>        
+    }
+
+}
+
+
+@code {
+    [Inject] 
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter]
+    public Action<string> OnInputUserCompleted { get; set; }
+
+    [Parameter]
+    public EventCallback OnClickCancel { get; set; }
+
+    // [Parameter]
+    // public bool Visible { get; set; }
+
+    [Parameter]
+    public string? QrWidth { get; set; }
+
+    [Parameter]
+    public OtpSetupDataModel SetupData { get; set; } = new();
+
+    // [Parameter]
+    // public OtpSetupTextModel? Texts { get; set; }
+
+    [Parameter]
+    public EventCallback<OtpSetupResultModel> OnClose { get; set; }
+
+    private bool IsLoading = false;
+    //private bool IsVisibleOtpSetup = false;
+
+
+    private int? _inputUser;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ShowSetup();
+    }
+
+    private async Task HandleCloseAccepted()
+    {
+        await OnClose.InvokeAsync(new() { IsAccepted = true });
+    }
+
+    private async Task CopyToClipboard(string textToCopy)
+    {
+        await _platform!.CopyTextToClipboard(textToCopy);
+    }
+
+    private async Task ShowSetup()
+    {
+        IsLoading = true;
+        StateHasChanged();
+        await Task.Delay(20);
+
+        if (string.IsNullOrEmpty(SetupData.QrSvg))
+        {
+            // Backup Code erstellen für ein 2FA Reset (falls benutzer z.B. sein Authentificator verliert)
+            //var backupCode = SecurityHelp.ComputeSha256Hash(secretKey + DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+            var backupCode = DateTime.UtcNow.ToString("yyyyMMddHHmmss") + BlazorCore.Services.ServerShared.SecurityHelp.ComputeSha256Hash(BlazorCore.Utilities.GenerateBackupCode());          
+
+            // OTP-Code auf dem Server generieren, in die AuthUsers abspeichern und an Client senden (einmalig)
+            var otpParameters = new OtpParametersModel();
+            otpParameters.UnixTS = _appState!.GenerateUniqueId();
+            otpParameters.AuthUsers_UnixTS = _appState!.UnixTS;
+            otpParameters.OtpBackupCode = backupCode;
+            BlazorCore.Services.Otp.OtpModel result = await _platform!.GenerateOtpAsync(otpParameters);
+            if (result != null && string.IsNullOrEmpty(result.err) && result.secret != null)
+            {
+                // QR-Code auf dem Client generieren und anzeigen (einmalig)
+                BlazorCore.Services.Otp.OtpModel OtpResult = await GenerateQrCodeSvg(result.secret, _appState.UnixTS, backupCode);
+
+                if (string.IsNullOrEmpty(OtpResult.err))
+                {
+                    // Merken auf dem Gerät, dass 2FA aktiviert wurde (wegen Internetverbindung)
+                    //await _platform.SetAsync("activated2fa_" + pE.Utility.Appl.ApplicationName + _appState.SecureStorageID, "1");
+
+                    // QR-Code anzeige im neuen Dialog
+                    await Task.Delay(50);
+
+                    SetupData.QrSvg = OtpResult.QrSvg;
+                    SetupData.OtpUri = OtpResult.OtpUri;
+                    SetupData.BackupCode = OtpResult.BackupCode;
+
+                    //IsVisibleOtpSetup = true;
+                    StateHasChanged();
+                    await Task.Delay(20);
+                }
+                else
+                {
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Error"),
+                        message: $"{_appState.T(_globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!")} {OtpResult.err}"
+                    );                    
+                }
+
+            }
+        }
+
+        IsLoading = false;
+        StateHasChanged();
+        await Task.Delay(20);
+    }
+
+    private async Task<OtpModel> GenerateQrCodeSvg(string secretKey, string authUsers_UnixTS, string backupCode)
+    {
+        OtpModel result = new();
+
+        try
+        {
+            if (_dam != null && _globalState != null)
+            {
+                await Task.Delay(20);
+
+                // 1. AuthUsers_ID hashen
+                string hash_userId = BlazorCore.Services.ServerShared.SecurityHelp.ComputeSha256Hash(authUsers_UnixTS);
+
+                // 1. Google Authenticator kompatiblen URI bauen
+                result.OtpUri = $"otpauth://totp/{Uri.EscapeDataString(_globalState.ConfigGeneral.ApplicationName)}:{Uri.EscapeDataString(hash_userId)}?secret={secretKey}&issuer={Uri.EscapeDataString(_globalState.ConfigGeneral.ApplicationName)}&digits=6";
+
+                // 2. QR-Code als SVG erzeugen (Skalierung 4 = mittlere Größe)
+                result.QrSvg = Net.Codecrete.QrCodeGenerator.QrCode.EncodeText(result.OtpUri, Net.Codecrete.QrCodeGenerator.QrCode.Ecc.Medium).ToSvgString(2);
+
+                // 3. Backup Code erstellen für ein 2FA Reset (falls benutzer z.B. sein Authentificator verliert)
+                result.BackupCode = backupCode;
+            }
+            else
+                result.err = _appState!.T("Database access not possible (dam is null).");
+        }
+        catch (Exception ex)
+        {
+            result.err = ex.Message;
+        }
+
+        return result;
+    }
+
+    private async Task HandleCancel()
+    {
+        if (OnClickCancel.HasDelegate)
+            await OnClickCancel.InvokeAsync();
+    }
+
+
+}

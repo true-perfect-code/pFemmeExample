@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>TestSolution4</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <base href="/" />
+
+    <link rel="stylesheet" href="_content/TestSolution4.Shared/fonts.css" />
+
+    <link rel="stylesheet" href="_content/P11/p11.css" />
+    <script src="_content/P11/p11.js" type="module"></script>
+
+    <link rel="stylesheet" href="_content/BlazorCore/nativewebview.css" />
+
+    <link rel="icon" href="data:,">
+</head>
+
+<body>
+    <div class="status-bar-safe-area"></div>
+
+    <div id="app">
+        <div class="d-flex flex-column justify-content-center align-items-center vh-100 bg-light">
+            <div class="text-center">
+                <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="loading-progress-text mt-3 text-secondary" style="font-family: sans-serif; font-size: 0.85rem;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <!--<script src="_content/P11/p11.js" type="module"></script>-->
+    <script src="_content/BlazorCore/app.js"></script>
+
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+
+    <script>
+        // 1. Zentrale Start-Logik
+        function attemptBlazorStart() {
+            // Falls bereits gestartet, nichts tun
+            if (window.BlazorStarted) return;
+
+            // BEDINGUNG 1: Unsere Library muss bereit sein (CSS/JS geladen)
+            const isP11Ready = !!window.p11Ready;
+
+            // BEDINGUNG 2: Das Microsoft Blazor Framework muss geladen sein
+            const isBlazorLoaded = !!window.Blazor;
+
+            if (!isP11Ready || !isBlazorLoaded) {
+                // Noch nicht alles da? Wir loggen es nur einmalig leise.
+                return;
+            }
+
+            try {
+                window.BlazorStarted = true;
+                console.log("[WPF] Alle Systeme bereit. Starte Blazor Framework...");
+
+                // Blazor manuell starten (da autostart="false" in der index.html sein sollte)
+                window.Blazor.start();
+
+            } catch (err) {
+                console.error("[WPF] CRITICAL: Fehler beim Aufruf von Blazor.start():", err);
+                window.BlazorStarted = false;
+            }
+        }
+
+        // 2. Registrierung der "Zünder"
+
+        // Zünder A: Falls p11 meldet, dass es fertig ist
+        window.addEventListener('p11-js-ready', () => {
+            console.log("[WPF] Event: p11-js-ready empfangen.");
+            attemptBlazorStart();
+        });
+
+        // Zünder B: Der Sicherheits-Poller (extrem wichtig für WPF/WebView2)
+        // Er prüft alle 50ms, ob BEIDE Bedingungen erfüllt sind.
+        const startValidator = setInterval(() => {
+            attemptBlazorStart();
+
+            // Wenn gestartet, Poller stoppen
+            if (window.BlazorStarted) {
+                clearInterval(startValidator);
+                console.log("[WPF] Start-Poller beendet.");
+            }
+        }, 50);
+
+        // Timeout-Schutz: Nach 10 Sekunden geben wir auf, um Ressourcen zu sparen
+        setTimeout(() => clearInterval(startValidator), 10000);
+
+        // --- Dein restlicher Code (WPF Interop) ---
+        window.pE_Web = window.pE_Web || {};
+        window.pE_Web.registerWebViewReadyCallback = function (dotNetRef) {
+            window.pE_Web._readyDotNetRef = dotNetRef;
+            window.pE_Web._webViewReady = true;
+            dotNetRef.invokeMethodAsync("OnWebViewReady");
+        };
+    </script>
+
+    <style>
+        /* 1. STRUKTUR: Definiert nur das Flex-Verhältnis */
+        .page {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        /* 2. DER CONTENT nimmt den restlichen Platz ein */
+        main {
+            flex: 1;
+        }
+
+        /* 3. BLAZOR ERROR UI (Sollte hier bleiben, da es spezifisch für Blazor ist) */
+        #blazor-error-ui {
+            background: lightyellow;
+            bottom: 0;
+            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+            box-sizing: border-box;
+            display: none;
+            left: 0;
+            padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+            position: fixed;
+            width: 100%;
+            z-index: 10000;
+        }
+
+            #blazor-error-ui .dismiss {
+                cursor: pointer;
+                position: absolute;
+                right: 0.75rem;
+                top: 0.5rem;
+            }
+    </style>
+
+</body>
+</html>

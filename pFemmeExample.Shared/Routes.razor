@@ -1,0 +1,85 @@
+﻿@using BlazorCore.Services.AppState
+@inject BlazorCore.Services.AppState.IAppStateBase _appState
+@implements IDisposable
+
+@switch (_appState.AppLoadingStatus)
+{
+    case APP_LOADING_STATUS.READY:
+        <Router AppAssembly="typeof(Layout.MainLayout).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" @key="_appState.SelectedLanguage" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(Layout.MainLayout)">
+                    @{
+                        try
+                        {
+                            if (_navigationManager != null)
+                                _navigationManager.NavigateTo("/");
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // NavigationManager noch nicht bereit – mach nichts
+                            // Der Benutzer sieht kurz den NotFound, aber das ist besser als Crash
+                        }
+                    }
+                </LayoutView>
+            </NotFound>
+        </Router>
+        <P11ThemeStyle />
+
+        <!--  Include Toast/MessageBox here as well, so they're available after startup -->
+        <P11Toast />
+        <P11MessageBox />
+
+        break;
+
+    case APP_LOADING_STATUS.LOADING_LANGUAGE:
+        <!-- Bootstrap spinner or splash screen -->
+        <div class="d-flex justify-content-center align-items-center vh-100 bg-light">
+            <div class="text-center">
+                <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">@_appState!.T("Loading...")</span>
+                </div>
+                <div class="mt-3 text-secondary fw-semibold">
+                    @_appState?.T("Reloading application...")
+                </div>
+            </div>
+        </div>
+        break;
+
+    default:
+        <!--  We move the initialization to AppStartup -->
+        <pFemmeExample.Shared.Pages.Common.AppStartup Assembly="typeof(Shared.Routes).Assembly" />
+        break;
+}
+
+<pFemmeExample.Shared.Pages.Common.JSlogger />
+
+@code {
+    [Inject]
+    private NavigationManager? _navigationManager { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+
+    protected override void OnInitialized()
+    {
+        if (_appState != null)
+        {
+            // We now only listen for the event to toggle the UI
+            _eventAggregator.OnRoutesStateHasChanged += HandleStateChange;
+        }
+    }
+
+    // Trigger a re-render when AppStartup signals completion
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (_appState != null)
+            _eventAggregator.OnRoutesStateHasChanged -= HandleStateChange;
+    }
+}

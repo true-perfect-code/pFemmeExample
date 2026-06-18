@@ -1,0 +1,62 @@
+/* -------------------------------------------- */
+/* VARIABLES DEFAULT THEME                      */
+/* -------------------------------------------- */
+:root {
+    /* true perfect code (tpc) */
+    /* GENTLE & CALM THEME - Menstrual Cycle App */
+    /* Primary: #E8D5C4 (Soft beige) */
+    /* Secondary: #DDB7A8 (Soft blush/terracotta) */
+    /* Accent: #A7C5BD (Calming mint green) */
+
+    --tpc-btn-color: #4A5B4A !important; /* Dark sage text on buttons */
+    --tpc-btn-color-active: #4A5B4A !important;
+    --tpc-btn-color-hover: #FCFAF8 !important; /* Soft warm white */
+
+    --tpc-btn-background: #DDB7A8 !important; /* Secondary - blush */
+    --tpc-btn-background-active: #C8A292 !important; /* Darker blush */
+    --tpc-btn-background-hover: #E8C9BC !important; /* Lighter blush */
+
+    --tpc-btn-focus-shadow-rgb: 0 4px 12px rgba(167, 197, 189, 0.3) !important; /* Mint shadow */
+    --tpc-btn-hover-shadow-rgb: 0 4px 12px rgba(221, 183, 168, 0.3) !important; /* Blush shadow */
+
+    --tpc-btn-border-radius: 16px !important; /* Softer rounded buttons */
+
+    --tpc-body: #f5d9bc !important; /* Soft warm white background */
+    --tpc-background: #E8D5C4 !important; /* Primary - soft beige */
+    --tpc-background-checked: #A7C5BD !important; /* Accent - calming mint */
+    --tpc-background-active: #DDB7A8 !important; /* Secondary - blush */
+
+    --tpc-text-color: #4A5B4A !important; /* Dark sage (soft on eyes) */
+    --tpc-text-color-hover: #6B7C6B !important; /* Lighter sage */
+
+    --tpc-border-color: #D1C3B6 !important; /* Soft warm grey-beige */
+    --tpc-border-color-focus: #A7C5BD !important; /* Accent - mint */
+    --tpc-border-color-active: #C8A292 !important; /* Darker blush */
+    --tpc-border-color-hover: #DDB7A8 !important; /* Secondary - blush */
+    --tpc-border-color-checked: #8FB2A8 !important; /* Darker mint */
+    /* Bootstrap */
+    --bs-body-bg: var(--tpc-body) !important;
+    --btn-shadow: var(--tpc-btn-focus-shadow-rgb) !important;
+    --btn-hover-shadow: var(--tpc-btn-hover-shadow-rgb) !important;
+    --bs-primary-rgb: var(--tpc-text-color) !important;
+    --bs-accordion-bg: var(--tpc-btn-background) !important;
+    --p11-accordion-header-bg: #F1D4B9 !important;
+    --bs-danger-rgb: var(--tpc-btn-background-active) !important;
+    /* Icon colors for charts - close to text color */
+    --tpc-icon-primary: #5A7B6E; /* Dark sage */
+    --tpc-icon-secondary: #8E6B5E; /* Dark warm brown */
+    --tpc-icon-tertiary: #7A5D52; /* Darkest warm brown */
+    --p11-accordion-content-bg: #F1D4B9 !important;
+}
+
+.tpc-landing-hero-bg {
+    filter: grayscale(0%) !important;
+}
+
+.tpc-form-bg-01 {
+    filter: grayscale(0%) !important;
+}
+
+.tpc-img {
+    filter: grayscale(0%) !important;
+}

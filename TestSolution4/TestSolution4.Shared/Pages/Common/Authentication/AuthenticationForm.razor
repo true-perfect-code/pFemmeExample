@@ -1,0 +1,638 @@
+﻿@using Microsoft.Extensions.DependencyInjection
+@using p11.UI
+
+
+
+<P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+    <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+        <legend class="float-none w-auto px-2">@_appState!.T("Action")</legend>
+
+        <div class="d-flex flex-column gap-4">
+            <!-- Logout -->
+            <div class="d-flex flex-column gap-1">
+                <h6>@_appState!.T("Log out of the app")</h6>
+                <AuthenticationLogout @ref="_logoutComponent"
+                                        Text="@_appState!.T("Logout")"
+                                        CookiesToClear="@(new List<string> { _appState.Catalog.LocalStorage != null ? _appState.Catalog.LocalStorage.idp : string.Empty })"
+                                        UseNativeFeatures="@(_appState.IsNativeApp ?? false)"
+                                        NavigateTo="/" />
+            </div>
+
+            <!-- Passwort ändern -->
+            @if (_appState != null && _appState.IdP == "tpc")
+            {
+                <div class="d-flex flex-column gap-1">
+                    <h6>@_appState.T("User account password")</h6>
+                    <AuthenticationChangePassword UseNativeFeatures="@(_appState!.IsNativeApp ?? false)" Visible="ChangePasswordVisible" />
+                </div>
+            }
+        </div>
+    </fieldset>
+</P11HoverEffect>
+
+<P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+    <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+        <legend class="float-none w-auto px-2">@_appState!.T("User info")</legend>
+
+        <div class="d-flex flex-column gap-4">
+            <!-- User info -->
+            <div class="d-flex flex-column gap-1">
+                <AuthenticationExtend PreventPhonePreviewOpen="@(_appState!.IsPhone)" IsCancelButtonHidden="true" />
+            </div>
+        </div>
+    </fieldset>
+</P11HoverEffect>
+
+@if (_appState != null && _appState.IdP == "tpc")
+{
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+
+        @if (_appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL || _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD)
+        {
+            <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+                <legend class="float-none w-auto px-2">@_appState!.T("2FA / Otp")</legend>
+
+                <!-- Otp Setup -->
+                <div class="d-flex flex-column gap-1">
+                    <P11Button 
+                        OnClick="async() => {
+                            if(_appState.Is2FAActivated)
+                            {
+                                if (OnClick2FARevoke.HasDelegate)
+                                    await OnClick2FARevoke.InvokeAsync();
+                            }
+                            else
+                            {
+                                if (OnClick2FASetup.HasDelegate)
+                                    await OnClick2FASetup.InvokeAsync();
+                            }
+                        }" 
+                        Text="@_appState.T(_appState.Is2FAActivated ? "2FA-Revoke" : "2FA-Setup")" 
+                        CssClass="flex-fill" />
+                </div>
+            </fieldset>
+        }
+
+        @if (_appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL || _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)
+        {
+            <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+                <legend class="float-none w-auto px-2">@_appState!.T("PIN")</legend>
+
+                <!-- Pin Setup -->
+                <div class="d-flex flex-column gap-1">
+                    <AuthenticationChangePin UseNativeFeatures="@(_appState!.IsNativeApp ?? false)" Visible="ChangePinVisible" />
+                </div>
+            </fieldset>
+        }
+
+    </P11HoverEffect>
+}
+
+<P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+    <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+        <legend class="float-none w-auto px-2">@_appState!.T("GDPR")</legend>
+
+        @* <div class="alert alert-dange mt-1 pt-2 pb-0">
+            <P11Checkbox Value="@pE.Utility.Appl.IsInspectionEnabled"
+                            ValueChanged="@((bool isChecked) => {
+                                // Ispection in WebView aktivieren
+                                pE.Utility.Appl.IsInspectionEnabled = isChecked;
+
+                                pE.Utility.HostBridge.RaiseInspectionChanged(isChecked);
+                            })"
+                            Label="Enable browser inspection (F12) and developer options (see new menu item Administration)."
+                            IsSwitch="true" />
+        </div> *@
+
+        <!-- GDPR/DSGVO -->
+        <div class="d-flex flex-column gap-1">
+            <P11AccordionNative CssClass="p-0">
+                <Title>
+                    <span>@_appState.T("Expand GDPR")</span>
+                </Title>
+                <ChildContent>
+                    <div class="d-flex flex-column gap-1">
+                        <P11AccordionNative HeaderBackgroundVariant="BackgroundVariant.Info">
+                            <Title>
+                                <span>@_appState.T("Delete Cookies")</span>
+                            </Title>
+                            <ChildContent>
+                                @* <div class="container mt-2">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">@_appState.T("Cookies")</th>
+                                                <th scope="col"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (cookies != null)
+                                            {
+                                                @foreach (var cookie in cookies)
+                                                {
+                                                    <tr>
+                                                        <td class="text-break">@cookie.Key : <b>@cookie.Value</b></td>
+                                                        <td class="text-end">
+                                                            <P11Button AriaLabel="@($"{_appState.T("Delete cookie")} {cookie.Key}")"
+                                                                        ButtonVariant="ButtonVariant.Danger"
+                                                                        OnClick="async() => {
+                                                                            await _platform!.RemoveAsync(cookie.Key);
+                                                                            await LoadCookies();
+                                                                            StateHasChanged();
+                                                                        }"
+                                                                        IsDisabled="@(cookie.Value == "******")"
+                                                                        IconClass="bi bi-trash" />
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mb-3">
+                                    <P11Button OnClick="OnClick_DeleteAllCookies" Text="@_appState.T("Delete all cookies")" />
+                                </div> *@
+
+                                <AuthenticationCookies 
+                                    OnLogout="async() => {
+                                        if (_logoutComponent != null)
+                                            await _logoutComponent.TriggerLogoutAsync();
+                                    }" 
+                                    OnChangeVisibleCookies="OnChangeVisible" />
+                                
+                            </ChildContent>
+                        </P11AccordionNative>
+                        <P11Button Text="@_appState.T("Delete cloud data")" OnClick="OnClick_DeleteCloudData" IsDisabled="@(_appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)" />
+                        <P11Button Text="@_appState.T("Delete local data")" OnClick="OnClick_DeleteLocalData" IsDisabled="@(_appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD || !_appState.HasIsNativeApp())" />
+                        <P11Button Text="@_appState.T("Delete local account")" OnClick="OnClick_DeleteLocalDB" IsDisabled="@( _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD || !_appState.HasIsNativeApp())" />
+                        <P11Button Text="@_appState.T("Delete cloud/local account")" OnClick="OnClick_DeleteAccount" IsDisabled="@(_appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)" ButtonVariant="ButtonVariant.Warning" />
+                    </div>
+
+                    <AuthenticationLogout @ref="logoutComponent"
+                                            IsButtonHidden="true"
+                                            UseNativeFeatures="@(_appState.IsNativeApp ?? false)" />
+                </ChildContent>
+            </P11AccordionNative>
+        </div>
+    </fieldset>
+</P11HoverEffect>
+
+@if(_appState != null && !_appState.IsPhone)
+{
+    <div class="d-flex w-100 gap-4 mt-4">
+        <P11Button Text="@_appState!.T("Close")" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" CssClass="flex-fill" />
+    </div>
+}
+
+
+@code {
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+
+    [Inject]
+    private IServiceProvider? ServiceProvider { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter] public string CssClassModalContent { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<bool> OnChangeVisible { get; set; }
+    [Parameter] public EventCallback OnClickCancel { get; set; }
+
+    [Parameter] public EventCallback OnClick2FASetup { get; set; }
+    [Parameter] public EventCallback OnClick2FARevoke { get; set; }
+
+    private AuthenticationLogout? logoutComponent;
+
+    private bool ChangePasswordVisible = false;
+    private bool ChangePinVisible = false;
+
+    //private Platform.LocalStorageModel _localStorageModel = new();
+    private System.Reflection.FieldInfo[]? _fields;
+    private Dictionary<string, string>? cookies;
+
+    private AuthenticationLogout? _logoutComponent;
+
+
+    protected override void OnInitialized()
+    {
+        if (cookies == null)
+            cookies = new();
+
+        //await LoadCookies();
+
+    }
+
+    protected override void OnParametersSet()
+    {
+    }
+
+    // private async Task LoadCookies()
+    // {
+    //     _fields = typeof(Platform.LocalStorageModel)
+    //     .GetFields(System.Reflection.BindingFlags.Public |
+    //                System.Reflection.BindingFlags.Instance);
+
+    //     if (cookies != null)
+    //         cookies.Clear();
+
+    //     foreach (var field in _fields)
+    //     {
+    //         var cookiename = field.GetValue(_localStorageModel);
+
+    //         var cookievalue = await _platform!.GetAsync($"{cookiename}{pE.Utility.Appl.ApplicationName}");
+    //         if (!string.IsNullOrEmpty(cookievalue))
+    //         {
+    //             if (cookies != null && cookiename != null)
+    //             {
+    //                 if (cookiename.ToString() == _localStorageModel.oauthToken
+    //                     || cookiename.ToString() == _localStorageModel.realmPassword)
+    //                     cookies.Add(cookiename.ToString()!, "******");
+    //                 else
+    //                     cookies.Add($"{cookiename}{pE.Utility.Appl.ApplicationName}", cookievalue);
+    //             }
+    //         }
+    //     }
+    // }
+
+    // private async Task OnClick_DeleteAllCookies()
+    // {
+    //     if (OnChangeVisible.HasDelegate)
+    //         await OnChangeVisible.InvokeAsync(false);
+
+    //     //StateHasChanged();
+    //     MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+    //         title: _appState!.T("Confirmation"),
+    //         message: _appState!.T("Do you want to delete all cookies?")
+    //     );
+
+    //     switch (result)
+    //     {
+    //         case MessageBoxResult.Yes:
+    //             if(cookies != null)
+    //             {
+    //                 foreach (var cookie in cookies)
+    //                 {
+    //                     if(cookie.Value != "******")
+    //                         await _platform!.RemoveAsync(cookie.Key);
+    //                 }
+    //             }
+
+    //             await LoadCookies();
+    //             StateHasChanged();
+    //             break;
+    //         case MessageBoxResult.No:
+    //             //Visible = true;
+    //             if (OnChangeVisible.HasDelegate)
+    //                 await OnChangeVisible.InvokeAsync(true);
+    //             break;
+    //         case MessageBoxResult.None:
+    //             //Visible = true;
+    //             if (OnChangeVisible.HasDelegate)
+    //                 await OnChangeVisible.InvokeAsync(true);
+    //             break;
+    //     }
+    // }
+
+    private async Task OnClick_DeleteCloudData()
+    {
+        // JS-LOG
+        await _appState!.Log("START [AuthenticationForm.razor] OnClick_DeleteCloudData");
+
+        if (OnChangeVisible.HasDelegate)
+        {
+            await OnChangeVisible.InvokeAsync(false);
+            await Task.Delay(30);
+            StateHasChanged();
+        }
+
+        await Task.Delay(30);
+        StateHasChanged();
+
+        MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+            title: _appState!.T("Confirmation"),
+            message: _appState!.T("Do you want to delete your cloud data (cloud account will not be deleted)?"),
+            yestext: @_appState!.T("Yes"),
+            notext: @_appState!.T("No")
+        );
+
+        switch (result)
+        {
+            case MessageBoxResult.Yes:
+                // Parameter setzen
+                Dictionary<string, string> db_para = new()
+                {
+                    { "@Case_", "DeleteCloudData" },
+                    { "@UnixTS", _appState!.UnixTS },
+                };
+                await _appState.Log($"db_para", data: db_para);
+                BlazorCore.Services.SqlClient.ScalarModel result_delete = await _dam!.ExecQuery(db_para)!; // Abfrage ausführen
+                await _appState.Log($"result_delete", data: result_delete);
+
+                if (result_delete != null && !string.IsNullOrEmpty(result_delete.out_err)) // Resultat prüfen
+                {
+                    await _messageBoxService.ShowOkAsync(
+                       title: _appState!.T("Error"),
+                       message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {result_delete.out_err}"
+                    );
+                }
+                if (logoutComponent != null)
+                {
+                    await Task.Delay(30);
+                    await _appState.Log("TriggerLogoutAsync");
+                    await logoutComponent.TriggerLogoutAsync();
+                }
+                break;
+            case MessageBoxResult.No:
+                if (OnChangeVisible.HasDelegate)
+                {
+                    await OnChangeVisible.InvokeAsync(true);
+                    await Task.Delay(30);
+                    StateHasChanged();
+                }
+                break;
+            case MessageBoxResult.None:
+                if (OnChangeVisible.HasDelegate)
+                {
+                    await OnChangeVisible.InvokeAsync(true);
+                    await Task.Delay(30);
+                    StateHasChanged();
+                }
+                break;
+        }
+        await _appState.Log("END [AuthenticationForm.razor] OnClick_DeleteCloudData");
+    }
+
+    private async Task OnClick_DeleteLocalData()
+    {
+        if (_appState?.Catalog.LocalStorage == null) return;
+
+        // JS-LOG
+        await _appState!.Log("START [AuthenticationForm.razor] OnClick_DeleteLocalData");
+
+        if (_appState!.IsNativeApp ?? false)
+        {
+            var _sqLite = ServiceProvider!.GetService<BlazorCore.Services.SqLite.ISqLiteBase>();
+            if (_sqLite != null)
+            {
+                if (OnChangeVisible.HasDelegate)
+                {
+                    await OnChangeVisible.InvokeAsync(false);
+                    await Task.Delay(30);
+                    StateHasChanged();
+                }
+
+                await Task.Delay(30);
+                StateHasChanged();
+
+                MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+                    title: _appState!.T("Confirmation"),
+                    message: _appState!.T("Do you want to delete your local data (local account will also be deleted)?"),
+                    yestext: @_appState!.T("Yes"),
+                    notext: @_appState!.T("No")
+                );
+
+                switch (result)
+                {
+                    case MessageBoxResult.Yes:
+                        BlazorCore.Services.SqlClient.ScalarModel resultClearAllData = await _sqLite!.ClearAllData();
+                        await _appState.Log($"resultClearAllData (local)", data: resultClearAllData);
+                        if (resultClearAllData != null && !string.IsNullOrEmpty(resultClearAllData.out_err))
+                        {
+                            await _messageBoxService.ShowOkAsync(
+                               title: _appState!.T("Error"),
+                               message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {resultClearAllData.out_err}"
+                            );
+                        }
+                        if (logoutComponent != null)
+                        {
+                            await Task.Delay(30);
+                            await _platform!.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString());
+                            _appState.UpdateStorageLocation(BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD);
+                            await Task.Delay(30);
+                            await _appState.Log("TriggerLogoutAsync");
+                            await logoutComponent.TriggerLogoutAsync();
+                        }
+                        break;
+                    case MessageBoxResult.No:
+                        if (OnChangeVisible.HasDelegate)
+                        {
+                            await OnChangeVisible.InvokeAsync(true);
+                            await Task.Delay(30);
+                            StateHasChanged();
+                        }
+                        break;
+                    case MessageBoxResult.None:
+                        if (OnChangeVisible.HasDelegate)
+                        {
+                            await OnChangeVisible.InvokeAsync(true);
+                            await Task.Delay(30);
+                            StateHasChanged();
+                        }
+                        break;
+                }              
+            }
+        }
+        await _appState.Log("END [AuthenticationForm.razor] OnClick_DeleteLocalData");
+    }
+
+    private async Task OnClick_DeleteLocalDB()
+    {
+        if (_appState == null) return;
+
+        // JS-LOG
+        await _appState.Log("START [AuthenticationForm.razor] OnClick_DeleteLocalDB");
+
+        if(_appState!.IsNativeApp ?? false)
+        {
+            var _sqLite = ServiceProvider!.GetService<BlazorCore.Services.SqLite.ISqLiteBase>();
+            if (_sqLite != null)
+            {
+                if (OnChangeVisible.HasDelegate)
+                {
+                    await OnChangeVisible.InvokeAsync(false);
+                    await Task.Delay(30);
+                    StateHasChanged();
+                }
+
+                await Task.Delay(30);
+                StateHasChanged();
+
+                MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+                    title: _appState!.T("Confirmation"),
+                    message: _appState!.T("Do you want to delete the local database (all users will be lost and you will be automatically logged out)?"),
+                    yestext: @_appState!.T("Yes"),
+                    notext: @_appState!.T("No")
+                );
+
+                switch (result)
+                {
+                    case MessageBoxResult.Yes:
+                        BlazorCore.Services.SqlClient.ScalarModel resultDeleteDB = await _sqLite!.DeleteDB();
+                        await _appState.Log($"resultDeleteDB (local)", data: resultDeleteDB);
+                        if (resultDeleteDB != null && !string.IsNullOrEmpty(resultDeleteDB.out_err))
+                        {
+                            await _messageBoxService.ShowOkAsync(
+                               title: _appState!.T("Error"),
+                               message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {resultDeleteDB.out_err}"
+                            );
+                        }
+                        if(resultDeleteDB != null && resultDeleteDB.out_value_bool)
+                        {
+                            if (logoutComponent != null)
+                            {
+                                await Task.Delay(30);
+                                await _appState.Log("TriggerLogoutAsync");
+                                await logoutComponent.TriggerLogoutAsync();
+                            }
+                        }
+                        else
+                        {
+                            await _messageBoxService.ShowOkAsync(
+                               title: _appState!.T("Warning"),
+                               message: $"{_appState.T("The local database is locked by the operating system and could not be deleted. Delete the database manually in the directory:")} {_appState.LocalSqLiteDbPath}"
+                            );
+                        }
+                        break;
+                    case MessageBoxResult.No:
+                        if (OnChangeVisible.HasDelegate)
+                        {
+                            await OnChangeVisible.InvokeAsync(true);
+                            await Task.Delay(30);
+                            StateHasChanged();
+                        }
+                        break;
+                    case MessageBoxResult.None:
+                        if (OnChangeVisible.HasDelegate)
+                        {
+                            await OnChangeVisible.InvokeAsync(true);
+                            await Task.Delay(30);
+                            StateHasChanged();
+                        }
+                        break;
+                }                
+            }
+        }
+        await _appState.Log("END [AuthenticationForm.razor] OnClick_DeleteLocalDB");
+    }
+
+    private async Task OnClick_DeleteAccount()
+    {
+        if (_appState == null) return;
+
+        // JS-LOG
+        await _appState.Log("START [AuthenticationForm.razor] OnClick_DeleteAccount");
+
+        if (OnChangeVisible.HasDelegate)
+        {
+            await OnChangeVisible.InvokeAsync(false);
+            await Task.Delay(30);
+            StateHasChanged();
+        }
+
+        await Task.Delay(30);
+        StateHasChanged();
+
+        MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+            title: _appState!.T("Confirmation"),
+            message: _appState!.T("Would you like to delete your account (cloud account and data as well as local account and data will be deleted)?"),
+            yestext: @_appState!.T("Yes"),
+            notext: @_appState!.T("No")
+        );
+
+        switch (result)
+        {
+            case MessageBoxResult.Yes:
+                // Lokale DB löschen
+                string err = string.Empty;
+                if (_appState!.IsNativeApp ?? false)
+                {
+                    var _sqLite = ServiceProvider!.GetService<BlazorCore.Services.SqLite.ISqLiteBase>();
+                    if (_sqLite != null)
+                    {
+                        BlazorCore.Services.SqlClient.ScalarModel resultDeleteDB = await _sqLite!.DeleteDB();
+                        await _appState.Log($"resultDeleteDB (local)", data: resultDeleteDB);
+                        if (resultDeleteDB != null && !string.IsNullOrEmpty(resultDeleteDB.out_err))
+                        {
+                            await _messageBoxService.ShowOkAsync(
+                               title: _appState!.T("Error"),
+                               message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {resultDeleteDB.out_err}"
+                            );
+                        }                 
+                    }
+                }
+
+                // Cloud Daten und Account löschen
+                if (string.IsNullOrEmpty(err))
+                {
+                    // Parameter setzen
+                    Dictionary<string, string> db_para = new()
+                    {
+                        { "@Case_", "DeleteAccount" },
+                        { "@UnixTS", _appState.UnixTS },
+                    };
+                    await _appState.Log($"db_para", data: db_para);
+                    BlazorCore.Services.SqlClient.ScalarModel result_delete = await _dam!.ExecQuery(db_para)!; // Abfrage ausführen
+                    await _appState.Log($"result_delete (cloud)", data: result_delete);
+                    if (result_delete != null && !string.IsNullOrEmpty(result_delete.out_err)) // Resultat prüfen
+                    {
+                        await _messageBoxService.ShowOkAsync(
+                            title: _appState!.T("Error"),
+                            message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {result_delete.out_err}"
+                        );
+                    }
+                    if (logoutComponent != null)
+                    {
+                        await Task.Delay(30);
+                        await _appState.Log("TriggerLogoutAsync");
+                        await logoutComponent.TriggerLogoutAsync();
+                    }
+                }
+                else
+                {
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Error"),
+                        message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                    );
+                }
+                break;
+            case MessageBoxResult.No:
+                if (OnChangeVisible.HasDelegate)
+                {
+                    await OnChangeVisible.InvokeAsync(true);
+                    await Task.Delay(30);
+                    StateHasChanged();
+                }
+                break;
+            case MessageBoxResult.None:
+                if (OnChangeVisible.HasDelegate)
+                {
+                    await OnChangeVisible.InvokeAsync(true);
+                    await Task.Delay(30);
+                    StateHasChanged();
+                }
+                break;
+        }
+        await _appState.Log("END [AuthenticationForm.razor] OnClick_DeleteAccount");
+    }
+
+    private async Task HandleCancel()
+    {
+        if (OnClickCancel.HasDelegate)
+            await OnClickCancel.InvokeAsync();
+    }
+
+
+}
+

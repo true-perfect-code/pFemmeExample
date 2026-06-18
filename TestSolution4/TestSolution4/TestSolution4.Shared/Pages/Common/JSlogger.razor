@@ -1,0 +1,14 @@
+﻿@using Microsoft.JSInterop
+@inject BlazorCore.Services.AppState.IAppStateBase _appState
+@inject IJSRuntime JSRuntime
+
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Jetzt ist die WebView definitiv bereit für JS!
+            _appState.Initialize(JSRuntime);
+        }
+    }
+}

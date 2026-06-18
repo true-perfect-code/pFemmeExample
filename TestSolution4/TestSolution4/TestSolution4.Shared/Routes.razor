@@ -1,0 +1,73 @@
+﻿@using BlazorCore.Services.AppState
+@inject BlazorCore.Services.AppState.IAppStateBase _appState
+@implements IDisposable
+
+@switch (_appState.AppLoadingStatus)
+{
+    case APP_LOADING_STATUS.READY:
+        <Router AppAssembly="typeof(Layout.MainLayout).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" @key="_appState!.SelectedLanguage" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(Layout.MainLayout)">
+                    @{
+                        // Wenn Blazor merkt: "Ich bin auf einer Route, die ich nicht kenne"
+                        // -> Sofort zurück nach Hause.
+                        _navigationManager!.NavigateTo("/");
+                    }
+                </LayoutView>
+            </NotFound>
+        </Router>
+        <P11ThemeStyle />
+
+        @* Toast/MessageBox auch hier, damit sie nach dem Start verfügbar sind *@
+        <P11Toast />
+        <P11MessageBox />
+        break;
+
+    case APP_LOADING_STATUS.LOADING_LANGUAGE:
+        <!-- Grauer Hintergrund + Bootstrap Spinner -->
+        <div class="d-flex justify-content-center align-items-center vh-100 bg-light">
+            <div class="text-center">
+                <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">@_appState!.T("Loading...")</span>
+                </div>
+                <div class="mt-3 text-secondary fw-semibold">
+                    @_appState?.T("Reloading application...")
+                </div>
+            </div>
+        </div>
+        break;
+
+    default:
+        @* Der Orchestrator übernimmt alles *@
+        <TestSolution4.Shared.Pages.Common.AppStartup Assembly="typeof(Shared.Routes).Assembly" />
+        break;
+}
+
+<TestSolution4.Shared.Pages.Common.JSlogger />
+
+@code {
+    [Inject]
+    private NavigationManager? _navigationManager { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        if (_appState != null)
+        {
+            // Wir hören nur noch auf das Event, um das UI umzuschalten
+            _appState.OnRoutesStateHasChanged += HandleStateChange;
+        }
+    }
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (_appState != null)
+            _appState.OnRoutesStateHasChanged -= HandleStateChange;
+    }
+}

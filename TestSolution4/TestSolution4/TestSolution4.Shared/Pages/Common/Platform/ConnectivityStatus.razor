@@ -1,0 +1,222 @@
+﻿@using Microsoft.JSInterop
+@using BlazorCore.Services.AppState
+@implements IDisposable
+
+<span title="@GetStatusTitle()" class="d-inline-flex align-items-center">
+    @if (_appState.IsCloudConnected)
+    {
+        <i class="bi bi-globe-americas text-success fs-6"></i>
+        <span class="ms-2 badge text-bg-success d-none d-lg-inline">
+            @_appState.T("Connected")
+        </span>
+    }
+    else
+    {
+        <i class="bi bi-slash-circle-fill text-danger fs-6"></i>
+        <span class="ms-2 badge text-bg-danger d-none d-lg-inline">
+            @_appState.T("Offline")
+        </span>
+    }
+</span>
+
+@code {
+    [Inject]
+    private IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime? _jsRuntime { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Wir abonnieren nur noch das Event des Services.
+        // Sobald der Service via SignalR merkt, dass die Cloud weg ist,
+        // triggert er dieses Event und wir zeichnen uns neu.
+        _appState.OnChange += HandleStateChange;
+    }
+
+    private void HandleStateChange()
+    {
+        // Wir nutzen InvokeAsync, um absolut sicher vor Thread-Fehlern zu sein
+        //InvokeAsync(StateHasChanged);
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+    private string GetStatusTitle() => _appState.IsCloudConnected
+        ? _appState.T("Cloud Reachable")
+        : _appState.T("Cloud Offline");
+
+    public void Dispose()
+    {
+        // Wichtig, um Memory Leaks zu vermeiden
+        _appState.OnChange -= HandleStateChange;
+
+        if (_jsRuntime != null)
+        {
+            try
+            {
+                // Async ohne Wait - sauber und ohne Blockierung
+                _jsRuntime.InvokeVoidAsync("pE_Web.cloudConnectivity.dispose");
+            }
+            catch { /* Ignoriere Fehler beim Cleanup */ }
+        }
+    }
+}
+
+
+
+
+@* @using Microsoft.JSInterop
+@using BlazorCore.Services.AppState
+@inject IAppStateBase AppState
+@implements IDisposable *@
+@* ACHTUNG: Bei Blazor-Server Daran denken, das JS-Script '[WEB]/wwwroot/js/blazor-connectivity.js' zu erstellen und in 'App.razor' einzubinden  *@
+@* *@
+@* !!! Ausführliche Anleitung dazu siehe weiter unten im Anschluss der Komponente !!! *@
+
+
+
+
+@* <span id="internet-status-wrapper"
+      title="@GetStatusTitle()"
+      class="d-inline-flex align-items-center">
+
+    @if (_appState.IsNativeApp ?? false)
+    {
+        <!-- MAUI/Hybrid-Modus → arbeitet über AppState -->
+        @if (AppState.IsInternetConnected)
+        {
+            <i class="bi bi-globe-americas text-success fs-6"></i>
+            <span class="ms-2 badge text-bg-success d-none d-lg-inline">@_appState.T("Connected")</span>
+        }
+        else
+        {
+            <i class="bi bi-slash-circle-fill text-danger fs-6"></i>
+            <span class="ms-2 badge text-bg-danger d-none d-lg-inline">@_appState.T("Offline")</span>
+        }
+    }
+    else
+    {
+        <!-- Blazor Server → direkt über Browser-API -->
+        <i id="tpc-internet-status-icon" class="bi bi-globe-americas text-success fs-6"></i>
+        <span id="tpc-internet-status-text" class="ms-2 badge text-bg-success d-none d-lg-inline">@_appState.T("Connected")</span>
+    }
+</span>
+
+@code {
+    [Inject] private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Nur in Blazor Server: Browser-Monitor aktivieren
+            if (_appState != null && _appState.IsNativeApp != null && _appState.IsNativeApp.Value == false)
+                await JSRuntime.InvokeVoidAsync("initializeOnlineOfflineMonitor");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (_appState.IsNativeApp ?? false)
+        {
+            // Nur in MAUI: mit AppState synchronisieren
+            AppState.OnChange += StateHasChanged;
+        }
+    }
+
+    private string GetStatusTitle()
+        => (_appState.IsNativeApp ?? false)
+            ? (AppState.IsInternetConnected ? _appState.T("Connected to the Internet") : _appState.T("Offline"))
+            : _appState.T("Browser Connection Status");
+
+    public void Dispose()
+    {
+        if (_appState.IsNativeApp ?? false)
+            AppState.OnChange -= StateHasChanged;
+    }
+}
+*@
+
+@* 
+
+Anleitung zur Server-Blazor Implementierung 
+1. Im Web-Projekt das Verzeichnis 'wwwroot' erstellen, falls nicht vorhanden
+2. JavaScript Datei 'blazor-connectivity.js' erstellen und folgendne Inhalt einfügen:
+    window.initializeOnlineOfflineMonitor = function () {
+        const icon = document.getElementById('tpc-internet-status-icon');
+        const text = document.getElementById('tpc-internet-status-text');
+
+        function updateStatus() {
+            if (navigator.onLine) {
+                icon.className = 'bi bi-globe-americas text-success fs-6';
+                text.textContent = 'Connected';
+                text.className = 'ms-2 badge text-bg-success d-none d-lg-inline';
+            } else {
+                icon.className = 'bi bi-slash-circle-fill text-danger fs-6';
+                text.textContent = 'Offline';
+                text.className = 'ms-2 badge text-bg-danger d-none d-lg-inline';
+            }
+        }
+
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        updateStatus(); // Initialstatus setzen
+    };
+3. Blazor Server applikation testen.
+*@
+
+
+
+
+
+
+
+
+
+
+
+@* @using BlazorCore.Services.AppState
+
+@inject IAppStateBase AppState
+@implements IDisposable *@
+
+@* <span title="@(AppState.IsInternetConnected? @_appState.T("connected to the Internet") : @_appState.T("Offline"))"
+      class="internet-status-icon d-inline-flex align-items-center">
+
+    @if (AppState.IsInternetConnected)
+    {
+        <i class="bi bi-globe-americas text-success fs-6"></i>
+        <span class="ms-2 badge text-bg-success d-none d-lg-inline">@_appState.T("Connected")</span>
+    }
+    else
+    {
+        <i class="bi bi-slash-circle-fill text-danger fs-6"></i>
+        <span class="ms-2 badge text-bg-danger d-none d-lg-inline">@_appState.T("Offline")</span>
+    }
+</span>
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Parameter] public bool UseNativeFeatures { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        // Abonniere das zentrale Event:
+        // Wenn der AppState (durch das MAUI-Event) das Signal sendet,
+        // ruft Blazor StateHasChanged() auf und die Komponente rendert neu.
+        AppState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        // Wichtig: Das Abonnement bei Zerstörung der Komponente aufheben,
+        // um Speicherlecks zu vermeiden.
+        AppState.OnChange -= StateHasChanged;
+    }
+} *@

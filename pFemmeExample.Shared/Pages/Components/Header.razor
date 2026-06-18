@@ -1,0 +1,151 @@
+﻿@implements IDisposable
+
+<header class="border-bottom py-2">
+    <div class="container d-flex justify-content-between align-items-center">
+        <!-- Links: Ask AI Button -->
+        @if (_appState.StorageLocation != BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)
+        {
+            <P11Button id="askAiButton" Text="@_appState.T("Ask AI")"
+                       Title="@_appState.T("Ask AI")"
+                       AriaLabel="@_appState.T("Ask AI")"
+                       ButtonVariant="ButtonVariant.Link"
+                       OnClick="@OnAskAIClicked" />
+        }
+
+        <!-- Rechts: Donate und About nebeneinander -->
+        <div class="d-flex gap-2">
+            <P11Button id="donateButton" Text="@_appState.T("Donate")"
+                       Title="@_appState.T("Donate")"
+                       AriaLabel="@_appState.T("Donate")"
+                       ButtonVariant="ButtonVariant.Link"
+                       OnClick="@OnDonateClicked" />
+
+            <P11Button id="accessibilityButton"
+                       Title="@_appState.T("Accessibility")"
+                       AriaLabel="@_appState.T("Accessibility")"
+                       IconClass="bi bi-universal-access"
+                       ButtonVariant="ButtonVariant.Link"
+                       OnClick="() => _openAccessibility = true" />
+        </div>
+    </div>
+</header>
+
+@* Accessibility *@
+@if (_openAccessibility)
+{
+    <P11Modal @bind-Visible="_openAccessibility"
+              Id="_idModal"
+              AriaLabelledby="accessibilityModalTitle"
+              CssClassContent="tpc-form-bg-01"
+              Size="Size.Small"
+              ShowDevelopmentErrors="true"
+              OnClose="() => _openAccessibility = false">
+
+        <HeaderContent>
+            <h5 id="accessibilityModalTitle" class="modal-title">@_appState.T("Accessibility Settings")</h5>
+        </HeaderContent>
+
+        <BodyContent>
+            <pFemmeExample.Shared.Pages.Common.Accessibility ClearCurrentCssThemeMonoMode="false"
+                                                      HideColorsSelectionMonoMode="true"
+                                                      VisibleMonoMode="false"
+                                                      OnClickSave="() => _openAccessibility = false"
+                                                      Alignment="@(_appState.LtrRtl == BlazorCore.Services.AppState.LTR_RTL.LTR ?  DropdownAlignment.BottomEnd : DropdownAlignment.BottomStart)"
+                                                      UseCssDefaultMonoMode="false" />
+        </BodyContent>
+    </P11Modal>
+}
+
+@code {
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxResult { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.IAIService? _aiService { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+    private bool _openAccessibility = false;
+    private Guid _idModal = Guid.NewGuid();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+    }
+    public void Dispose()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+    }
+
+    // Inline Event Handler
+    private async Task OnAskAIClicked()
+    {
+        if (_aiService == null) return;
+
+
+        // Show confirmation dialog
+        MessageBoxResult result_nsg = await _messageBoxResult.ShowYesNoAsync(
+            title: _appState.T("Confirmation"),
+            message: _appState.T("To enable AI to analyze your data (last 12 months), the app sends it to the Microsoft Azure service. You can use this service free of charge only once a month. Do you want to send the data to the AI now?"),
+            yestext: _appState.T("Yes"),
+            notext: _appState.T("No")
+        );
+
+        switch (result_nsg)
+        {
+            case MessageBoxResult.Yes:
+                // Check if this is the first query of the month?
+                var result = await _aiService.AvailableAi();
+                if (result != null && string.IsNullOrEmpty(result.out_err))
+                {
+                    if (result.out_value_bool)
+                    {
+                        await _eventAggregatorProject.ChangeModalNativeAsync(Services.EventAggregatorProject.ModalNativeProjectType.AskAI, true);
+                    }
+                    else
+                    {
+                        await _messageBoxService.ShowOkAsync(
+                            title: _appState.T("Warning"),
+                            message: _appState.T("You can use this service free of charge only once a month")
+                        );
+                    }
+                }
+                else
+                {
+                    var err = result != null ? result.out_err : "Unknown error occurred while checking AI availability.";
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Error"),
+                        message: $"We’re sorry, but an error occurred!{err}"
+                    );
+                }
+                break;
+            case MessageBoxResult.No:
+            case MessageBoxResult.None:
+                break;
+        }
+    }
+
+    private void OnDonateClicked()
+    {
+        _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.Donate, true);
+    }
+
+    private void OnAboutClicked()
+    {
+        _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.About, true);
+    }
+}

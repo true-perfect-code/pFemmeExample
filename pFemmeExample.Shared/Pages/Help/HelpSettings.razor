@@ -1,0 +1,542 @@
+﻿@using p11.UI
+@using Microsoft.AspNetCore.Components.Web
+
+
+<pFemmeExample.Shared.Pages.Common.Help DocumentBody="@Body" Language="@Language" />
+
+@code {
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+    private string? Body = string.Empty;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var language = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (language != null && string.IsNullOrEmpty(language.out_err) && !string.IsNullOrEmpty(language.out_value_str))
+                    Language = language.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (language != null && !string.IsNullOrEmpty(language.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {language.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Body = $@"
+1. Settings:
+- Under Settings, four central parameters of the app can be managed: Debug ID, Storage Allocation, Local 2FA PIN, and the number of loaded (locally displayed) datasets from the server.
+
+2. Debug ID:
+- The Debug ID allows the clear assignment of a contact person's Cloud data.
+- This parameter is relevant if a user contacts support for support reasons (error message, data query, assistance).
+- It is recommended to leave this field empty unless direct data support from the technical team is required.
+- The stored Debug ID must be unique to ensure correct saving.
+
+3. Storage Allocation (Data Storage Location):
+- With this parameter, the user can define the storage location of their data.
+- The default setting is <b>'Cloud and Local'</b>, where data is stored both on the Cloud server and locally on the device (provided an internet connection exists).
+- When selecting <b>'Local Only'</b>, the data is exclusively saved locally on the user's device.
+- The option <b>'Cloud Only'</b> stores the data exclusively on the Cloud.
+
+4. Local 2FA PIN:
+- This PIN serves to protect the local database if Two-Factor Authentication (2FA) is activated but no internet connection is available.
+- If the internet is disconnected to bypass 2FA, a PIN entry window appears, and the app only starts upon correct PIN entry.
+- This ensures local data protection and serves as an additional security measure, as other apps often completely block local use in such cases.
+
+5. Number of Loaded Datasets:
+- This value determines the maximum number of datasets that are loaded from the server into the app and thus displayed locally.
+- Reducing this number can improve app performance, as the local loading process is faster.
+- The search function (Filter) is independent of this: it is always executed across all Cloud data (or the local DB) and delivers all found datasets, regardless of the set number of loaded data.
+
+6. Saving Settings:
+- Entered or changed parameters must be saved.
+- <b>Attention:</b> If the storage location (Storage Allocation) is changed, the user will be automatically logged out for technical reasons.
+- This is necessary so that cookies are set correctly and the app maintains a defined status.
+- To avoid automatic logging out, the saving process must be canceled.
+
+Note
+A detailed description of the application can be found in our linked user manual
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            case "DE":
+                Body = $@"
+1. Einstellungen:
+- Unter Einstellungen können vier zentrale Parameter der App verwaltet werden: Debug-ID, Speicherzuweisung, Lokaler 2FA-PIN und die Anzahl der geladenen (lokal angezeigten) Datensätze vom Server.
+
+2. Debug-ID:
+- Die Debug-ID ermöglicht die eindeutige Zuordnung der Cloud-Daten einer Kontaktperson.
+- Dieser Parameter ist relevant, wenn ein Benutzer den Support aus Supportgründen kontaktiert (Fehlermeldung, Datenabfrage, Unterstützung).
+- Es wird empfohlen, dieses Feld leer zu lassen, es sei denn, direkte Datenunterstützung vom technischen Team ist erforderlich.
+- Die gespeicherte Debug-ID muss eindeutig sein, um eine korrekte Speicherung zu gewährleisten.
+
+3. Speicherzuweisung (Datenspeicherort):
+- Mit diesem Parameter kann der Benutzer den Speicherort seiner Daten festlegen.
+- Die Standardeinstellung ist <b>'Cloud und Lokal'</b>, wobei Daten sowohl auf dem Cloud-Server als auch lokal auf dem Gerät gespeichert werden (vorausgesetzt eine Internetverbindung besteht).
+- Bei Auswahl von <b>'Nur Lokal'</b> werden die Daten ausschließlich lokal auf dem Gerät des Benutzers gespeichert.
+- Die Option <b>'Nur Cloud'</b> speichert die Daten ausschließlich in der Cloud.
+
+4. Lokaler 2FA-PIN:
+- Dieser PIN dient dem Schutz der lokalen Datenbank, wenn die Zwei-Faktor-Authentifizierung (2FA) aktiviert ist, aber keine Internetverbindung verfügbar ist.
+- Bei Unterbrechung der Internetverbindung zum Umgehen der 2FA erscheint ein PIN-Eingabefenster, und die App startet erst nach korrekter PIN-Eingabe.
+- Dies gewährleistet den lokalen Datenschutz und dient als zusätzliche Sicherheitsmaßnahme, da andere Apps in solchen Fällen den lokalen Zugriff oft komplett blockieren.
+
+5. Anzahl der geladenen Datensätze:
+- Dieser Wert bestimmt die maximale Anzahl der Datensätze, die vom Server in die App geladen und somit lokal angezeigt werden.
+- Eine Reduzierung dieser Zahl kann die App-Performance verbessern, da der lokale Ladeprozess schneller ist.
+- Die Suchfunktion (Filter) ist hiervon unabhängig: sie wird immer über alle Cloud-Daten (oder die lokale DB) ausgeführt und liefert alle gefundenen Datensätze, unabhängig von der eingestellten Anzahl geladener Daten.
+
+6. Speichern der Einstellungen:
+- Eingegebene oder geänderte Parameter müssen gespeichert werden.
+- <b>Achtung:</b> Bei Änderung des Speicherorts (Speicherzuweisung) wird der Benutzer aus technischen Gründen automatisch abgemeldet.
+- Dies ist notwendig, damit Cookies korrekt gesetzt werden und die App einen definierten Status behält.
+- Um eine automatische Abmeldung zu vermeiden, muss der Speichervorgang abgebrochen werden.
+
+Hinweis
+Eine detaillierte Beschreibung der Anwendung finden Sie in unserem verlinkten Benutzerhandbuch
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Body = $@"
+1. Paramètres :
+- Sous Paramètres, quatre paramètres centraux de l'application peuvent être gérés : ID de débogage, Allocation de stockage, PIN 2FA local et le nombre de jeux de données chargés (affichés localement) depuis le serveur.
+
+2. ID de débogage :
+- L'ID de débogage permet l'attribution claire des données cloud d'une personne de contact.
+- Ce paramètre est pertinent si un utilisateur contacte le support pour des raisons de support (message d'erreur, requête de données, assistance).
+- Il est recommandé de laisser ce champ vide sauf si un support de données direct de l'équipe technique est requis.
+- L'ID de débogage stocké doit être unique pour garantir une sauvegarde correcte.
+
+3. Allocation de stockage (Emplacement de stockage des données) :
+- Avec ce paramètre, l'utilisateur peut définir l'emplacement de stockage de ses données.
+- Le réglage par défaut est <b>'Cloud et Local'</b>, où les données sont stockées à la fois sur le serveur cloud et localement sur l'appareil (à condition qu'une connexion internet existe).
+- En sélectionnant <b>'Local uniquement'</b>, les données sont enregistrées exclusivement localement sur l'appareil de l'utilisateur.
+- L'option <b>'Cloud uniquement'</b> stocke les données exclusivement dans le cloud.
+
+4. PIN 2FA local :
+- Ce PIN sert à protéger la base de données locale si l'authentification à deux facteurs (2FA) est activée mais qu'aucune connexion internet n'est disponible.
+- En cas de déconnexion internet pour contourner la 2FA, une fenêtre de saisie du PIN apparaît et l'application ne démarre qu'après saisie correcte du PIN.
+- Cela garantit la protection des données locales et sert de mesure de sécurité supplémentaire, car d'autres applications bloquent souvent complètement l'utilisation locale dans de tels cas.
+
+5. Nombre de jeux de données chargés :
+- Cette valeur détermine le nombre maximum de jeux de données chargés du serveur dans l'application et donc affichés localement.
+- Réduire ce nombre peut améliorer les performances de l'application, car le processus de chargement local est plus rapide.
+- La fonction de recherche (Filtre) en est indépendante : elle s'exécute toujours sur toutes les données cloud (ou la BD locale) et fournit tous les jeux de données trouvés, indépendamment du nombre de données chargées défini.
+
+6. Enregistrement des paramètres :
+- Les paramètres saisis ou modifiés doivent être enregistrés.
+- <b>Attention :</b> En cas de modification de l'emplacement de stockage (Allocation de stockage), l'utilisateur sera automatiquement déconnecté pour des raisons techniques.
+- Cela est nécessaire pour que les cookies soient définis correctement et que l'application conserve un état défini.
+- Pour éviter une déconnexion automatique, le processus d'enregistrement doit être annulé.
+
+Note
+Une description détaillée de l'application se trouve dans notre manuel utilisateur lié
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Body = $@"
+1. Impostazioni:
+- Sotto Impostazioni è possibile gestire quattro parametri centrali dell'app: ID di debug, Allocazione storage, PIN 2FA locale e il numero di dataset caricati (visualizzati localmente) dal server.
+
+2. ID di debug:
+- L'ID di debug consente l'assegnazione chiara dei dati cloud di una persona di contatto.
+- Questo parametro è rilevante se un utente contatta il supporto per motivi di assistenza (messaggio di errore, richiesta dati, aiuto).
+- Si consiglia di lasciare questo campo vuoto a meno che non sia necessario un supporto dati diretto dal team tecnico.
+- L'ID di debug memorizzato deve essere unico per garantire un salvataggio corretto.
+
+3. Allocazione storage (Posizione di archiviazione dati):
+- Con questo parametro l'utente può definire la posizione di archiviazione dei propri dati.
+- L'impostazione predefinita è <b>'Cloud e Locale'</b>, dove i dati vengono memorizzati sia sul server cloud che localmente sul dispositivo (a condizione che esista una connessione internet).
+- Selezionando <b>'Solo Locale'</b>, i dati vengono salvati esclusivamente localmente sul dispositivo dell'utente.
+- L'opzione <b>'Solo Cloud'</b> memorizza i dati esclusivamente nel cloud.
+
+4. PIN 2FA locale:
+- Questo PIN serve a proteggere il database locale se l'autenticazione a due fattori (2FA) è attivata ma non è disponibile una connessione internet.
+- In caso di disconnessione internet per bypassare la 2FA, appare una finestra di inserimento PIN e l'app si avvia solo dopo l'inserimento corretto del PIN.
+- Questo garantisce la protezione dei dati locali e funge da misura di sicurezza aggiuntiva, poiché altre app spesso bloccano completamente l'uso locale in tali casi.
+
+5. Numero di dataset caricati:
+- Questo valore determina il numero massimo di dataset caricati dal server nell'app e quindi visualizzati localmente.
+- Ridurre questo numero può migliorare le prestazioni dell'app, poiché il processo di caricamento locale è più veloce.
+- La funzione di ricerca (Filtro) è indipendente da questo: viene sempre eseguita su tutti i dati cloud (o sul DB locale) e fornisce tutti i dataset trovati, indipendentemente dal numero di dati caricati impostato.
+
+6. Salvataggio delle impostazioni:
+- I parametri inseriti o modificati devono essere salvati.
+- <b>Attenzione:</b> In caso di modifica della posizione di archiviazione (Allocazione storage), l'utente verrà disconnesso automaticamente per motivi tecnici.
+- Questo è necessario affinché i cookie vengano impostati correttamente e l'app mantenga uno stato definito.
+- Per evitare il logout automatico, il processo di salvataggio deve essere annullato.
+
+Nota
+Una descrizione dettagliata dell'applicazione si trova nel nostro manuale utente collegato
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Body = $@"
+1. الإعدادات:
+- تحت الإعدادات، يمكن إدارة أربعة معلمات مركزية للتطبيق: معرف التصحيح، تخصيص التخزين، PIN 2FA المحلي، وعدد مجموعات البيانات المحملة (المعروضة محليًا) من الخادم.
+
+2. معرف التصحيح:
+- يتيح معرف التصحيح تعيين بيانات السحابة لشخص الاتصال بوضوح.
+- هذا المعلمة ذات صلة إذا اتصل مستخدم بالدعم لأسباب دعم (رسالة خطأ، طلب بيانات، مساعدة).
+- يُوصى بترك هذا الحقل فارغًا ما لم يكن دعم البيانات المباشر من الفريق التقني مطلوبًا.
+- يجب أن يكون معرف التصحيح المخزن فريدًا لضمان الحفظ الصحيح.
+
+3. تخصيص التخزين (موقع تخزين البيانات):
+- بهذا المعلمة يمكن للمستخدم تحديد موقع تخزين بياناته.
+- الإعداد الافتراضي هو <b>'السحابة والمحلي'</b>، حيث تُخزن البيانات في خادم السحابة ومحليًا على الجهاز (شريطة وجود اتصال بالإنترنت).
+- عند اختيار <b>'محلي فقط'</b>، تُخزن البيانات حصريًا محليًا على جهاز المستخدم.
+- الخيار <b>'سحابة فقط'</b> يخزن البيانات حصريًا في السحابة.
+
+4. PIN 2FA المحلي:
+- يخدم هذا الـ PIN لحماية قاعدة البيانات المحلية إذا كان التحقق بخطوتين (2FA) مفعلاً لكن لا يوجد اتصال بالإنترنت.
+- في حال انقطاع الإنترنت لتجاوز 2FA، يظهر نافذة إدخال PIN، ويبدأ التطبيق فقط بعد إدخال PIN الصحيح.
+- هذا يضمن حماية البيانات المحلية ويعمل كإجراء أمان إضافي، حيث غالبًا ما تحظر تطبيقات أخرى الاستخدام المحلي تمامًا في مثل هذه الحالات.
+
+5. عدد مجموعات البيانات المحملة:
+- تحدد هذه القيمة الحد الأقصى لعدد مجموعات البيانات التي تُحمل من الخادم إلى التطبيق وبالتالي تُعرض محليًا.
+- تقليل هذا العدد يمكن أن يحسن أداء التطبيق، حيث تكون عملية التحميل المحلية أسرع.
+- وظيفة البحث (الفلتر) مستقلة عن هذا: تُنفذ دائمًا على جميع بيانات السحابة (أو قاعدة البيانات المحلية) وتوفر جميع مجموعات البيانات الموجودة، بغض النظر عن عدد البيانات المحملة المحدد.
+
+6. حفظ الإعدادات:
+- يجب حفظ المعلمات المدخلة أو المعدلة.
+- <b>انتبه:</b> عند تغيير موقع التخزين (تخصيص التخزين)، سيتم تسجيل خروج المستخدم تلقائيًا لأسباب تقنية.
+- هذا ضروري لتعيين الكوكيز بشكل صحيح وللحفاظ على حالة محددة للتطبيق.
+- لتجنب تسجيل الخروج التلقائي، يجب إلغاء عملية الحفظ.
+
+ملاحظة
+وصف مفصل للتطبيق موجود في دليل المستخدم المرتبط لدينا
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Body = $@"
+1. 设置：
+- 在设置下，可以管理应用的四个核心参数：调试 ID、存储分配、本地 2FA PIN，以及从服务器加载（本地显示）的数据集数量。
+
+2. 调试 ID：
+- 调试 ID 允许明确分配联系人的云数据。
+- 如果用户因支持原因联系支持（错误消息、数据查询、协助），此参数相关。
+- 建议除非需要技术团队的直接数据支持，否则留空此字段。
+- 存储的调试 ID 必须唯一，以确保正确保存。
+
+3. 存储分配（数据存储位置）：
+- 使用此参数，用户可以定义数据的存储位置。
+- 默认设置是 <b>'云端和本地'</b>，数据同时存储在云服务器和设备本地（前提是有互联网连接）。
+- 选择 <b>'仅本地'</b> 时，数据仅本地存储在用户设备上。
+- 选项 <b>'仅云端'</b> 仅在云端存储数据。
+
+4. 本地 2FA PIN：
+- 此 PIN 用于保护本地数据库，当双因素认证 (2FA) 激活但无互联网连接时。
+- 如果断开互联网以绕过 2FA，会出现 PIN 输入窗口，只有正确输入 PIN 后应用才会启动。
+- 这确保本地数据保护，并作为额外安全措施，因为其他应用在这种情况下往往完全阻止本地使用。
+
+5. 加载的数据集数量：
+- 此值确定从服务器加载到应用中并本地显示的数据集最大数量。
+- 减少此数量可以改善应用性能，因为本地加载过程更快。
+- 搜索功能（过滤器）独立于此：它始终在所有云数据（或本地 DB）上执行，并提供所有找到的数据集，无论设置的加载数据数量如何。
+
+6. 保存设置：
+- 输入或更改的参数必须保存。
+- <b>注意：</b> 如果更改存储位置（存储分配），用户将因技术原因自动注销。
+- 这是必要的，以便正确设置 cookie 并保持应用定义状态。
+- 要避免自动注销，必须取消保存过程。
+
+注意
+应用的详细描述可在我们链接的用户手册中找到
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Body = $@"
+1. सेटिंग्स:
+- सेटिंग्स के अंतर्गत ऐप के चार केंद्रीय पैरामीटर प्रबंधित किए जा सकते हैं: डिबग आईडी, स्टोरेज एलोकेशन, लोकल 2FA PIN, और सर्वर से लोड किए गए (लोकली डिस्प्ले किए गए) डेटासेट की संख्या।
+
+2. डिबग आईडी:
+- डिबग आईडी संपर्क व्यक्ति के क्लाउड डेटा की स्पष्ट असाइनमेंट की अनुमति देती है।
+- यह पैरामीटर प्रासंगिक है यदि उपयोगकर्ता सपोर्ट कारणों से सपोर्ट से संपर्क करता है (एरर मैसेज, डेटा क्वेरी, सहायता)।
+- सिफारिश की जाती है कि इस फ़ील्ड को खाली छोड़ें जब तक कि तकनीकी टीम से डायरेक्ट डेटा सपोर्ट की आवश्यकता न हो।
+- स्टोर की गई डिबग आईडी अद्वितीय होनी चाहिए ताकि सही सेविंग सुनिश्चित हो।
+
+3. स्टोरेज एलोकेशन (डेटा स्टोरेज लोकेशन):
+- इस पैरामीटर से उपयोगकर्ता अपने डेटा का स्टोरेज लोकेशन निर्धारित कर सकता है।
+- डिफ़ॉल्ट सेटिंग <b>'क्लाउड और लोकल'</b> है, जहां डेटा क्लाउड सर्वर और डिवाइस पर लोकली दोनों पर स्टोर होता है (इंटरनेट कनेक्शन होने पर)।
+- <b>'केवल लोकल'</b> चुनने पर डेटा केवल उपयोगकर्ता के डिवाइस पर लोकली स्टोर होता है।
+- विकल्प <b>'केवल क्लाउड'</b> डेटा केवल क्लाउड पर स्टोर करता है।
+
+4. लोकल 2FA PIN:
+- यह PIN लोकल डेटाबेस की सुरक्षा के लिए काम करता है यदि टू-फैक्टर ऑथेंटिकेशन (2FA) सक्रिय है लेकिन इंटरनेट कनेक्शन उपलब्ध नहीं है।
+- यदि 2FA को बायपास करने के लिए इंटरनेट डिस्कनेक्ट किया जाता है, तो PIN एंट्री विंडो दिखाई देती है, और सही PIN एंट्री पर ही ऐप स्टार्ट होता है।
+- यह लोकल डेटा प्रोटेक्शन सुनिश्चित करता है और अतिरिक्त सुरक्षा उपाय के रूप में काम करता है, क्योंकि अन्य ऐप्स ऐसे मामलों में लोकल उपयोग को पूरी तरह ब्लॉक कर देते हैं।
+
+5. लोड किए गए डेटासेट की संख्या:
+- यह वैल्यू सर्वर से ऐप में लोड और लोकली डिस्प्ले किए गए डेटासेट की अधिकतम संख्या निर्धारित करती है।
+- इस संख्या को कम करने से ऐप परफॉर्मेंस सुधार सकती है, क्योंकि लोकल लोडिंग प्रोसेस तेज़ होती है।
+- सर्च फ़ंक्शन (फ़िल्टर) इससे स्वतंत्र है: यह हमेशा सभी क्लाउड डेटा (या लोकल DB) पर एक्जीक्यूट होती है और सभी मिले डेटासेट प्रदान करती है, सेट लोडेड डेटा संख्या से स्वतंत्र।
+
+6. सेटिंग्स सेव करना:
+- एंटर या चेंज किए गए पैरामीटर सेव करने चाहिए।
+- <b>ध्यान दें:</b> यदि स्टोरेज लोकेशन (स्टोरेज एलोकेशन) चेंज किया जाता है, तो तकनीकी कारणों से उपयोगकर्ता ऑटोमैटिकली लॉगआउट हो जाएगा।
+- यह जरूरी है ताकि कुकीज़ सही सेट हों और ऐप डिफ़ाइंड स्टेटस बनाए रखे।
+- ऑटोमैटिक लॉगआउट से बचने के लिए सेव प्रोसेस कैंसल करना चाहिए।
+
+नोट
+एप्लिकेशन का विस्तृत विवरण हमारे लिंक किए गए यूज़र मैनुअल में मिल सकता है
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Body = $@"
+1. Configuración:
+- En Configuración se pueden gestionar cuatro parámetros centrales de la app: ID de depuración, Asignación de almacenamiento, PIN 2FA local y el número de conjuntos de datos cargados (mostrados localmente) desde el servidor.
+
+2. ID de depuración:
+- La ID de depuración permite la asignación clara de los datos en la nube de una persona de contacto.
+- Este parámetro es relevante si un usuario contacta al soporte por motivos de asistencia (mensaje de error, consulta de datos, ayuda).
+- Se recomienda dejar este campo vacío a menos que se requiera soporte de datos directo del equipo técnico.
+- La ID de depuración almacenada debe ser única para garantizar un guardado correcto.
+
+3. Asignación de almacenamiento (Ubicación de almacenamiento de datos):
+- Con este parámetro el usuario puede definir la ubicación de almacenamiento de sus datos.
+- El ajuste predeterminado es <b>'Nube y Local'</b>, donde los datos se almacenan tanto en el servidor en la nube como localmente en el dispositivo (siempre que exista conexión a internet).
+- Al seleccionar <b>'Solo Local'</b>, los datos se guardan exclusivamente localmente en el dispositivo del usuario.
+- La opción <b>'Solo Nube'</b> almacena los datos exclusivamente en la nube.
+
+4. PIN 2FA local:
+- Este PIN sirve para proteger la base de datos local si la Autenticación de dos factores (2FA) está activada pero no hay conexión a internet disponible.
+- Si se desconecta internet para omitir la 2FA, aparece una ventana de entrada de PIN y la app solo se inicia tras introducir el PIN correcto.
+- Esto garantiza la protección de los datos locales y sirve como medida de seguridad adicional, ya que otras apps suelen bloquear por completo el uso local en tales casos.
+
+5. Número de conjuntos de datos cargados:
+- Este valor determina el número máximo de conjuntos de datos que se cargan del servidor a la app y por tanto se muestran localmente.
+- Reducir este número puede mejorar el rendimiento de la app, ya que el proceso de carga local es más rápido.
+- La función de búsqueda (Filtro) es independiente de esto: siempre se ejecuta sobre todos los datos en la nube (o la BD local) y entrega todos los conjuntos de datos encontrados, independientemente del número de datos cargados establecido.
+
+6. Guardado de la configuración:
+- Los parámetros introducidos o modificados deben guardarse.
+- <b>Atención:</b> Si se cambia la ubicación de almacenamiento (Asignación de almacenamiento), el usuario será desconectado automáticamente por razones técnicas.
+- Esto es necesario para que las cookies se establezcan correctamente y la app mantenga un estado definido.
+- Para evitar el cierre de sesión automático, debe cancelarse el proceso de guardado.
+
+Nota
+Una descripción detallada de la aplicación se encuentra en nuestro manual de usuario vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Body = $@"
+1. Pengaturan:
+- Di bawah Pengaturan, empat parameter sentral aplikasi dapat dikelola: ID Debug, Alokasi Penyimpanan, PIN 2FA Lokal, dan jumlah dataset yang dimuat (ditampilkan secara lokal) dari server.
+
+2. ID Debug:
+- ID Debug memungkinkan penetapan yang jelas dari data cloud orang kontak.
+- Parameter ini relevan jika pengguna menghubungi dukungan untuk alasan dukungan (pesan kesalahan, permintaan data, bantuan).
+- Disarankan untuk meninggalkan bidang ini kosong kecuali dukungan data langsung dari tim teknis diperlukan.
+- ID Debug yang disimpan harus unik untuk memastikan penyimpanan yang benar.
+
+3. Alokasi Penyimpanan (Lokasi Penyimpanan Data):
+- Dengan parameter ini, pengguna dapat menentukan lokasi penyimpanan data mereka.
+- Pengaturan default adalah <b>'Cloud dan Lokal'</b>, di mana data disimpan baik di server cloud maupun secara lokal di perangkat (dengan syarat ada koneksi internet).
+- Saat memilih <b>'Hanya Lokal'</b>, data disimpan secara eksklusif secara lokal di perangkat pengguna.
+- Opsi <b>'Hanya Cloud'</b> menyimpan data secara eksklusif di cloud.
+
+4. PIN 2FA Lokal:
+- PIN ini berfungsi untuk melindungi database lokal jika Autentikasi Dua Faktor (2FA) diaktifkan tetapi tidak ada koneksi internet.
+- Jika internet terputus untuk melewati 2FA, muncul jendela masukan PIN, dan aplikasi hanya mulai setelah masukan PIN yang benar.
+- Ini memastikan perlindungan data lokal dan berfungsi sebagai langkah keamanan tambahan, karena aplikasi lain sering memblokir penggunaan lokal sepenuhnya dalam kasus seperti itu.
+
+5. Jumlah Dataset yang Dimuat:
+- Nilai ini menentukan jumlah maksimum dataset yang dimuat dari server ke aplikasi dan karenanya ditampilkan secara lokal.
+- Mengurangi jumlah ini dapat meningkatkan performa aplikasi, karena proses pemuatan lokal lebih cepat.
+- Fungsi pencarian (Filter) independen dari ini: selalu dieksekusi pada semua data cloud (atau DB lokal) dan memberikan semua dataset yang ditemukan, terlepas dari jumlah data yang dimuat yang ditetapkan.
+
+6. Menyimpan Pengaturan:
+- Parameter yang dimasukkan atau diubah harus disimpan.
+- <b>Perhatian:</b> Jika lokasi penyimpanan (Alokasi Penyimpanan) diubah, pengguna akan otomatis logout karena alasan teknis.
+- Ini diperlukan agar cookie diatur dengan benar dan aplikasi mempertahankan status yang terdefinisi.
+- Untuk menghindari logout otomatis, proses penyimpanan harus dibatalkan.
+
+Catatan
+Deskripsi rinci aplikasi dapat ditemukan di manual pengguna yang tertaut kami
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Body = $@"
+1. Configurações:
+- Em Configurações, você pode gerenciar quatro parâmetros centrais do app: ID de depuração, Alocação de armazenamento, PIN 2FA local e o número de conjuntos de dados carregados (exibidos localmente) do servidor.
+
+2. ID de depuração:
+- O ID de depuração permite a atribuição clara dos dados na nuvem de uma pessoa de contato.
+- Esse parâmetro é relevante se um usuário contatar o suporte por motivos de assistência (mensagem de erro, consulta de dados, ajuda).
+- Recomenda-se deixar esse campo vazio, a menos que seja necessário suporte de dados direto da equipe técnica.
+- O ID de depuração salvo deve ser único para garantir uma gravação correta.
+
+3. Alocação de armazenamento (Localização de armazenamento de dados):
+- Com esse parâmetro, o usuário pode definir a localização de armazenamento dos seus dados.
+- A configuração padrão é <b>'Nuvem e Local'</b>, onde os dados são armazenados tanto no servidor na nuvem quanto localmente no dispositivo (desde que haja conexão com a internet).
+- Ao selecionar <b>'Apenas Local'</b>, os dados são salvos exclusivamente localmente no dispositivo do usuário.
+- A opção <b>'Apenas Nuvem'</b> armazena os dados exclusivamente na nuvem.
+
+4. PIN 2FA local:
+- Esse PIN serve para proteger o banco de dados local se a Autenticação de dois fatores (2FA) estiver ativada mas não houver conexão com a internet disponível.
+- Se a internet for desconectada para contornar a 2FA, aparece uma janela de entrada de PIN e o app só inicia após entrada correta do PIN.
+- Isso garante a proteção dos dados locais e serve como medida de segurança adicional, pois outros apps frequentemente bloqueiam completamente o uso local nesses casos.
+
+5. Número de conjuntos de dados carregados:
+- Esse valor determina o número máximo de conjuntos de dados carregados do servidor para o app e, portanto, exibidos localmente.
+- Reduzir esse número pode melhorar o desempenho do app, pois o processo de carregamento local é mais rápido.
+- A função de pesquisa (Filtro) é independente disso: ela é sempre executada em todos os dados na nuvem (ou no BD local) e fornece todos os conjuntos de dados encontrados, independentemente do número de dados carregados definido.
+
+6. Salvamento das configurações:
+- Os parâmetros inseridos ou alterados devem ser salvos.
+- <b>Atenção:</b> Se a localização de armazenamento (Alocação de armazenamento) for alterada, o usuário será desconectado automaticamente por razões técnicas.
+- Isso é necessário para que os cookies sejam definidos corretamente e o app mantenha um estado definido.
+- Para evitar o logout automático, o processo de salvamento deve ser cancelado.
+
+Nota
+Uma descrição detalhada do aplicativo está disponível em nosso manual do usuário vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Body = $@"
+1. Podešavanja:
+- Pod Podešavanjima se mogu upravljati četiri centralna parametra aplikacije: Debug ID, Dodela skladišta, Lokalni 2FA PIN i broj učitanih (lokalno prikazanih) skupova podataka sa servera.
+
+2. Debug ID:
+- Debug ID omogućava jasnu dodelu cloud podataka kontakt osobe.
+- Ovaj parametar je relevantan ako korisnik kontaktira podršku iz razloga podrške (poruka o grešci, upit podataka, pomoć).
+- Preporučuje se ostaviti ovo polje prazno osim ako je potreban direktan podatkovni suport od tehničkog tima.
+- Sačuvani Debug ID mora biti jedinstven da bi se osiguralo ispravno čuvanje.
+
+3. Dodela skladišta (Lokacija skladištenja podataka):
+- Pomoću ovog parametra korisnik može definisati lokaciju skladištenja svojih podataka.
+- Podrazumevano podešavanje je <b>'Cloud i Lokalno'</b>, gde se podaci čuvaju i na cloud serveru i lokalno na uređaju (pod uslovom da postoji internet veza).
+- Prilikom izbora <b>'Samo Lokalno'</b>, podaci se čuvaju isključivo lokalno na uređaju korisnika.
+- Opcija <b>'Samo Cloud'</b> čuva podatke isključivo u cloudu.
+
+4. Lokalni 2FA PIN:
+- Ovaj PIN služi za zaštitu lokalne baze podataka ako je Dvofaktorska autentifikacija (2FA) aktivirana ali nema internet veze.
+- Ako se internet prekine da bi se zaobišla 2FA, pojavljuje se prozor za unos PIN-a, i aplikacija se pokreće samo nakon ispravnog unosa PIN-a.
+- Ovo osigurava zaštitu lokalnih podataka i služi kao dodatna mera bezbednosti, jer druge aplikacije često potpuno blokiraju lokalnu upotrebu u takvim slučajevima.
+
+5. Broj učitanih skupova podataka:
+- Ova vrednost određuje maksimalan broj skupova podataka koji se učitavaju sa servera u aplikaciju i time prikazuju lokalno.
+- Smanjenje ovog broja može poboljšati performanse aplikacije, jer je lokalni proces učitavanja brži.
+- Funkcija pretrage (Filter) je nezavisna od ovoga: uvek se izvršava preko svih cloud podataka (ili lokalne DB) i isporučuje sve pronađene skupove podataka, nezavisno od podešenog broja učitanih podataka.
+
+6. Čuvanje podešavanja:
+- Uneti ili izmenjeni parametri moraju se sačuvati.
+- <b>Pažnja:</b> Ako se promeni lokacija skladištenja (Dodela skladišta), korisnik će biti automatski odjavljen iz tehničkih razloga.
+- Ovo je neophodno da bi se kolačići ispravno postavili i da aplikacija održi definisano stanje.
+- Da bi se izbeglo automatsko odjavljivanje, proces čuvanja mora biti otkazan.
+
+Napomena
+Detaljan opis aplikacije nalazi se u našem povezanom korisničkom priručniku
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Body = $@"
+1. Подешавања:
+- Под Подешавањима се могу управљати четири централна параметра апликације: Debug ID, Додела складишта, Локални 2FA PIN и број учитаних (локално приказаних) скупова података са сервера.
+
+2. Debug ID:
+- Debug ID омогућава јасну доделу cloud података контакт особе.
+- Овај параметар је релевантан ако корисник контактира подршку из разлога подршке (порука о грешци, упит података, помоћ).
+- Препоручује се оставити ово поље празно осим ако је потребан директан податковни супорт од техничког тима.
+- Сачувани Debug ID мора бити јединствен да би се осигурало исправно чување.
+
+3. Додела складишта (Локација складиштења података):
+- Помоћу овог параметра корисник може дефинисати локацију складиштења својих података.
+- Подразумевано подешавање је <b>'Cloud и Локално'</b>, где се подаци чувају и на cloud серверу и локално на уређају (под условом да постоји интернет веза).
+- Приликом избора <b>'Само Локално'</b>, подаци се чувају искључиво локално на уређају корисника.
+- Опција <b>'Само Cloud'</b> чува податке искључиво у cloudu.
+
+4. Локални 2FA PIN:
+- Овај PIN служи за заштиту локалне базе података ако је Двофакторска аутентификација (2FA) активирана али нема интернет везе.
+- Ако се интернет прекине да би се заобишла 2FA, појављује се прозор за унос PIN-а, и апликација се покреће само након исправног уноса PIN-а.
+- Ово осигурава заштиту локалних података и служи као додатна мера безбедности, јер друге апликације често потпуно блокирају локалну употребу у таквим случајевима.
+
+5. Број учитаних скупова података:
+- Ова вредност одређује максималан број скупова података који се учитавају са сервера у апликацију и тиме приказују локално.
+- Смањење овог броја може побољшати перформансе апликације, јер је локални процес учитавања бржи.
+- Функција претраге (Филтер) је независна од овога: увек се извршава преко свих cloud података (или локалне DB) и испоручује све пронађене скупове података, независно од подешеног броја учитаних података.
+
+6. Чување подешавања:
+- Унети или измењени параметри морају се сачувати.
+- <b>Пажња:</b> Ако се промени локација складиштења (Додела складишта), корисник ће бити аутоматски одјављен из техничких разлога.
+- Ово је неопходно да би се колачићи исправно поставили и да апликација одржи дефинисано стање.
+- Да би се избегло аутоматско одјављивање, процес чувања мора бити отказан.
+
+Напомена
+Детаљан опис апликације налази се у нашем повезаном корисничком приручнику
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+        }
+    }
+
+}
+

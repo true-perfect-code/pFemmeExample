@@ -1,0 +1,109 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- Basic -->
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <base href="/" />
+
+        <!-- Primary SEO -->
+        <title>@pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationName - Privacy First App</title>
+        <meta name="description" content="@($"{@pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationName} is a privacy-first, anonymous and cross-platform app. Full data sovereignty. Local, Cloud or Hybrid storage. 100% free.")" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="@($"https://{pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationDomain}/")" />
+
+        <!-- Open Graph -->
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="@($"{@pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationName} - The Privacy First App")" />
+        <meta property="og:description" content="Anonymous and full data ownership. Cross-platform app for your digital sovereignty." />
+        <meta property="og:url" content="@($"https://{pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationDomain}/")" />
+        <meta property="og:image" content="@($"https://{pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationDomain}/_content/pFemmeExample.Shared/img/opengraphimg.jpg")" />
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="@($"{@pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationName} - Privacy First App")" />
+        <meta name="twitter:description" content="Full control and anonymous. Sovereign. Cross-platform." />
+        <meta name="twitter:image" content="@($"https://{pFemmeExample.Shared.Global.Configuration.ConfigGeneral.ApplicationDomain}/_content/pFemmeExample.Shared/img/opengraphimg.jpg")" />
+
+        <!-- Theme -->
+        <meta name="theme-color" content="#ffffff" />
+
+        <!-- Styles -->
+        <!-- Achtung: 'app.css' wird dynamisch über 'AppStartup.razor' geladen '<link rel="stylesheet" href="_content/pFemmeExample.Shared/app.css" /> -->
+        <link rel="stylesheet" href="_content/pFemmeExample.Shared/fonts.css" />
+        @* <link rel="stylesheet" href="@Assets["_content/p11/p11.css"]" /> *@
+
+        <script src="_content/P11/p11.js" type="module"></script>
+
+        <link rel="stylesheet" href="pFemmeExample.Web.styles.css" />
+        <style>
+                footer,
+                .footer,
+                .fixed-bottom {
+                    position: sticky;
+                    left: 0;
+                    right: 0;
+                    z-index: 1000;
+                    bottom: var(--p11-bottom-fix);
+                    min-height: calc(var(--p11-safe-area-bottom) + var(--p11-height-footer-fix));
+                }
+        </style>
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/png" href="_content/pFemmeExample.Shared/img/logo_web.png" />
+
+        <!-- Structured Data -->
+        <script type="application/ld+json">
+            @(
+                $@"{{
+                  ""@context"": ""https://schema.org"",
+                  ""@type"": ""SoftwareApplication"",
+                  ""name"": ""{Shared.Global.Configuration.ConfigGeneral.ApplicationName}"",
+                  ""applicationCategory"": ""ProductivityApplication"",
+                  ""operatingSystem"": ""Web, Windows, macOS, iOS, Android, Linux (PWA)"",
+                  ""offers"": {{
+                    ""@type"": ""Offer"",
+                    ""price"": ""0"",
+                    ""priceCurrency"": ""EUR""
+                  }},
+                  ""description"": ""A privacy-first and anonymous application focused on digital sovereignty and full data ownership."",
+                  ""url"": ""https://{Shared.Global.Configuration.ConfigGeneral.ApplicationDomain}/""
+                }}"
+            )
+        </script>
+
+        <HeadOutlet @rendermode="InteractiveServer" />
+    </head>
+
+    <body>
+        <div class="tpc-bg"></div>
+
+        @* <Routes @rendermode="InteractiveServer" />
+        <ReconnectModal /> *@
+        <Routes @rendermode="new InteractiveServerRenderMode(prerender: true)" />
+
+        @if (pFemmeExample.Shared.Global.Configuration.ConfigGeneral.IsShowingReconnectModal)
+        {
+            <ReconnectModal />
+        }
+
+        <script src="_content/BlazorCore/app.js"></script>
+
+        @* <script src="_content/P11/p11.js" type="module"></script> *@
+
+        <script src="_framework/blazor.web.js"></script>
+
+        <script>
+            window.pE_Web = window.pE_Web || {};
+
+            window.pE_Web.registerWebViewReadyCallback = function (dotNetRef) {
+                dotNetRef?.invokeMethodAsync("OnWebViewReady");
+            };
+
+            window.pE_Web.disposeWebViewReadyCallback = function () {
+            };
+        </script>
+
+    </body>
+
+</html>

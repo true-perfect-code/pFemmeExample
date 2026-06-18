@@ -1,0 +1,515 @@
+﻿@using p11.UI
+@* @using BlazorCore.DbApp.Models *@
+@using BlazorCore.Models
+
+<div class="card">
+    <div class="card-header">
+        <h5>@_appState!.T("Existing sharing users")</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-column gap-4">
+
+            @if(_appState.StorageLocation != BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="py-3 ps-3" style="width: 1%; white-space: nowrap;"></th>
+                                <th scope="col" class="py-3 ps-3" style="width: 1%; white-space: nowrap;"></th>
+                                <th scope="col" class="py-3">@_appState!.T("Alias")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in list_SharingUsers ?? [])
+                            {
+                                <tr>
+                                    <td class="py-2 ps-3" style="width: 1%; white-space: nowrap;">
+                                        <div class="form-check">
+                                            <P11Checkbox 
+                                                Value="@item.IsChecked" 
+                                                ValueChanged="async(bool isChecked) => {
+                                                    item.IsChecked = isChecked;                
+                                                    await OnCheckedSharingUser();
+                                                }" 
+                                                AriaLabel=@_appState!.T("Share with other user") />
+                                        </div>
+                                    </td>
+                                    <td class="py-2 ps-3" style="width: 1%; white-space: nowrap;">
+                                        @* @if(list_AuthUsersTodo.Any(x => 
+                                            x!.Todo_UnixTS == UnixTS 
+                                            && x.AuthUsers_UnixTS == _appState.UnixTS // Enthält Mastereintrag der Todo-Verknüpfungstabelle den erteilten Sharing-Benutzer
+                                            && !string.IsNullOrEmpty(x.AuthUsers_ShareFrom_UnixTS)) // Es muss aber ein Erteilter Eintrag sein => AuthUsers_ShareFrom_UnixTS != ''
+                                        )
+                                        {
+                                            <span class="badge bg-info text-dark fs-6">
+                                                @_appState.T("From")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info text-dark fs-6">
+                                                @_appState.T("To")
+                                            </span>
+                                        } *@
+                                    </td>
+                                    <td class="py-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                @* <img src="@(string.IsNullOrEmpty(item.AliasImgJpegThumbnail) ? "_content/BlazorCore/img/avatar.jpg" : item.AliasImgJpegThumbnail)"
+                                                        alt="@(_appState!.T("Avatar von") + " " + item.Alias)"
+                                                        class="rounded-circle me-2"
+                                                        width="40"
+                                                        height="40"> *@
+                                                <img src="@(string.IsNullOrEmpty(item.AliasImgJpegThumbnail) ? "_content/BlazorCore/img/avatar.jpg" : $"data:{BlazorCore.Utilities.DetectMimeFromBase64(item.AliasImgJpegThumbnail)};base64,{item.AliasImgJpegThumbnail}")"
+                                                     alt="@(_appState.T("Avatar von") + " " + item.Alias)"
+                                                     class="rounded-circle me-2"
+                                                     width="40" height="40" />
+                                                <strong>@item.Alias</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <P11Button Text="@_appState.T("Save")" OnClick="OnSave" IconClass="bi bi-save" AriaLabel="@_appState.T("Save")" Title="@_appState.T("Save sharing")" />
+                    <P11Button 
+                        Text="@_appState.T("Cancel")" 
+                        OnClick="async () => { 
+                           // if (OnClickCancel.HasDelegate)
+                           // {
+                           //     await OnClickCancel.InvokeAsync();
+                           // }
+                        }" 
+                        IconClass="bi bi-x-lg"
+                        ButtonVariant="ButtonVariant.Secondary"
+                        AriaLabel="@_appState.T("Cancel sharing")" 
+                        Title="@_appState.T("Cancel sharing")" />
+
+                    <div class="ms-3"/>
+                    <P11Button 
+                        Text="@_appState.T("Manage")" 
+                        OnClick="() => OpenModalCallback?.Invoke()" 
+                        ButtonVariant="ButtonVariant.Warning"
+                        IconClass="bi bi-share me-2" 
+                        AriaLabel="@_appState.T("Manage sharing")" 
+                        Title="@_appState.T("Manage sharing")" />
+                </div>     
+                
+                <hr class="my-2 border-ink border-2 opacity-50">
+            }
+
+            @if(ShareExternally && (Title != null && Text != null))
+            {
+
+                <h5 class="text-ink mb-2">@_appState.T("Share via email, WhatsApp, Viber or other platforms")</h5>
+
+                <div class="d-flex align-items-center flex-wrap">
+                    <div class="mb-3 mb-md-0 me-md-4">
+                        <P11Checkbox 
+                            Value="IsTextCopyToClipboard"
+                            ValueChanged="async(bool val) => await copyTextToClipboard(val)"
+                            Label="@_appState.T("Copy text to clipboard")"
+                            IsSwitch="true" />
+                    </div>
+
+                    @* @if(_appState.IsNativeApp ?? false) 
+                    {
+                        <P11Button 
+                            CssClass="btn-lg px-4 shadow-sm" 
+                            Text="@_appState.T("Share Externally")"
+                            OnClick="async() => {
+                                await _platform.ShareText(Title ?? string.Empty, Text ?? string.Empty);
+                            }"
+                            IconClass="bi bi-share-fill me-2"
+                            ButtonVariant="ButtonVariant.Light" />                       
+                    }
+                    else
+                    {  
+                        <button 
+                            onclick="shareText('@(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(Title ?? string.Empty))', 
+                                                '@(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(Text ?? string.Empty))')"
+                            type="button"
+                            class="btn btn-sepia btn-lg px-4 shadow-sm">
+                            <i class="bi bi-share-fill me-2"></i> @_appState.T("Share Externally")
+                        </button>
+                    } *@
+                    <P11Button 
+                        CssClass="btn-lg px-4 shadow-sm" 
+                        Text="@_appState.T("Share Externally")"
+                        OnClick="async() => await _platform.ShareText(Title ?? string.Empty, Text ?? string.Empty)"
+                        IconClass="bi bi-share-fill me-2"
+                        ButtonVariant="ButtonVariant.Light" />  
+                </div>    
+            }
+
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [CascadingParameter(Name = "OpenModalCallback")]
+    public Action? OpenModalCallback { get; set; }
+
+    [Parameter]
+    public string?  UnixTS { get; set; }
+
+    [Parameter]
+    public bool ShareExternally { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<bool> OnClickSave { get; set; }
+
+    // [Parameter]
+    // public EventCallback<TodoModel> OnClickCancel { get; set; }
+
+    // [Parameter]
+    // public EventCallback<TodoModel> OnClickDelete { get; set; }
+
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase _dam { get; set; } = default!;
+
+
+    private string JsonSharingUsers = string.Empty;
+
+    private List<SharingInfoModel> list_SharingUsers = new();
+    //private List<AuthUsersTodoModel?> list_AuthUsersTodo= new();
+
+    private bool IsTextCopyToClipboard = true;
+    private string? Title;
+    private string? Text;
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                if(_appState.StorageLocation != BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)
+                {
+                    await LoadAuthUsersTodo();
+
+                    await LoadSharingUsers();                 
+                }
+
+                await LoadShareExternallyData(UnixTS ?? string.Empty);
+
+                await copyTextToClipboard(IsTextCopyToClipboard);
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task LoadSharingUsers()
+    {
+        try
+        {
+            if(list_SharingUsers != null)
+                list_SharingUsers.Clear();
+
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "Select>>SharingUsers" },
+                { "@AuthUsers_UnixTS", _appState.UnixTS },
+                { BlazorCore.Services.Dam.DB_CMD.NO_LOCAL, string.Empty } // Kein Sharing wenn kein Internet
+            };
+            BlazorCore.Services.SqlClient.ReadModel<SharingUsersModel?> result = await _dam.ReadData<SharingUsersModel>(db_para)!; // Abfrage ausführen
+            if (result != null && result.out_list != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            {
+                //await _toastService!.ShowSuccessAsync(_appState.T("Data has been successfully loaded."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 2000);
+                //list_sharingusers = result.out_list!; // Liste einlesen 
+                foreach(var item in result.out_list!)
+                {
+                    // Prüfen, ob es sich hier um einen Sharing Eintrag handelt (Sharing-Tabelle durchlaufen und mit Zuweisungen vergleichen)
+                    bool isChecked = false;
+                    // if(list_AuthUsersTodo.Any(x => 
+                    //     x!.Todo_UnixTS == UnixTS 
+                    //     && x.AuthUsers_UnixTS == item!.AuthUsers_UnixTS // Enthält Mastereintrag der Todo-Verknüpfungstabelle den Master-User aus Sharing-Stamm
+                    //     && !string.IsNullOrEmpty(x.AuthUsers_ShareFrom_UnixTS)) // Es muss aber ein Erteilter Eintrag sein => AuthUsers_ShareFrom_UnixTS != ''
+                    //     || list_AuthUsersTodo.Any(x => 
+                    //     x!.Todo_UnixTS == UnixTS 
+                    //     && x.AuthUsers_UnixTS == item!.AuthUsers_ShareTo_UnixTS // Enthält Mastereintrag der Todo-Verknüpfungstabelle den erteilten Sharing-Benutzer
+                    //     && !string.IsNullOrEmpty(x.AuthUsers_ShareFrom_UnixTS)) // Es muss aber ein Erteilter Eintrag sein => AuthUsers_ShareFrom_UnixTS != ''
+                    // )
+                    // {
+                    //     isChecked = true;
+                    // }
+
+                    // list_SharingUsers!.Add(new SharingInfoModel()
+                    // {
+                    //     IsChecked = isChecked,
+                    //     Alias = item!.Int__Alias,
+                    //     AliasImgJpegThumbnail = item.Int__AliasImgJpegThumbnail,
+                    //     //AuthUsers_UnixTS = item.Int__AuthUsers_UnixTS,
+                    //     AuthUsers_UnixTS = item.AuthUsers_UnixTS,
+                    //     AuthUsers_ShareTo_UnixTS = item.AuthUsers_ShareTo_UnixTS,
+                    // });
+                    if(item != null && (SHARING_STATUS)item.SharingStatus == SHARING_STATUS.ACCEPT)
+                    {
+                        list_SharingUsers!.Add(new SharingInfoModel()
+                        {
+                            IsChecked = isChecked,
+                            Alias = item!.Int__Alias,
+                            AliasImgJpegThumbnail = item.Int__AliasImgJpegThumbnail,
+                            AuthUsers_UnixTS = _appState.UnixTS,
+                            AuthUsers_ShareTo_UnixTS = item.Int__AuthUsers_UnixTS
+                        });
+                    }
+                }
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "Select>>SharingUsers";
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Error"),
+                    message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task LoadAuthUsersTodo()
+    {
+        try
+        {
+            // if(list_AuthUsersTodo != null)
+            //     list_AuthUsersTodo.Clear();
+
+            // // Parameter setzen
+            // Dictionary<string, string> db_para = new()
+            // {
+            //     { "@Case_", "Select>>AuthUsersTodo" },
+            //     { "@Todo_UnixTS", UnixTS! },
+            // };
+            // BlazorCore.Services.SqlClient.ReadModel<AuthUsersTodoModel?> result = await _dam.ReadData<AuthUsersTodoModel>(db_para)!; // Abfrage ausführen
+            // if (result != null && result.out_list != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            // {
+            //     list_AuthUsersTodo = result.out_list;
+            // }
+            // else
+            // {
+            //     string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "Select>>AuthUsersTodo";
+            //     await _messageBoxService.ShowOkAsync(
+            //         title: _appState!.T("Error"),
+            //         message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+            //     );
+            // }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnSave()
+    {
+        try
+        {
+            // ShareFrom bestimmen (ist Todo-Datensatz, der AuthUsers_UnixTS hat jedoch kein Eintrag AuthUsers_ShareFrom_UnixTS)
+            //var result_ShareFrom = list_AuthUsersTodo.FirstOrDefault(x => x!.Todo_UnixTS == UnixTS && string.IsNullOrEmpty(x.AuthUsers_ShareFrom_UnixTS));
+
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "Save>>AuthUsersTodo" },
+                { "@Todo_UnixTS", UnixTS! },
+                //{ "@AuthUsers_UnixTS", _appState.UnixTS },
+                //{ "@AuthUsers_ShareFrom_UnixTS", result_ShareFrom?.AuthUsers_UnixTS ?? string.Empty },
+                { "@SharingUsersUnixTS", JsonSharingUsers! /*SharingUsersUnixTS*/ }, // Sharing Users-UnixTS hier hinzufügen
+            };
+            BlazorCore.Services.SqlClient.ScalarModel result = await _dam.Save(db_para)!; // Abfrage ausführen
+            if (result != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            {
+                if (OnClickSave.HasDelegate)
+                {
+                    await OnClickSave.InvokeAsync(!list_SharingUsers.Any(x=> x.IsChecked));
+                }
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "Save>>AuthUsersTodo";
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Error"),
+                    message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnCheckedSharingUser()
+    {
+        try
+        {
+            var sharingUsers = new List<SharingInfoJsonModel>();
+
+            if(list_SharingUsers != null)
+            {
+                // var result_ShareFrom = list_AuthUsersTodo.FirstOrDefault(x => x!.Todo_UnixTS == UnixTS && string.IsNullOrEmpty(x.AuthUsers_ShareFrom_UnixTS));
+                // string AuthUsers_UnixTS = string.Empty;
+                // string authUsers_ShareFrom_UnixTS = string.Empty;
+                // if(result_ShareFrom != null)
+                // {
+                //     // Wenn Todo-Eintrag vom aktuellen User erstellt ist (ist der Fall wenn in der 
+                //     // list_AuthUsersTodo AuthUsers_UnixTS == _appState.UnixTS && string.IsNullOrEmpty(AuthUsers_ShareFrom_UnixTS))
+                //     // , dann ist hier der aktuelle User ein FROM-User (AuthUsers_ShareFrom_UnixTS)
+                //     if (result_ShareFrom.AuthUsers_UnixTS == _appState.UnixTS)
+                //         authUsers_ShareFrom_UnixTS = _appState.UnixTS;
+                //     else
+                //         authUsers_ShareFrom_UnixTS = result_ShareFrom.AuthUsers_UnixTS;
+                // }
+                // else
+                // {
+                //     // Wenn es keinen Eintrag vom aktuellen user ist (kein list_AuthUsersTodo AuthUsers_UnixTS == _appState.UnixTS && string.IsNullOrEmpty(AuthUsers_ShareFrom_UnixTS))
+                //     // , dann ist hier der aktuelle User ein Master-Usert (AuthUsers_UnixTS) dem ein Sharing zugeteilt wurde
+                //     AuthUsers_UnixTS = _appState.UnixTS;
+                // }
+
+
+                foreach(var entry in list_SharingUsers)
+                {
+                    await Task.Delay(5);
+                    var unixTS2 = _appState.GenerateUniqueId();
+                    //bool useToField = entry.AuthUsers_UnixTS == _appState!.UnixTS;
+
+                    // sharingUsers.Add(new SharingInfoJsonModel
+                    // {
+                    //     //AuthUsers_UnixTS = useToField ? _appState.UnixTS : entry.AuthUsers_UnixTS,
+                    //     //AuthUsers_ShareFrom_UnixTS = useToField ? entry.AuthUsers_UnixTS : _appState.UnixTS,
+                    //     IsChecked = entry.IsChecked ? "1" : "0",
+                    //     AuthUsers_UnixTS = string.IsNullOrEmpty(AuthUsers_UnixTS) ? entry.AuthUsers_ShareTo_UnixTS : AuthUsers_UnixTS, // User, der Sharing erhalten hat
+                    //     AuthUsers_ShareFrom_UnixTS = string.IsNullOrEmpty(authUsers_ShareFrom_UnixTS) ? authUsers_ShareFrom_UnixTS : authUsers_ShareFrom_UnixTS, // User, der Sharing erteilt
+                    //     UnixTS = unixTS2,
+                    //     DisplayName = entry.Alias ?? string.Empty
+                    // });
+
+                    sharingUsers.Add(new SharingInfoJsonModel
+                    {
+                        IsChecked = entry.IsChecked ? "1" : "0",
+                        AuthUsers_UnixTS = entry.AuthUsers_ShareTo_UnixTS, // User, der Sharing erhalten hat
+                        AuthUsers_ShareFrom_UnixTS = _appState.UnixTS, // User, der Sharing erteilt
+                        UnixTS = unixTS2,
+                        DisplayName = entry.Alias ?? string.Empty  // User, der Sharing erhalten hat
+                    });
+                }                
+            }
+
+            // AOT-sicher durch JsonContext!
+            if(sharingUsers.Count > 0)
+            {
+                // JsonSharingUsers = System.Text.Json.JsonSerializer.Serialize(
+                //     sharingUsers, 
+                //     Utility.JsonContext.Default.ListSharingInfoJsonModel
+                // );           
+            }
+
+            //await OmJsonSharingUsersChanged.InvokeAsync(jsonString);
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task LoadShareExternallyData(string unixTS)
+    {
+        try
+        {
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "SharingInfoByUnixTS>>Todo" },
+                { "@UnixTS", unixTS },
+            };
+            BlazorCore.Services.SqlClient.ScalarModel result = await _dam!.Scalar(db_para)!; // Abfrage ausführen
+            if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str)) // Resultat prüfen
+            {
+                // // Trennung zwischen Todo und Tasks
+                // int index = result.out_value_str.IndexOf(": ");
+                // Title = index >= 0 ? result.out_value_str.Substring(0, index) : result.out_value_str;
+                // Text = index >= 0  ? result.out_value_str : string.Empty; 
+                int index = result.out_value_str.IndexOf(": ");
+                Title = index >= 0 ? result.out_value_str.Substring(0, index) : result.out_value_str;
+                Text  = index >= 0 ? result.out_value_str.Substring(index + 2) : string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task copyTextToClipboard(bool isTextCopyToClipboard)
+    {
+        try
+        {
+            if(isTextCopyToClipboard)
+            {
+                string text = Title ?? string.Empty;
+                text = (!string.IsNullOrWhiteSpace(text) ? (text + ": " + (Text ?? string.Empty)) : "");
+                if(!string.IsNullOrWhiteSpace(text))
+                    await _platform.CopyTextToClipboard(text);
+            }
+            else
+                await _platform.CopyTextToClipboard(string.Empty);
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+}

@@ -1,0 +1,280 @@
+﻿@using Microsoft.JSInterop
+@using p11.UI
+@using BlazorCore.Services.Authentication
+@using Microsoft.AspNetCore.Components.Web
+@using BlazorCore.Services.SqlClient
+
+
+@if (!IsOpenButtonHidden)
+{
+    <P11Button IsDisabled="Visible" Text="@_appState!.T("Change PIN")" OnClick="async () => { Visible = true; StateHasChanged(); }" />
+}
+
+@if (Visible)
+{
+    <h5 class="modal-title">@_appState!.T("Change PIN")</h5>
+
+    <p>@_appState!.T("To enable PIN verification, you must always log out of the application and the storage mode must only be set to Local.")</p>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger small" role="alert" style="border: 2px solid red; padding: 10px; margin-top: 5px;">
+            <p>@_errorMessage</p>
+        </div>
+    }
+
+    <div class="mt-2">
+        <P11Input Label="@_appState!.T("Account")"
+                  @bind-Value="Model.Account"
+                  InputType="text" />
+
+        <P11Input Label="@_appState!.T("Current Password")"
+                  @bind-Value="Model.Password"
+                  InputType="password" />
+
+        <P11Input Label="@_appState!.T("New PIN")"
+                  @bind-Value="Model.NewPassword"
+                  Disabled="@resetPin"
+                  InputType="password" />
+
+        <P11Checkbox @bind-Value="resetPin"
+                     Label="@_appState!.T("PIN reset")"
+                     Description="@_appState!.T("(in case there are problems with registration/login)")" />
+    </div>
+
+    <P11Button Text="@_appState!.T("Save")"
+               OnClick="HandleChangePin"
+               IsLoading="@isLoading"
+               ButtonVariant="ButtonVariant.Primary" />
+
+    <P11Button Text="@_appState!.T("Cancel")"
+               OnClick="HandleCancel"
+               ButtonVariant="ButtonVariant.Secondary" />
+}
+
+@code {
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+    
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+
+    [Inject]
+    private NavigationManager? _navigationManager { get; set; }
+
+    [Inject]
+    private IAuthenticationBase? _authentication { get; set; }
+
+    [Inject]
+    protected IJSRuntime? _jsRuntime { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public bool IsOpenButtonHidden { get; set; } = false;
+
+    [Parameter]
+    public ChangePasswordRequestModel Model { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnChangedPassword { get; set; }
+
+    [Parameter]
+    public bool UseNativeFeatures { get; set; }
+
+    [Parameter]
+    public string ApiEndpoint { get; set; } = "/api/logout";
+
+    [Parameter]
+    public string NavigateTo { get; set; } = "/";
+
+    private string? _errorMessage;
+    string pin = string.Empty;
+    bool resetPin = false;
+    bool isLoading = false;
+
+    private void ResetInternalState()
+    {
+        Model.Account = string.Empty;
+        Model.Password = string.Empty;
+        Model.NewPassword = string.Empty;
+        _errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task HandleChangePin()
+    {
+        if (_appState?.Catalog.LocalStorage == null || _platformStorage == null) return;
+
+        try
+        {
+            _errorMessage = null;
+            isLoading = true;
+            await Task.Delay(20);
+            StateHasChanged();
+
+            if (string.IsNullOrEmpty(Model.Account) || string.IsNullOrEmpty(Model.Password))
+            {
+                _errorMessage = _appState!.T("Please fill in all fields.");
+                Model.NewPassword = string.Empty;
+                Model.NewPasswordRepeat = string.Empty;
+                StateHasChanged();
+                isLoading = false;
+                return;
+            }
+
+            // Falls Pin leer, dann Reset aktivieren
+            resetPin = string.IsNullOrEmpty(Model.NewPassword.Trim());
+
+            // Prüfen, ob User/Passwort korrekt sind
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "ExistsEmailHashPasswordHash>>AuthUsers" },
+                { "@EmailHash", Model.Account! },
+                { "@PasswordHash", Model.Password },
+                { BlazorCore.Services.Dam.DB_CMD.NO_CLOUD, BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString() } // Wird nur auf lokal ausgeführt
+            };
+            var resultCheckUser = await _dam!.Scalar(db_para);
+
+            if (resultCheckUser != null && string.IsNullOrEmpty(resultCheckUser.out_err))
+            {
+                if (resultCheckUser.out_value_bool && _globalState != null)
+                {
+                    // Pin-Cookie Management
+                    List<BlazorCore.Services.AppState.PinsModel> list_pin = new();
+                    BlazorCore.Services.AppState.PepperClientInfo peppers = new();
+                    string pinId = string.Empty;
+
+                    // Verschlüsselung/Entschlüsselung aktivieren
+                    using (var aes = BlazorCore.Services.ServerShared.SecurityServerFactory.Create())
+                    {
+                        // Wir setzen 'pepper' statisch (App-Name), um anschliessend aktuelle User-Credential zu hashen
+                        peppers.ApplicationName = _globalState.ConfigGeneral.ApplicationName;
+                        peppers.ApplicationNamePepper = await aes.DecryptPepperAsync();
+                        peppers.PasHash = await aes.HashCredentialsAsync(Model.Password, Model.Account, peppers.ApplicationNamePepper!);
+                        peppers.AccountHash = await aes.HashUsernameAsync(Model.Account, peppers.ApplicationNamePepper!);
+
+                        // Pepper für Pin Verschöüsselung/Entschlüsselung bestimmen, damit Pin-Eintrag im Cookie verschlüsselt/entschlüsselt werden kann
+                        byte[]? pepperPin;
+                        string pepperPinString = await aes.GenerateDeterministicPepperAsync($"dynamicpepper: {peppers.PasHash} {_globalState.ConfigGeneral.ApplicationName} {peppers.AccountHash}");
+                        pepperPin = await aes.DecryptPepperAsync(pepperPinString);
+
+                        // Prüfen ob Pin Cookie vorhanden
+                        var resultPin = await _platformStorage.GetAsync(_appState!.Catalog.LocalStorage.pin);
+                        if (resultPin != null && string.IsNullOrEmpty(resultPin.out_err) && !string.IsNullOrEmpty(resultPin.out_value_str))
+                        {
+                            // Pin Cookie prüfen, um zu schauen, ob Pin überhaupt gesetzt ist
+                            (string pinid, string pinname, string pinval) resultPinVal = await BlazorCore.Services.ServerShared.CookiePins.GetPinCookieValue(resultPin.out_value_str, peppers);
+                            if (resultPinVal.pinid != "-1" && resultPinVal.pinname != "-1" && resultPinVal.pinval != "-1")
+                            {
+                                pinId = resultPinVal.pinid;
+                            }
+
+                            // Pin-Liste aus Cookie holen und Pin aktualisieren/einfügen
+                            list_pin = await BlazorCore.Services.ServerShared.CookiePins.GetPinPinstatusCookieList(resultPin.out_value_str, peppers);
+                            if (list_pin.Any(x => x.Nonce == pinId))
+                            {
+                                // aktualisieren (hier in der liste bestimmten User)
+                                list_pin.Where(x => x.Nonce == pinId).FirstOrDefault()!.Pin = resetPin ? "" : await aes.EncryptBase32SecretAsync(Model.NewPassword, pepperPin);
+                            }
+                            else
+                            {
+                                // Neu einfügen, da der User in der Cookieliste nicht existiert
+                                list_pin.Add(new BlazorCore.Services.AppState.PinsModel()
+                                {
+                                    EmailHash = await aes.EncryptBase32SecretAsync(Model.Account, pepperPin),
+                                    Pin = resetPin ? "" : await aes.EncryptBase32SecretAsync(Model.NewPassword, pepperPin),
+                                    Nonce = Guid.NewGuid().ToString()
+                                });
+                            }
+                        }
+                        else
+                        {
+                            // Pin-Cookie existiert auf dem lokalen Gerät nicht (keie andere Benutzer).
+                            list_pin.Add(new BlazorCore.Services.AppState.PinsModel()
+                            {
+                                EmailHash = await aes.EncryptBase32SecretAsync(Model.Account, pepperPin),
+                                Pin = resetPin ? "" : await aes.EncryptBase32SecretAsync(Model.NewPassword, pepperPin),
+                                Nonce = Guid.NewGuid().ToString()
+                            });
+                        }
+
+                        // Liste zu Json serialisieren
+                        string json = System.Text.Json.JsonSerializer.Serialize(
+                            list_pin,
+                            BlazorCore.JsonContext.Default.ListPinsModel);
+
+                        // Cookie-Verschlüsseln
+                        // Bemerkung: Schlüssel kommt aus der App, keine wirkliche Sicherheit,
+                        // jedoch geht es nicht anderes, da im Cookie alle Benutzer enthalten sind
+                        string jsonEncrypt = await aes.EncryptBase32SecretAsync(json, peppers.ApplicationNamePepper);
+
+                        // Pin-Cookie löschen
+                        await _platformStorage.RemoveAsync(_appState.Catalog.LocalStorage.pin);
+
+                        // Pin-Cookie neu erstellen
+                        await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.pin, jsonEncrypt);
+
+                        await _toastService!.ShowSuccessAsync(_appState!.T("Your PIN has been changed successfully."), _appState!.T("Success"), position: ToastPosition.BottomEnd);
+                    }
+                }
+                else
+                {
+                    _errorMessage = _appState!.T("User does not exist locally! Please try again.");
+                    StateHasChanged();
+                    isLoading = false;
+                    return;
+                }
+            }
+            else
+            {
+                _errorMessage = _appState!.T("User does not exist locally! Please try again.");
+                StateHasChanged();
+                isLoading = false;
+                return;
+            }
+
+            ResetInternalState();
+            isLoading = false;
+            Visible = false;
+            await VisibleChanged.InvokeAsync(Visible);
+
+            if (OnChangedPassword.HasDelegate)
+            {
+                await OnChangedPassword.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"{_appState!.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {ex.Message.Substring(0, (ex.Message.Length > 600 ? 600 : ex.Message.Length - 1))}";
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        ResetInternalState();
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+}

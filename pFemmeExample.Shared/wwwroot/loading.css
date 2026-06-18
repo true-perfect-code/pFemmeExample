@@ -1,0 +1,152 @@
+:root {
+    --tpc-body: #f5d9bc !important;
+}
+
+.hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(to right, var(--tpc-body) 45%, transparent 75%), url('/_content/BlazorCore/img/hero_landing_girl.png');
+    background-size: cover;
+    background-position: right center;
+    background-repeat: no-repeat;
+}
+
+/* LEFT CONTENT */
+.hero-left {
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* WRAPPER */
+.hero-content {
+    max-width: 560px;
+}
+
+/* HEADER */
+.hero-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+/* LOGO */
+.hero-logo {
+    width: 140px;
+    max-width: 35vw;
+    height: auto;
+}
+
+/* TITLE */
+.hero-title {
+    font-weight: 900;
+    font-size: clamp(2.8rem, 4vw, 5.5rem);
+    line-height: 0.95;
+    color: #332222;
+}
+
+/* DESCRIPTION */
+.hero-description {
+    font-size: clamp(1.1rem, 1.3vw, 1.4rem);
+    color: #554444;
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+    max-width: 520px;
+}
+
+/* ACTIONS */
+.hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* LINK */
+.hero-link {
+    text-decoration: none;
+    font-weight: 600;
+    color: #a85175;
+    font-size: 1.1rem;
+    width: fit-content;
+}
+
+.tpc-hero-section {
+    padding: 6rem 0 4rem 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+}
+
+/* NAV */
+.tpc-floating-navbar {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    width: auto;
+    max-width: 90%;
+}
+
+.tpc-button-row {
+    display: flex;
+    background-color: rgba(from var(--tpc-body) r g b / 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 30px;
+    padding: 4px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    overflow: hidden;
+}
+
+.tpc-nav-button {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #554444 !important;
+    font-size: 1.3rem;
+    transition: all 0.2s ease-in-out;
+    border-radius: 26px;
+    margin: 0 2px;
+}
+
+.btn-primary {
+    --bs-btn-color: #4A5B4A !important;
+    --bs-btn-bg: #DDB7A8 !important;
+    --bs-btn-border-color: #D1C3B6 !important;
+}
+
+/* RESPONSIVE */
+@media (max-width: 992px) {
+
+    .tpc-hero-section {
+        background: linear-gradient(to bottom, rgba(253, 245, 232, 0.85) 40%, rgba(253, 245, 232, 0.6) 80%, rgba(253, 245, 232, 0.2) 100% ), url('/_content/BlazorCore/img/hero_landing_girl.png') !important;
+        background-size: cover !important;
+        background-position: 65% center !important;
+        background-repeat: no-repeat !important;
+        min-height: 100vh !important;
+        align-items: center !important;
+        padding-top: 5rem;
+        padding-bottom: 5rem;
+    }
+
+    .hero-left {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .hero-header {
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .hero-actions {
+        align-items: center;
+    }
+}

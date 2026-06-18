@@ -1,0 +1,894 @@
+﻿
+<TextToHtml Header="@Header" Body="@Body" IsHeaderHidden="@IsHeaderHidden" />
+
+@code {
+    [Parameter]
+    public bool IsHeaderHidden { get; set; } = false;
+
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+
+    private string? Header = string.Empty;
+    private string? Body = string.Empty;
+    private string[]? BodyBlocks { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var result = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+                    Language = result.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (result != null && !string.IsNullOrEmpty(result.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {result.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Header = "How We Handle Your Data";
+                Body = $@"
+Collected Data
+
+The application stores exclusively technically necessary information, including:
+- Hashed username and password (Argon2) in the local or cloud database
+- Language setting
+- Last login date/time
+- Authentication information in the form of encrypted cookies (only technically necessary cookies)
+- Storage location preference (local / cloud / both)
+- Text direction (LTR/RTL)
+- Accessibility settings
+- Design/theme mode
+- Identity provider information (Microsoft, Google, Apple) solely for authentication purposes
+
+Optional Debug ID
+
+Users may voluntarily enter a temporary debug ID to better analyze their own issues. This debug ID:
+- is not automatically generated
+- is not stored permanently
+- is not linked to a user account
+- can be deleted or changed at any time
+
+Data Anonymization
+
+To maximize the protection of your privacy, we apply the following measures:
+- All login credentials are stored exclusively in hashed form and cannot be associated with any natural person without additional information.
+- We do not store any personally identifiable information (PII).
+- Users are themselves responsible for any personal content they voluntarily store in the app. This data is not processed, analyzed, or read by True Perfect Code.
+
+Note:
+- If users actively contact us and voluntarily provide their debug identifier, we may temporarily use it for error analysis. After completion of the support request, no connection is retained.
+
+Purpose of Data Collection
+
+Your data is processed only to the extent strictly necessary for the operation of the app:
+- Ensuring the functionality and provision of the application.
+- Legal basis pursuant to Art. 6(1)(b) GDPR (EU General Data Protection Regulation) for the use of app features.
+- Technically necessary cookies and settings are additionally based on Art. 6(1)(f) GDPR (legitimate interest in a secure and functional app).
+
+Data Storage Location
+
+Your data is hosted under strict security standards and in compliance with European data protection principles:
+- When using cloud storage, data is stored encrypted on servers in Switzerland operated by Firestorm (a reputable Swiss hosting provider).
+
+Data Sharing with Third Parties
+
+Your privacy is our top priority, therefore:
+- No data is shared with third parties.
+- No tracking or analytics services are used.
+
+User Rights
+
+Users can at any time:
+- delete local data, cloud data, or both
+- view or export all their stored data in the app
+- completely delete their user account
+
+Note:
+- Since no personally identifiable information is collected, True Perfect Code cannot assign or provide user-specific data externally, unless the user voluntarily shares a debug ID for support purposes.
+
+Data Protection Officer
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Contact: privacy@true-perfect-code.ch
+";
+                break;
+
+            case "DE":
+                Header = "Wie wir Ihre Daten verarbeiten";
+                Body = $@"
+Erhobene Daten
+
+Die Anwendung speichert ausschließlich technisch notwendige Informationen, darunter:
+- Gehashter Benutzername und Passwort (Argon2) in der lokalen oder Cloud-Datenbank
+- Spracheinstellung
+- Letztes Anmeldedatum/-zeit
+- Authentifizierungsinformationen in Form verschlüsselter Cookies (nur technisch notwendige Cookies)
+- Speicherort-Präferenz (lokal / Cloud / beides)
+- Textausrichtung (LTR/RTL)
+- Barrierefreiheits-Einstellungen
+- Design-/Themenmodus
+- Identity-Provider-Informationen (Microsoft, Google, Apple) ausschließlich zur Authentifizierung
+
+Optionale Debug-ID
+
+Benutzer können freiwillig eine temporäre Debug-ID eingeben, um eigene Probleme besser analysieren zu können. Diese Debug-ID:
+- wird nicht automatisch generiert
+- wird nicht dauerhaft gespeichert
+- ist nicht mit einem Benutzerkonto verknüpft
+- kann jederzeit gelöscht oder geändert werden
+
+Datenanonymisierung
+
+Um den Schutz Ihrer Privatsphäre maximal zu gewährleisten, wenden wir folgende Maßnahmen an:
+- Alle Anmeldedaten werden ausschließlich gehasht gespeichert und können ohne zusätzliche Informationen keiner natürlichen Person zugeordnet werden.
+- Wir speichern keinerlei personenbezogene Daten (PII).
+- Benutzer sind selbst verantwortlich für eventuelle personenbezogene Inhalte, die sie freiwillig in der App speichern. Diese Daten werden nicht von True Perfect Code verarbeitet, analysiert oder ausgelesen.
+
+Bemerkung:
+- Wenn Benutzer uns aktiv kontaktieren und dabei freiwillig ihren Debug-Identifier übermitteln, können wir diesen vorübergehend zur Fehleranalyse nutzen. Nach Abschluss der Support-Anfrage wird keine Verbindung aufbewahrt.
+
+Zweck der Datenerhebung
+
+Ihre Daten werden nur so verarbeitet, wie es für den Betrieb der App unbedingt erforderlich ist:
+- Sicherstellung der Funktionsfähigkeit und Bereitstellung der Anwendung.
+- Rechtsgrundlage gemäß Art. 6 Abs. 1 lit. b DSGVO (EU-Datenschutzgrundverordnung) für die Nutzung der App-Funktionen.
+- Technisch notwendige Cookies und Einstellungen basieren zusätzlich auf Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren und funktionsfähigen App).
+
+Speicherort der Daten
+
+Ihre Daten werden unter strengen Sicherheitsstandards und unter Beachtung der europäischen Datenschutzgrundsätze gehostet:
+- Bei Nutzung der Cloud-Speicherung werden Daten verschlüsselt auf Servern in der Schweiz bei Firestorm (renommierter Schweizer Hosting-Anbieter) gespeichert.
+
+Datenweitergabe an Dritte
+
+Ihre Privatsphäre steht für uns an erster Stelle, daher:
+- Es erfolgt keinerlei Weitergabe von Daten an Dritte.
+- Es werden keine Tracking- oder Analyse-Dienste eingesetzt.
+
+Benutzerrechte
+
+Benutzer können jederzeit:
+- lokale Daten, Cloud-Daten oder beides löschen
+- sämtliche ihre gespeicherten Daten in der App einsehen oder exportieren
+- ihr Benutzerkonto vollständig löschen
+
+Bemerkung:
+- Da keine personenbezogenen Daten erhoben werden, kann True Perfect Code keine benutzerspezifischen Daten extern zuordnen oder bereitstellen, außer der Benutzer teilt freiwillig eine Debug-ID für Supportzwecke mit.
+
+Datenschutzbeauftragter
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Kontakt: privacy@true-perfect-code.ch
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Header = "Comment Nous Traitons Vos Données";
+                Body = $@"
+Données collectées
+
+L'application ne stocke exclusivement que les informations techniquement nécessaires, notamment :
+- Nom d'utilisateur et mot de passe hachés (Argon2) dans la base de données locale ou cloud
+- Paramètre de langue
+- Date/heure de la dernière connexion
+- Informations d'authentification sous forme de cookies chiffrés (uniquement des cookies techniquement nécessaires)
+- Préférence d'emplacement de stockage (local / cloud / les deux)
+- Direction du texte (LTR/RTL)
+- Paramètres d'accessibilité
+- Mode de design/thème
+- Informations sur le fournisseur d'identité (Microsoft, Google, Apple) exclusivement à des fins d'authentification
+
+ID de débogage optionnelle
+
+Les utilisateurs peuvent volontairement saisir un ID de débogage temporaire pour mieux analyser leurs propres problèmes. Cet ID de débogage :
+- n'est pas généré automatiquement
+- n'est pas stocké de manière permanente
+- n'est pas lié à un compte utilisateur
+- peut être supprimé ou modifié à tout moment
+
+Anonymisation des données
+
+Afin de maximiser la protection de votre vie privée, nous appliquons les mesures suivantes :
+- Toutes les données de connexion sont stockées exclusivement sous forme hachée et ne peuvent pas être associées à une personne physique sans informations supplémentaires.
+- Nous ne stockons aucune information personnellement identifiable (PII).
+- Les utilisateurs sont eux-mêmes responsables des éventuels contenus personnels qu'ils stockent volontairement dans l'application. Ces données ne sont ni traitées, ni analysées, ni lues par True Perfect Code.
+
+Remarque :
+- Si les utilisateurs nous contactent activement et nous fournissent volontairement leur identifiant de débogage, nous pouvons l'utiliser temporairement pour l'analyse d'erreurs. Après la fin de la demande de support, aucune connexion n'est conservée.
+
+Finalité de la collecte de données
+
+Vos données ne sont traitées que dans la mesure strictement nécessaire au fonctionnement de l'application :
+- Assurer la fonctionnalité et la fourniture de l'application.
+- Base juridique conformément à l'art. 6, al. 1, let. b RGPD (Règlement général sur la protection des données de l'UE) pour l'utilisation des fonctions de l'application.
+- Les cookies techniquement nécessaires et les paramètres reposent en outre sur l'art. 6, al. 1, let. f RGPD (intérêt légitime à une application sûre et fonctionnelle).
+
+Lieu de stockage des données
+
+Vos données sont hébergées selon des normes de sécurité strictes et dans le respect des principes européens de protection des données :
+- En cas d'utilisation du stockage cloud, les données sont stockées chiffrées sur des serveurs en Suisse exploités par Firestorm (un hébergeur suisse réputé).
+
+Partage des données avec des tiers
+
+Votre vie privée est notre priorité absolue, par conséquent :
+- Aucune donnée n'est transmise à des tiers.
+- Aucun service de suivi ou d'analyse n'est utilisé.
+
+Droits des utilisateurs
+
+Les utilisateurs peuvent à tout moment :
+- supprimer les données locales, les données cloud ou les deux
+- consulter ou exporter toutes leurs données stockées dans l'application
+- supprimer complètement leur compte utilisateur
+
+Remarque :
+- Comme aucune information personnellement identifiable n'est collectée, True Perfect Code ne peut pas attribuer ou fournir de données spécifiques à un utilisateur de manière externe, sauf si l'utilisateur partage volontairement un ID de débogage à des fins de support.
+
+Responsable de la protection des données
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Contact : privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Header = "Come Gestiamo i Tuoi Dati";
+                Body = $@"
+Dati raccolti
+
+L'applicazione memorizza esclusivamente informazioni tecnicamente necessarie, tra cui:
+- Nome utente e password sottoposti a hash (Argon2) nel database locale o cloud
+- Impostazione della lingua
+- Data/ora dell'ultimo accesso
+- Informazioni di autenticazione sotto forma di cookie crittografati (solo cookie tecnicamente necessari)
+- Preferenza di posizione di archiviazione (locale / cloud / entrambi)
+- Direzione del testo (LTR/RTL)
+- Impostazioni di accessibilità
+- Modalità di design/tema
+- Informazioni sul provider di identità (Microsoft, Google, Apple) esclusivamente ai fini dell'autenticazione
+
+ID di debug opzionale
+
+Gli utenti possono inserire volontariamente un ID di debug temporaneo per analizzare meglio i propri problemi. Questo ID di debug:
+- non viene generato automaticamente
+- non viene memorizzato in modo permanente
+- non è collegato a un account utente
+- può essere eliminato o modificato in qualsiasi momento
+
+Anonimizzazione dei dati
+
+Per massimizzare la protezione della vostra privacy, applichiamo le seguenti misure:
+- Tutte le credenziali di accesso vengono memorizzate esclusivamente in forma hashed e non possono essere associate a una persona fisica senza informazioni aggiuntive.
+- Non memorizziamo alcuna informazione personalmente identificabile (PII).
+- Gli utenti sono responsabili in prima persona per eventuali contenuti personali che memorizzano volontariamente nell'app. Questi dati non vengono elaborati, analizzati o letti da True Perfect Code.
+
+Nota:
+- Se gli utenti ci contattano attivamente e ci forniscono volontariamente il loro identificatore di debug, possiamo utilizzarlo temporaneamente per l'analisi degli errori. Al termine della richiesta di supporto, nessuna connessione viene conservata.
+
+Finalità della raccolta dei dati
+
+I vostri dati vengono elaborati solo nella misura strettamente necessaria al funzionamento dell'app:
+- Garantire la funzionalità e la fornitura dell'applicazione.
+- Base giuridica ai sensi dell'art. 6 par. 1 lett. b GDPR (Regolamento generale sulla protezione dei dati dell'UE) per l'utilizzo delle funzioni dell'app.
+- I cookie tecnicamente necessari e le impostazioni si basano inoltre sull'art. 6 par. 1 lett. f GDPR (interesse legittimo a un'app sicura e funzionale).
+
+Luogo di memorizzazione dei dati
+
+I vostri dati sono ospitati secondo rigorosi standard di sicurezza e nel rispetto dei principi europei di protezione dei dati:
+- In caso di utilizzo dell'archiviazione cloud, i dati vengono memorizzati crittografati su server in Svizzera gestiti da Firestorm (un provider di hosting svizzero rinomato).
+
+Condivisione dei dati con terze parti
+
+La vostra privacy è la nostra priorità assoluta, pertanto:
+- Nessun dato viene condiviso con terze parti.
+- Non vengono utilizzati servizi di tracciamento o analisi.
+
+Diritti degli utenti
+
+Gli utenti possono in qualsiasi momento:
+- eliminare i dati locali, i dati cloud o entrambi
+- visualizzare o esportare tutti i dati memorizzati nell'app
+- eliminare completamente il proprio account utente
+
+Nota:
+- Poiché non vengono raccolte informazioni personalmente identificabili, True Perfect Code non può assegnare o fornire dati specifici dell'utente all'esterno, a meno che l'utente non condivida volontariamente un ID di debug per scopi di supporto.
+
+Responsabile della protezione dei dati
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Contatto: privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Header = "كيف نتعامل مع بياناتك";
+                Body = $@"
+البيانات المجمعة
+
+يخزن التطبيق حصريًا المعلومات الضرورية تقنيًا، وتشمل:
+- اسم المستخدم وكلمة المرور المُهشَّمين (Argon2) في قاعدة البيانات المحلية أو السحابية
+- إعداد اللغة
+- تاريخ/وقت آخر تسجيل دخول
+- معلومات المصادقة في شكل كوكيز مشفرة (كوكيز ضرورية تقنيًا فقط)
+- تفضيل موقع التخزين (محلي / سحابي / كلاهما)
+- اتجاه النص (LTR/RTL)
+- إعدادات الوصولية
+- وضع التصميم/الثيم
+- معلومات مزود الهوية (Microsoft، Google، Apple) حصريًا لأغراض المصادقة
+
+معرف تصحيح أخطاء اختياري
+
+يمكن للمستخدمين إدخال معرف تصحيح أخطاء مؤقت بشكل طوعي لتحليل مشكلاتهم الخاصة بشكل أفضل. هذا المعرف:
+- لا يتم توليده تلقائيًا
+- لا يُخزن بشكل دائم
+- غير مرتبط بحساب مستخدم
+- يمكن حذفه أو تغييره في أي وقت
+
+إخفاء هوية البيانات
+
+لضمان أقصى حماية لخصوصيتكم، نطبق الإجراءات التالية:
+- تُخزن جميع بيانات تسجيل الدخول حصريًا في شكل مُهشَّم ولا يمكن ربطها بشخص طبيعي بدون معلومات إضافية.
+- لا نخزن أي معلومات شخصية قابلة لتحديد الهوية (PII).
+- يتحمل المستخدمون مسؤولية أي محتوى شخصي يخزنونه طوعيًا في التطبيق. لا تتم معالجة هذه البيانات أو تحليلها أو قراءتها من قبل True Perfect Code.
+
+ملاحظة:
+- إذا اتصل المستخدمون بنا بشكل نشط وقدموا معرف التصحيح الخاص بهم طوعيًا، يمكننا استخدامه مؤقتًا لتحليل الأخطاء. بعد انتهاء طلب الدعم، لا يتم الاحتفاظ بأي ربط.
+
+غرض جمع البيانات
+
+تتم معالجة بياناتكم فقط بالقدر الضروري لتشغيل التطبيق:
+- ضمان الوظيفية وتوفير التطبيق.
+- الأساس القانوني وفقًا للمادة 6 الفقرة 1 حرف ب من اللائحة العامة لحماية البيانات (GDPR) لاستخدام وظائف التطبيق.
+- تعتمد الكوكيز الضرورية تقنيًا والإعدادات أيضًا على المادة 6 الفقرة 1 حرف و من GDPR (مصلحة مشروعة في تطبيق آمن وعملي).
+
+موقع تخزين البيانات
+
+تُستضاف بياناتكم وفقًا لمعايير أمان صارمة ومع مراعاة مبادئ حماية البيانات الأوروبية:
+- عند استخدام التخزين السحابي، تُخزن البيانات مشفرة على خوادم في سويسرا يديرها Firestorm (مزود استضافة سويسري مرموق).
+
+مشاركة البيانات مع أطراف ثالثة
+
+خصوصيتكم هي أولويتنا القصوى، لذا:
+- لا تتم مشاركة أي بيانات مع أطراف ثالثة.
+- لا نستخدم خدمات تتبع أو تحليل.
+
+حقوق المستخدمين
+
+يمكن للمستخدمين في أي وقت:
+- حذف البيانات المحلية أو السحابية أو كليهما
+- عرض أو تصدير جميع البيانات المخزنة في التطبيق
+- حذف حساب المستخدم بالكامل
+
+ملاحظة:
+- بما أنه لا تُجمع معلومات شخصية قابلة لتحديد الهوية، لا يمكن لـ True Perfect Code تعيين أو توفير بيانات خاصة بالمستخدم خارجيًا، إلا إذا شارك المستخدم معرف تصحيح أخطاء طوعيًا لأغراض الدعم.
+
+مسؤول حماية البيانات
+- Daniel S. Simic، Dipl. Techniker HF Informatik
+- الاتصال: privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Header = "我们如何处理您的数据";
+                Body = $@"
+收集的数据
+
+本应用仅存储技术上必要的信息，包括：
+- 用户名和密码（使用 Argon2 哈希）存储在本地或云数据库中
+- 语言设置
+- 上次登录日期/时间
+- 以加密 Cookie 形式存储的认证信息（仅限技术必要 Cookie）
+- 存储位置偏好（本地 / 云端 / 两者）
+- 文本方向（LTR/RTL）
+- 无障碍设置
+- 设计/主题模式
+- 身份提供商信息（Microsoft、Google、Apple）仅用于认证目的
+
+可选调试 ID
+
+用户可自愿输入一个临时调试 ID，以便更好地分析自身问题。此调试 ID：
+- 不会自动生成
+- 不会永久存储
+- 不与用户账户关联
+- 可随时删除或更改
+
+数据匿名化
+
+为最大程度保护您的隐私，我们采取以下措施：
+- 所有登录凭证仅以哈希形式存储，没有额外信息无法关联到自然人。
+- 我们不存储任何个人可识别信息（PII）。
+- 用户自行负责在应用中自愿存储的任何个人内容。这些数据不会被 True Perfect Code 处理、分析或读取。
+
+注意：
+- 如果用户主动联系我们并自愿提供调试标识符，我们可临时用于错误分析。支持请求结束后，不会保留任何关联。
+
+数据收集目的
+
+您的资料仅在应用运行严格必要的范围内进行处理：
+- 确保应用的功能和提供。
+- 法律依据依据 GDPR（欧盟一般数据保护条例）第 6 条第 1 款 b 项，用于使用应用功能。
+- 技术必要 Cookie 和设置还依据 GDPR 第 6 条第 1 款 f 项（对安全且功能正常的应用的合法利益）。
+
+数据存储位置
+
+您的资料按照严格的安全标准托管，并遵守欧洲数据保护原则：
+- 使用云存储时，数据加密存储在瑞士的 Firestorm 服务器上（一家知名的瑞士托管提供商）。
+
+与第三方共享数据
+
+您的隐私是我们的首要任务，因此：
+- 不向任何第三方共享数据。
+- 不使用任何跟踪或分析服务。
+
+用户权利
+
+用户可随时：
+- 删除本地数据、云数据或两者
+- 在应用中查看或导出所有存储的数据
+- 完全删除用户账户
+
+注意：
+- 由于不收集任何个人可识别信息，True Perfect Code 无法外部分配或提供用户特定数据，除非用户自愿为支持目的分享调试 ID。
+
+数据保护负责人
+- Daniel S. Simic，Dipl. Techniker HF Informatik
+- 联系方式：privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Header = "हम आपका डेटा कैसे संभालते हैं";
+                Body = $@"
+एकत्रित डेटा
+
+एप्लिकेशन केवल तकनीकी रूप से आवश्यक जानकारी संग्रहीत करता है, जिसमें शामिल हैं:
+- हैश किया गया उपयोगकर्ता नाम और पासवर्ड (Argon2) स्थानीय या क्लाउड डेटाबेस में
+- भाषा सेटिंग
+- अंतिम लॉगिन तिथि/समय
+- एन्क्रिप्टेड कुकीज़ के रूप में प्रमाणीकरण जानकारी (केवल तकनीकी रूप से आवश्यक कुकीज़)
+- संग्रहण स्थान प्राथमिकता (स्थानीय / क्लाउड / दोनों)
+- टेक्स्ट दिशा (LTR/RTL)
+- पहुंच संबंधी सेटिंग्स
+- डिज़ाइन/थीम मोड
+- पहचान प्रदाता जानकारी (Microsoft, Google, Apple) केवल प्रमाणीकरण उद्देश्यों के लिए
+
+वैकल्पिक डिबग आईडी
+
+उपयोगकर्ता स्वेच्छा से एक अस्थायी डिबग आईडी दर्ज कर सकते हैं ताकि अपनी समस्याओं का बेहतर विश्लेषण कर सकें। यह डिबग आईडी:
+- स्वचालित रूप से उत्पन्न नहीं की जाती
+- स्थायी रूप से संग्रहीत नहीं की जाती
+- किसी उपयोगकर्ता खाते से जुड़ी नहीं होती
+- किसी भी समय हटाई या बदली जा सकती है
+
+डेटा अनामीकरण
+
+आपकी गोपनीयता की अधिकतम सुरक्षा सुनिश्चित करने के लिए हम निम्नलिखित उपाय अपनाते हैं:
+- सभी लॉगिन क्रेडेंशियल केवल हैश रूप में संग्रहीत किए जाते हैं और अतिरिक्त जानकारी के बिना किसी प्राकृतिक व्यक्ति से जोड़े नहीं जा सकते।
+- हम कोई व्यक्तिगत रूप से पहचान योग्य जानकारी (PII) संग्रहीत नहीं करते।
+- उपयोगकर्ता स्वयं उन व्यक्तिगत सामग्री के लिए जिम्मेदार हैं जो वे एप में स्वेच्छा से संग्रहीत करते हैं। इन डेटा को True Perfect Code द्वारा संसाधित, विश्लेषित या पढ़ा नहीं जाता।
+
+नोट:
+- यदि उपयोगकर्ता सक्रिय रूप से हमसे संपर्क करते हैं और स्वेच्छा से अपना डिबग पहचानकर्ता प्रदान करते हैं, तो हम इसे त्रुटि विश्लेषण के लिए अस्थायी रूप से उपयोग कर सकते हैं। सपोर्ट अनुरोध पूरा होने के बाद कोई संबंध नहीं रखा जाता।
+
+डेटा संग्रह का उद्देश्य
+
+आपका डेटा केवल एप के संचालन के लिए सख्ती से आवश्यक सीमा तक संसाधित किया जाता है:
+- एप्लिकेशन की कार्यक्षमता और प्रदान सुनिश्चित करना।
+- कानूनी आधार GDPR (ईयू सामान्य डेटा संरक्षण विनियमन) के अनुच्छेद 6(1)(b) के अनुसार एप सुविधाओं के उपयोग के लिए।
+- तकनीकी रूप से आवश्यक कुकीज़ और सेटिंग्स अतिरिक्त रूप से GDPR के अनुच्छेद 6(1)(f) पर आधारित हैं (सुरक्षित और कार्यात्मक एप के लिए वैध हित)।
+
+डेटा संग्रहण स्थान
+
+आपका डेटा सख्त सुरक्षा मानकों के तहत होस्ट किया जाता है और यूरोपीय डेटा संरक्षण सिद्धांतों का पालन करता है:
+- क्लाउड संग्रहण का उपयोग करने पर डेटा एन्क्रिप्टेड रूप में स्विट्जरलैंड में Firestorm के सर्वरों पर संग्रहीत किया जाता है (एक प्रतिष्ठित स्विस होस्टिंग प्रदाता)।
+
+तीसरे पक्षों के साथ डेटा साझा करना
+
+आपकी गोपनीयता हमारी सर्वोच्च प्राथमिकता है, इसलिए:
+- कोई डेटा तीसरे पक्षों के साथ साझा नहीं किया जाता।
+- कोई ट्रैकिंग या विश्लेषण सेवाएं उपयोग नहीं की जातीं।
+
+उपयोगकर्ता अधिकार
+
+उपयोगकर्ता किसी भी समय कर सकते हैं:
+- स्थानीय डेटा, क्लाउड डेटा या दोनों हटा सकते हैं
+- एप में संग्रहीत सभी डेटा देख या निर्यात कर सकते हैं
+- अपना उपयोगकर्ता खाता पूरी तरह हटा सकते हैं
+
+नोट:
+- चूंकि कोई व्यक्तिगत रूप से पहचान योग्य जानकारी एकत्र नहीं की जाती, True Perfect Code बाहरी रूप से उपयोगकर्ता-विशिष्ट डेटा आवंटित या प्रदान नहीं कर सकता, जब तक कि उपयोगकर्ता सपोर्ट उद्देश्यों के लिए स्वेच्छा से डिबग आईडी साझा न करे।
+
+डेटा संरक्षण अधिकारी
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- संपर्क: privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Header = "Cómo Gestionamos Sus Datos";
+                Body = $@"
+Datos recopilados
+
+La aplicación almacena exclusivamente información técnicamente necesaria, incluyendo:
+- Nombre de usuario y contraseña hasheados (Argon2) en la base de datos local o en la nube
+- Configuración de idioma
+- Fecha/hora del último inicio de sesión
+- Información de autenticación en forma de cookies encriptadas (solo cookies técnicamente necesarias)
+- Preferencia de ubicación de almacenamiento (local / nube / ambos)
+- Dirección del texto (LTR/RTL)
+- Configuraciones de accesibilidad
+- Modo de diseño/tema
+- Información del proveedor de identidad (Microsoft, Google, Apple) exclusivamente con fines de autenticación
+
+ID de depuración opcional
+
+Los usuarios pueden introducir voluntariamente un ID de depuración temporal para analizar mejor sus propios problemas. Este ID de depuración:
+- no se genera automáticamente
+- no se almacena de forma permanente
+- no está vinculado a una cuenta de usuario
+- puede eliminarse o modificarse en cualquier momento
+
+Anonimización de datos
+
+Para maximizar la protección de su privacidad, aplicamos las siguientes medidas:
+- Todas las credenciales de inicio de sesión se almacenan exclusivamente en forma hasheada y no pueden asociarse a una persona física sin información adicional.
+- No almacenamos ninguna información personalmente identificable (PII).
+- Los usuarios son responsables de cualquier contenido personal que almacenen voluntariamente en la aplicación. Estos datos no son procesados, analizados ni leídos por True Perfect Code.
+
+Nota:
+- Si los usuarios nos contactan activamente y nos proporcionan voluntariamente su identificador de depuración, podemos utilizarlo temporalmente para el análisis de errores. Una vez finalizada la solicitud de soporte, no se conserva ninguna conexión.
+
+Finalidad de la recogida de datos
+
+Sus datos se procesan únicamente en la medida estrictamente necesaria para el funcionamiento de la aplicación:
+- Garantizar la funcionalidad y la prestación de la aplicación.
+- Base legal conforme al art. 6, apdo. 1, letra b del RGPD (Reglamento General de Protección de Datos de la UE) para el uso de las funciones de la aplicación.
+- Las cookies técnicamente necesarias y las configuraciones se basan además en el art. 6, apdo. 1, letra f del RGPD (interés legítimo en una aplicación segura y funcional).
+
+Ubicación de almacenamiento de datos
+
+Sus datos se alojan bajo estrictos estándares de seguridad y en cumplimiento de los principios europeos de protección de datos:
+- Al utilizar el almacenamiento en la nube, los datos se almacenan encriptados en servidores en Suiza operados por Firestorm (un proveedor de hosting suizo reputado).
+
+Intercambio de datos con terceros
+
+Su privacidad es nuestra máxima prioridad, por lo tanto:
+- No se comparten datos con terceros.
+- No se utilizan servicios de seguimiento ni de análisis.
+
+Derechos de los usuarios
+
+Los usuarios pueden en cualquier momento:
+- eliminar los datos locales, los datos en la nube o ambos
+- visualizar o exportar todos sus datos almacenados en la aplicación
+- eliminar completamente su cuenta de usuario
+
+Nota:
+- Dado que no se recopila ninguna información personalmente identificable, True Perfect Code no puede asignar ni proporcionar datos específicos del usuario de forma externa, salvo que el usuario comparta voluntariamente un ID de depuración con fines de soporte.
+
+Responsable de protección de datos
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Contacto: privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Header = "Cara Kami Mengelola Data Anda";
+                Body = $@"
+Data yang Dikumpulkan
+
+Aplikasi hanya menyimpan informasi yang diperlukan secara teknis, termasuk:
+- Nama pengguna dan kata sandi yang di-hash (Argon2) di database lokal atau cloud
+- Pengaturan bahasa
+- Tanggal/waktu login terakhir
+- Informasi autentikasi dalam bentuk cookie terenkripsi (hanya cookie yang diperlukan secara teknis)
+- Preferensi lokasi penyimpanan (lokal / cloud / keduanya)
+- Arah teks (LTR/RTL)
+- Pengaturan aksesibilitas
+- Mode desain/tema
+- Informasi penyedia identitas (Microsoft, Google, Apple) semata-mata untuk tujuan autentikasi
+
+ID Debug Opsional
+
+Pengguna dapat secara sukarela memasukkan ID debug sementara untuk menganalisis masalah mereka sendiri dengan lebih baik. ID debug ini:
+- tidak dibuat secara otomatis
+- tidak disimpan secara permanen
+- tidak terkait dengan akun pengguna
+- dapat dihapus atau diubah kapan saja
+
+Anonimisasi Data
+
+Untuk memaksimalkan perlindungan privasi Anda, kami menerapkan langkah-langkah berikut:
+- Semua kredensial login disimpan secara eksklusif dalam bentuk hash dan tidak dapat dikaitkan dengan orang perorangan tanpa informasi tambahan.
+- Kami tidak menyimpan informasi pribadi yang dapat diidentifikasi (PII).
+- Pengguna bertanggung jawab sendiri atas konten pribadi apa pun yang mereka simpan secara sukarela di aplikasi. Data ini tidak diproses, dianalisis, atau dibaca oleh True Perfect Code.
+
+Catatan:
+- Jika pengguna menghubungi kami secara aktif dan secara sukarela memberikan pengenal debug mereka, kami dapat menggunakannya sementara untuk analisis kesalahan. Setelah permintaan dukungan selesai, tidak ada koneksi yang dipertahankan.
+
+Tujuan Pengumpulan Data
+
+Data Anda hanya diproses sejauh yang benar-benar diperlukan untuk pengoperasian aplikasi:
+- Memastikan fungsionalitas dan penyediaan aplikasi.
+- Dasar hukum sesuai Pasal 6 ayat (1) huruf b GDPR (Peraturan Umum Perlindungan Data UE) untuk penggunaan fitur aplikasi.
+- Cookie yang diperlukan secara teknis dan pengaturan juga didasarkan pada Pasal 6 ayat (1) huruf f GDPR (kepentingan sah untuk aplikasi yang aman dan berfungsi).
+
+Lokasi Penyimpanan Data
+
+Data Anda dihosting dengan standar keamanan ketat dan sesuai dengan prinsip perlindungan data Eropa:
+- Saat menggunakan penyimpanan cloud, data disimpan terenkripsi di server di Swiss yang dioperasikan oleh Firestorm (penyedia hosting Swiss terkemuka).
+
+Berbagi Data dengan Pihak Ketiga
+
+Privasi Anda adalah prioritas utama kami, oleh karena itu:
+- Tidak ada data yang dibagikan kepada pihak ketiga.
+- Tidak ada layanan pelacakan atau analisis yang digunakan.
+
+Hak Pengguna
+
+Pengguna dapat kapan saja:
+- menghapus data lokal, data cloud, atau keduanya
+- melihat atau mengekspor semua data yang disimpan di aplikasi
+- menghapus sepenuhnya akun pengguna mereka
+
+Catatan:
+- Karena tidak ada informasi pribadi yang dapat diidentifikasi yang dikumpulkan, True Perfect Code tidak dapat menetapkan atau menyediakan data spesifik pengguna secara eksternal, kecuali pengguna secara sukarela membagikan ID debug untuk tujuan dukungan.
+
+Petugas Perlindungan Data
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Kontak: privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Header = "Como Tratamos os Seus Dados";
+                Body = $@"
+Dados Coletados
+
+O aplicativo armazena exclusivamente informações tecnicamente necessárias, incluindo:
+- Nome de usuário e senha hasheados (Argon2) no banco de dados local ou na nuvem
+- Configuração de idioma
+- Data/hora do último login
+- Informações de autenticação em forma de cookies criptografados (apenas cookies tecnicamente necessários)
+- Preferência de localização de armazenamento (local / nuvem / ambos)
+- Direção do texto (LTR/RTL)
+- Configurações de acessibilidade
+- Modo de design/tema
+- Informações do provedor de identidade (Microsoft, Google, Apple) exclusivamente para fins de autenticação
+
+ID de Depuração Opcional
+
+Os usuários podem inserir voluntariamente um ID de depuração temporário para analisar melhor seus próprios problemas. Este ID de depuração:
+- não é gerado automaticamente
+- não é armazenado permanentemente
+- não está vinculado a uma conta de usuário
+- pode ser excluído ou alterado a qualquer momento
+
+Anonimização de Dados
+
+Para maximizar a proteção da sua privacidade, aplicamos as seguintes medidas:
+- Todas as credenciais de login são armazenadas exclusivamente em forma hash e não podem ser associadas a uma pessoa física sem informações adicionais.
+- Não armazenamos nenhuma informação pessoalmente identificável (PII).
+- Os usuários são responsáveis por qualquer conteúdo pessoal que armazenem voluntariamente no aplicativo. Esses dados não são processados, analisados ou lidos pela True Perfect Code.
+
+Nota:
+- Se os usuários nos contatarem ativamente e fornecerem voluntariamente seu identificador de depuração, podemos usá-lo temporariamente para análise de erros. Após a conclusão do pedido de suporte, nenhuma conexão é mantida.
+
+Finalidade da Coleta de Dados
+
+Seus dados são processados apenas na medida estritamente necessária para o funcionamento do aplicativo:
+- Garantir a funcionalidade e o fornecimento do aplicativo.
+- Base legal nos termos do art. 6º, § 1º, alínea b) do RGPD (Regulamento Geral de Proteção de Dados da UE) para o uso das funções do aplicativo.
+- Os cookies tecnicamente necessários e as configurações baseiam-se adicionalmente no art. 6º, § 1º, alínea f) do RGPD (interesse legítimo em um aplicativo seguro e funcional).
+
+Localização do Armazenamento de Dados
+
+Seus dados são hospedados sob rigorosos padrões de segurança e em conformidade com os princípios europeus de proteção de dados:
+- Ao utilizar o armazenamento na nuvem, os dados são armazenados criptografados em servidores na Suíça operados pela Firestorm (um provedor de hospedagem suíço renomado).
+
+Compartilhamento de Dados com Terceiros
+
+Sua privacidade é nossa prioridade máxima, por isso:
+- Nenhum dado é compartilhado com terceiros.
+- Não são utilizados serviços de rastreamento ou análise.
+
+Direitos dos Usuários
+
+Os usuários podem a qualquer momento:
+- excluir os dados locais, os dados na nuvem ou ambos
+- visualizar ou exportar todos os seus dados armazenados no aplicativo
+- excluir completamente sua conta de usuário
+
+Nota:
+- Como não são coletadas informações pessoalmente identificáveis, a True Perfect Code não pode atribuir ou fornecer dados específicos do usuário externamente, exceto se o usuário compartilhar voluntariamente um ID de depuração para fins de suporte.
+
+Responsável pela Proteção de Dados
+- Daniel S. Simic, Engenheiro de TI Certificado (HF suíço)
+- Contato: privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Header = "Kako postupamo sa vašim podacima";
+                Body = $@"
+Prikupljeni podaci
+
+Aplikacija čuva isključivo tehnički neophodne informacije, uključujući:
+- Heširano korisničko ime i lozinka (Argon2) u lokalnoj ili cloud bazi podataka
+- Podešavanje jezika
+- Datum/vreme poslednje prijave
+- Informacije o autentifikaciji u obliku šifrovanih kolačića (samo tehnički neophodni kolačići)
+- Preferencija lokacije skladištenja (lokalno / cloud / oba)
+- Smer teksta (LTR/RTL)
+- Podešavanja pristupačnosti
+- Režim dizajna/teme
+- Informacije o provajderu identiteta (Microsoft, Google, Apple) isključivo u svrhu autentifikacije
+
+Opcioni ID za debagovanje
+
+Korisnici mogu dobrovoljno uneti privremeni ID za debagovanje kako bi bolje analizirali svoje probleme. Ovaj ID za debagovanje:
+- se ne generiše automatski
+- se ne čuva trajno
+- nije povezan sa korisničkim nalogom
+- može biti obrisan ili izmenjen u bilo kom trenutku
+
+Anonimizacija podataka
+
+Da bismo maksimalno zaštitili vašu privatnost, primenjujemo sledeće mere:
+- Svi podaci za prijavu čuvaju se isključivo u heširanom obliku i ne mogu se povezati sa fizičkim licem bez dodatnih informacija.
+- Ne čuvamo nikakve lične podatke koji omogućavaju identifikaciju (PII).
+- Korisnici su sami odgovorni za eventualne lične sadržaje koje dobrovoljno čuvaju u aplikaciji. Ti podaci ne obrađuju, ne analiziraju niti ih čita True Perfect Code.
+
+Napomena:
+- Ako korisnici aktivno kontaktiraju nas i dobrovoljno dostave svoj identifikator za debagovanje, možemo ga privremeno koristiti za analizu grešaka. Nakon završetka zahteva za podršku, ne čuva se nikakva veza.
+
+Svrha prikupljanja podataka
+
+Vaši podaci obrađuju se samo u obimu koji je strogo neophodan za rad aplikacije:
+- Osiguranje funkcionalnosti i pružanje aplikacije.
+- Pravni osnov prema čl. 6 st. 1 sl. b GDPR-a (Opšta uredba o zaštiti podataka EU) za korišćenje funkcija aplikacije.
+- Tehnički neophodni kolačići i podešavanja dodatno se zasnivaju na čl. 6 st. 1 sl. f GDPR-a (legitimni interes za sigurnu i funkcionalnu aplikaciju).
+
+Lokacija čuvanja podataka
+
+Vaši podaci se hostuju pod strogim bezbednosnim standardima i u skladu sa evropskim principima zaštite podataka:
+- Pri korišćenju cloud skladištenja, podaci se čuvaju šifrovano na serverima u Švajcarskoj koje održava Firestorm (renomirani švajcarski hosting provajder).
+
+Deljenje podataka sa trećim stranama
+
+Vaša privatnost nam je na prvom mestu, stoga:
+- Ne dolazi do deljenja podataka sa trećim stranama.
+- Ne koriste se usluge praćenja ili analize.
+
+Prava korisnika
+
+Korisnici mogu u bilo kom trenutku:
+- obrisati lokalne podatke, cloud podatke ili oba
+- pregledati ili izvesti sve svoje sačuvane podatke u aplikaciji
+- potpuno obrisati svoj korisnički nalog
+
+Napomena:
+- Pošto se ne prikupljaju lični podaci koji omogućavaju identifikaciju, True Perfect Code ne može dodeliti ili pružiti korisnički specifične podatke spolja, osim ako korisnik dobrovoljno podeli ID za debagovanje u svrhu podrške.
+
+Službenik za zaštitu podataka
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Kontakt: privacy@true-perfect-code.ch
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Header = "Како поступамо са вашим подацима";
+                Body = $@"
+Прикупљени подаци
+
+Апликација чува искључиво технички неопходне информације, укључујући:
+- Хеширано корисничко име и лозинка (Argon2) у локалној или cloud бази података
+- Подешавање језика
+- Датум/време последње пријаве
+- Информације о аутентификацији у облику шифрованих колачића (само технички неопходни колачићи)
+- Преференција локације складиштења (локално / cloud / оба)
+- Смер текста (LTR/RTL)
+- Подешавања приступачности
+- Режим дизајна/теме
+- Информације о провајдеру идентитета (Microsoft, Google, Apple) искључиво у сврху аутентификације
+
+Опциони ID за дебагивање
+
+Корисници могу добровољно унети привремени ID за дебагивање како би боље анализирали своје проблеме. Овај ID за дебагивање:
+- се не генерише аутоматски
+- се не чува трајно
+- није повезан са корисничким налогом
+- може бити обрисан или измењен у било ком тренутку
+
+Анонимизација података
+
+Да бисмо максимално заштитили вашу приватност, примењујемо следеће мере:
+- Сви подаци за пријаву чувају се искључиво у хешираном облику и не могу се повезати са физичким лицем без додатних информација.
+- Не чувамо никакве личне податке који омогућавају идентификацију (PII).
+- Корисници су сами одговорни за евентуалне личне садржаје које добровољно чувају у апликацији. Ти подаци не обрађују, не анализирају нити их чита True Perfect Code.
+
+Напомена:
+- Ако корисници активно контактирају нас и добровољно доставе свој идентификатор за дебагивање, можемо га привремено користити за анализу грешака. Након завршетка захтева за подршку, не чува се никаква веза.
+
+Сврха прикупљања података
+
+Ваши подаци обрађују се само у обиму који је строго неопходан за рад апликације:
+- Осигурање функционалности и пружање апликације.
+- Правни основ према чл. 6 ст. 1 сл. б GDPR-а (Општа уредба о заштити података ЕУ) за коришћење функција апликације.
+- Технички неопходни колачићи и подешавања додатно се заснивају на чл. 6 ст. 1 сл. ф GDPR-а (легитимни интерес за сигурну и функционалну апликацију).
+
+Локација чувања података
+
+Ваши подаци се хостују под строгим безбедносним стандардима и у складу са европским принципима заштите података:
+- При коришћењу cloud складиштења, подаци се чувају шифровано на серверима у Швајцарској које одржава Firestorm (реномирани швајцарски хостинг провајдер).
+
+Дељење података са трећим странама
+
+Ваша приватност нам је на првом месту, стога:
+- Не долази до дељења података са трећим странама.
+- Не користе се услуге праћења или анализе.
+
+Права корисника
+
+Корисници могу у било ком тренутку:
+- обрисати локалне податке, cloud податке или оба
+- прегледати или извести све своје сачуване податке у апликацији
+- потпуно обрисати свој кориснички налог
+
+Напомена:
+- Пошто се не прикупљају лични подаци који омогућавају идентификацију, True Perfect Code не може доделити или пружити кориснички специфичне податке споља, осим ако корисник добровољно подели ID за дебагивање у сврху подршке.
+
+Службеник за заштиту података
+- Daniel S. Simic, Dipl. Techniker HF Informatik
+- Контакт: privacy@true-perfect-code.ch
+";
+                break;
+
+        }
+
+    }
+
+}
+

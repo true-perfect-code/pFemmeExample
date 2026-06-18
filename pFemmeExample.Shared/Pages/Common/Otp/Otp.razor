@@ -1,0 +1,424 @@
+﻿@using p11.UI
+@using BlazorCore.Services.Otp
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@implements IDisposable
+
+
+<div class="d-flex justify-content-center gap-2 my-4">
+
+    @if (!_infoMessageOnly)
+    {
+        @if (_isPin && (_appState!.IsNativeApp ?? false) && (!_appState.IsInternetConnected || _appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL))
+        {
+            <div class="my-4 form-floating">
+                <div class="input-group">
+                    <div style="background: #f0f8ff;">
+                        <P11Input TValue="string"
+                                  @bind-Value="@PinValue"
+                                  Label="@_appState!.T("PIN")"
+                                  InputType="password"
+                                  OnKeyDown="HandlePinInput"
+                                  UseFloatingLabel="true"
+                                  @ref="pinInputRef"
+                                  Description="@_appState!.T("Please enter your PIN.")" />
+                    </div>
+                    <P11Button OnClick="PinInput"
+                               IconClass="bi bi-check-lg"
+                               IsDisabled="@(string.IsNullOrEmpty(PinValue))"
+                               Size="Size.Medium"
+                               AriaLabel="@_appState!.T("Ok")"
+                               Title="@_appState!.T("Ok")"
+                               ButtonVariant="ButtonVariant.Success" />
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="form-group text-center">
+                <label class="form-label" for="otpInput">@_appState!.T("OTP Code")</label>
+                <div class="d-flex justify-content-center gap-2">
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        var index = i;
+                        <input type="text"
+                               class="form-control text-center @(string.IsNullOrEmpty(_otpErrorMessage) ? "" : "is-invalid")"
+                               style="width: 3.5rem;"
+                               maxlength="1"
+                               autocomplete="one-time-code"
+                               @bind="OtpDigits[index]"
+                               @oninput="e => HandleInput(e, index)"
+                               @onkeydown="e => HandleBackspace(e, index)"
+                               @ref="inputRefs[index]" />
+                    }
+                </div>
+                <small class="form-text text-muted">@_appState!.T("Please enter all 6 digits.")</small>
+            </div>
+        }
+    }
+    
+</div>
+
+@if (!_infoMessageOnly)
+{
+    <div class="text-end" style="margin-top: -25px">
+        <div class="d-flex justify-content-between align-items-center">
+            <P11Button Text="@(_isPin? _appState!.T("Cloud/Local") : _appState!.T("Local"))" OnClick="ResetStorageLocation" ButtonVariant="ButtonVariant.Link" Size="Size.Small" />
+            <P11Button Text="@_appState!.T("Clear")" OnClick="ResetInternalState" ButtonVariant="ButtonVariant.Link" Size="Size.Small" />
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_otpErrorMessage))
+{
+    <div class="alert alert-danger" style="border: 2px solid red; padding: 10px; margin-top: 5px; font-size: 0.9em;">
+        <p>@_otpErrorMessage</p>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_infoMessage))
+{
+    <div class="alert alert-primary text-center" style="border: 2px solid green; padding: 10px; margin-top: 5px; font-size: 0.9em;">
+        <p class="mb-2">@_infoMessage</p>
+        @if (!_infoMessageOnly)
+        {
+            <div class="spinner-border text-success" role="status" style="width: 1.5rem; height: 1.5rem;">
+                <span class="visually-hidden">@_appState!.T("Loading...")</span>
+            </div>
+        }
+    </div>
+}
+
+@if (!_isPin && !_infoMessageOnly)
+{
+    <div class="mt-4">
+        <P11AccordionNative>
+            <Title>
+                <span>@_appState!.T("Lost Authenticator?")</span>
+            </Title>
+            <ChildContent>
+                <p>@_appState!.T("Enter your backup code, account, and password to reset 2FA.")</p>
+
+                @if (!string.IsNullOrEmpty(_resetErrorMessage))
+                {
+                    <div class="alert alert-warning" style="border: 2px solid orange; padding: 10px; margin: 5px 0; font-size: 0.9em; z-index: 1000;">
+                        <p><strong>@_appState!.T("An error occurred:")</strong></p>
+                        <p>@_resetErrorMessage</p>
+                    </div>
+                }
+
+                <P11Input Label="@_appState!.T("Backup Code")"
+                          @bind-Value="_otpParametersForm.OtpBackupCode"
+                          Autocomplete="false"
+                          InputType="text"
+                          Description=@_appState!.T("Already created during OTP setup") />
+
+                <P11Input Label=@_appState!.T("Account")
+                          @bind-Value="_otpParametersForm.Account"
+                          Autocomplete="new-username"
+                          InputType="text"
+                          Description=@_appState!.T("Your anonymous application account") />
+
+                <P11Input Label=@_appState!.T("Password")
+                          @bind-Value="_otpParametersForm.Password"
+                          Autocomplete="new-password"
+                          InputType="password"
+                          Description=@_appState!.T("Your account password for verification.") />
+
+                <P11Button Text=@_appState!.T("Reset 2FA")
+                           OnClick="HandleRevoke2FA"
+                           ButtonVariant="ButtonVariant.Primary" />
+            </ChildContent>
+        </P11AccordionNative>
+    </div>
+}
+
+@code {
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter]
+    public string? EmailHash { get; set; }
+
+    [Parameter]
+    public string? PasswordHash { get; set; }
+
+    [Parameter]
+    public int FocusDelayMilliseconds { get; set; } = 100;
+
+    [Parameter]
+    public EventCallback<(string OtpUserDigitInput, string OtpBackupCode, string Account, string Password)> OnSecretEntered { get; set; }
+
+    [Parameter]
+    public Action<(string OtpUserDigitInput, string OtpBackupCode, string Account, string Password)>? OnSecretEnteredAction { get; set; }
+
+    [Parameter]
+    public string? Pin { get; set; }
+
+
+    private ElementReference[] inputRefs = new ElementReference[6];
+    private P11Input<string>? pinInputRef;
+    private string[] OtpDigits = new string[6];
+    private string PinValue = string.Empty;
+    private string? _otpErrorMessage;
+    private string? _infoMessage;
+    private string? _resetErrorMessage;
+    private OtpParametersModel _otpParametersForm = new();
+    private OtpParametersModel _otpParametersLogin = new();
+    private bool _isPin = false;
+    private bool _infoMessageOnly = false;
+
+
+    protected override void OnInitialized()
+    {
+        if (_appState != null && Pin != null)
+        {
+            _isPin = !string.IsNullOrEmpty(Pin);
+            _otpParametersLogin.AuthUsers_UnixTS = _appState!.UnixTS;
+        }
+
+        if (EmailHash != null)
+            _otpParametersLogin.Account = EmailHash;
+
+        if (PasswordHash != null)
+            _otpParametersLogin.Password = PasswordHash;
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ResetInternalState();
+        await Task.Delay(FocusDelayMilliseconds);
+
+        if (_isPin)
+        {
+            if (pinInputRef != null)
+            {
+                await pinInputRef.FocusAsync();
+            }
+        }
+        else
+        {
+            if (inputRefs != null)
+                await JSRuntime.InvokeVoidAsync("pE_Web.otpFocus.focusElement", inputRefs[0]);
+        }
+
+    }
+
+    private async Task SetFocus()
+    {
+        await Task.Delay(FocusDelayMilliseconds);
+
+        if (_isPin)
+        {
+            if (pinInputRef != null)
+            {
+                await pinInputRef.FocusAsync(); // Hier wird die neue Methode aufgerufen
+            }
+        }
+        else
+        {
+            if(inputRefs != null)
+                await JSRuntime.InvokeVoidAsync("pE_Web.otpFocus.focusElement", inputRefs[0]);
+        }
+    }
+
+    private async Task ResetStorageLocation()
+    {
+        if (_appState?.Catalog.LocalStorage == null || _platformStorage == null) return;
+
+        _infoMessageOnly = true;
+        _otpErrorMessage = null;
+
+        if (_isPin)
+        {
+            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL).ToString());
+            _infoMessage = _appState!.T("Storage mode is set to cloud/local. Please close app and start it again to log in!");
+        }
+        else
+        {
+            _infoMessage = _appState!.T("Storage mode is set to local. Please close app and start it again to log in!");
+            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL).ToString());
+        }
+
+        StateHasChanged();
+    }
+
+    private void ResetInternalState()
+    {
+        if (_isPin)
+        {
+            PinValue = string.Empty;
+            StateHasChanged();
+        }
+        else
+        {
+            for (int i = 0; i < OtpDigits.Length; i++)
+            {
+                OtpDigits[i] = string.Empty;
+                StateHasChanged();
+            }
+        }
+        _otpErrorMessage = null;
+        _resetErrorMessage = null;
+
+        _ = SetFocus();
+    }
+
+    private async Task HandleInput(ChangeEventArgs e, int currentIndex)
+    {
+        _otpErrorMessage = null;
+        _resetErrorMessage = null;
+        var value = e.Value?.ToString();
+
+        if (string.IsNullOrEmpty(value) || !char.IsDigit(value[0]))
+        {
+            OtpDigits[currentIndex] = "";
+            StateHasChanged();
+            return;
+        }
+
+        OtpDigits[currentIndex] = value;
+        StateHasChanged();
+
+        if (currentIndex < 5)
+        {
+            await JSRuntime.InvokeVoidAsync("pE_Web.otpFocus.focusNext", inputRefs[currentIndex + 1]);
+        }
+
+        if (OtpDigits.All(d => !string.IsNullOrEmpty(d)))
+        {
+            var fullOtp = string.Join("", OtpDigits);
+            if (fullOtp.Length == 6 && fullOtp.All(char.IsDigit))
+            {
+                _infoMessage = _appState!.T("Please be patient, the connection to the database (cloud/local) is being secured and this may take a few seconds!");
+                StateHasChanged();
+
+                _otpParametersForm.Reset();
+
+                // Wir nutzen die komponente nur um Benutzereingaben durchzuführen. Eigentliche prüfung erfolgt dann auf dem Server
+                (string OtpUserDigitInput, string OtpBackupCode, string Account, string Password) result = (fullOtp, string.Empty, string.Empty, string.Empty);
+
+                if (OnSecretEnteredAction is not null)
+                {
+                    // Service-Variante (direkter Callback)
+                    OnSecretEnteredAction.Invoke(result);
+                }
+                else if (OnSecretEntered.HasDelegate)
+                {
+                    // UI-Variante (Parent Razor-Komponente)
+                    await OnSecretEntered.InvokeAsync(result);
+                }
+            }
+            else
+            {
+                _otpErrorMessage = _appState!.T("Please enter all 6 digits.");
+            }
+        }
+    }
+
+    private async Task HandlePinInput(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await PinInput();
+    }
+
+    private async Task PinInput()
+    {
+        if (!string.IsNullOrEmpty(PinValue))
+        {
+            _otpErrorMessage = null;
+            _resetErrorMessage = null;
+
+            _infoMessage = _appState!.T("Please be patient, the connection to the database (cloud/local) is being secured and this may take a few seconds!");
+            StateHasChanged();
+            await Task.Delay(2000);
+
+            if (PinValue == Pin)
+            {
+                (string OtpUserDigitInput, string OtpBackupCode, string Account, string Password) result = (PinValue, string.Empty, string.Empty, string.Empty); // ((pin == resultAppParameter.out_value_str), pin);
+
+                if (OnSecretEnteredAction is not null)
+                {
+                    // Service-Variante (direkter Callback)
+                    OnSecretEnteredAction.Invoke(result);
+                }
+                else if (OnSecretEntered.HasDelegate)
+                {
+                    // UI-Variante (Parent Razor-Komponente)
+                    await OnSecretEntered.InvokeAsync(result);
+                }
+            }
+            else
+            {
+                //await _toastService!.ShowWarningAsync(_appState!.T("Pin incorrect, please try again."), _appState!.T("Error"), position: ToastPosition.BottomEnd);
+                _infoMessage = null;
+                _otpErrorMessage = _appState!.T("Pin incorrect, please try again.");
+                StateHasChanged();
+                await Task.Delay(2000);
+            }
+        }
+        else
+        {
+            // Setze eine Fehlermeldung, wenn die Eingabe leer ist.
+            _otpErrorMessage = _appState!.T("Please enter your PIN.");
+        }
+
+        PinValue = string.Empty; // Leere das Eingabefeld nach der Verarbeitung.
+        _otpErrorMessage = null;
+        _infoMessage = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleBackspace(KeyboardEventArgs e, int currentIndex)
+    {
+        _otpErrorMessage = null;
+        _resetErrorMessage = null;
+        if (e.Key == "Backspace" && string.IsNullOrEmpty(OtpDigits[currentIndex]) && currentIndex > 0)
+        {
+            await JSRuntime.InvokeVoidAsync("pE_Web.otpFocus.focusPrev", inputRefs[currentIndex - 1]);
+        }
+    }
+
+    private async Task HandleRevoke2FA()
+    {
+        _resetErrorMessage = null;
+
+        // Wir nutzen die komponente nur um Benutzereingaben durchzuführen. Eigentliche prüfung erfolgt dann auf dem Server
+        (string OtpUserDigitInput, string OtpBackupCode, string Account, string Password) result = (string.Empty, _otpParametersForm.OtpBackupCode, _otpParametersForm.Account, _otpParametersForm.Password);
+        if (OnSecretEnteredAction is not null)
+        {
+            // Service-Variante (direkter Callback)
+            OnSecretEnteredAction.Invoke(result);
+        }
+        else if (OnSecretEntered.HasDelegate)
+        {
+            // UI-Variante (Parent Razor-Komponente)
+            await OnSecretEntered.InvokeAsync(result);
+        }
+    }
+
+    public void Dispose()
+    {
+        inputRefs = null!;
+    }
+}

@@ -1,0 +1,259 @@
+﻿@using BlazorCore.Services.Dam
+@using pFemmeExample.Shared.Models
+@inject IDamBase Dam
+@inject pFemmeExample.Shared.Services.Components.CyclesService CyclesService
+
+
+<h3>AI Health Analysis</h3>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary spinner-border-lg" role="status" style="width: 4rem; height: 4rem;">
+            <span class="visually-hidden">@_appState.T("Loading...")</span>
+
+        </div>
+        <p class="mt-3 text-muted">@_appState.T("Analyzing your cycle data with Azure OpenAI...")</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(analysisResult))
+{
+    <div class="alert alert-danger border-0 border-start border-4 border-danger shadow-sm mt-4 d-flex align-items-center gap-3">
+        <i class="bi bi-exclamation-diamond-fill fs-3 text-danger"></i>
+        <div>
+            <span class="fw-bold text-danger me-1">@_appState.T("ATTENTION:")</span>
+            <span class="text-dark small fw-medium">
+                @_appState.T("This analysis is based on your logged entries. For medical concerns, please consult a healthcare professional.")
+            </span>
+        </div>
+    </div>
+    <div class="border-2 shadow-md">
+        <h5>@_appState.T("AI Health Assessment")</h5>
+        <hr />
+        <div style="white-space: pre-wrap; font-size: 1.05rem; line-height: 1.6;">
+            @RenderedHtml
+        </div>
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <h5><i class="bi bi-exclamation-triangle"></i> @_appState.T("Error")</h5>
+        <p>@errorMessage</p>
+    </div>
+}
+
+<style>
+    .spinner-border-lg {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.IAIService? _aiService { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    private MarkupString RenderedHtml => (MarkupString)Markdig.Markdown.ToHtml(analysisResult ?? "");
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RunAnalysis();
+    }
+
+    private string analysisResult = string.Empty;
+    private string? errorMessage = null;
+    private bool isLoading = false;
+
+    private async Task RunAnalysis()
+    {
+        isLoading = true;
+        errorMessage = null;
+        analysisResult = string.Empty;
+
+        try
+        {
+            // 1. Load all data from database (via CyclesService)
+            var loadResult = await CyclesService.Load();
+
+            if (loadResult?.out_list == null || !loadResult.out_list.Any())
+            {
+                errorMessage = "No cycle data found in database. Please add some entries first.";
+                return;
+            }
+
+            var allEntries = loadResult.out_list;
+
+            // 2. Sort by date (RecordDate or created_at)
+            var sortedEntries = allEntries
+                .Where(e => e.RecordDate.HasValue || e.created_at.HasValue)
+                .OrderByDescending(e => e.RecordDate ?? e.created_at)
+                .Take(30) // Last 30 entries
+                .ToList();
+
+            if (!sortedEntries.Any())
+            {
+                errorMessage = "No valid date entries found.";
+                return;
+            }
+
+            // 3. Format data for AI
+            string formattedData = FormatEntriesForAI(sortedEntries);
+
+            // 4. Call AI via DAM
+            var aiResponse = await AskAIAnalysis(formattedData);
+            analysisResult = aiResponse;
+
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Analysis failed: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string FormatEntriesForAI(List<CyclesModel> entries)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("USER MENSTRUAL CYCLE DATA (most recent first):");
+        sb.AppendLine("================================================");
+
+        foreach (var entry in entries)
+        {
+            DateTime entryDate = entry.RecordDate ?? entry.created_at ?? DateTime.MinValue;
+            string unixTS_ID = entry.UnixTS ?? "N/A";
+
+            sb.AppendLine($"\n📅 Date: {entryDate:yyyy-MM-dd} (ID: {unixTS_ID})");
+            sb.AppendLine($"   • Bleeding: {(entry.bleeding ? "Yes" : "No")}");
+            sb.AppendLine($"   • Intensity: {GetIntensityText(entry.intensity)}");
+            sb.AppendLine($"   • Pain: {GetPainText(entry.pain)}");
+            sb.AppendLine($"   • Headache: {GetSeverityText(entry.headache)}");
+            sb.AppendLine($"   • Fatigue: {GetSeverityText(entry.fatigue)}");
+            sb.AppendLine($"   • Nausea: {GetSeverityText(entry.nausea)}");
+            sb.AppendLine($"   • Cramps: {GetSeverityText(entry.cramps)}");
+
+            if (!string.IsNullOrWhiteSpace(entry.Details))
+                sb.AppendLine($"   • Notes: {entry.Details}");
+        }
+
+        // Statistics
+        int bleedingDays = entries.Count(e => e.bleeding);
+        double avgIntensity = entries.Where(e => e.bleeding).Average(e => e.intensity);
+        double avgPain = entries.Average(e => e.pain);
+        double avgCramps = entries.Average(e => e.cramps);
+
+        sb.AppendLine("\n================================================");
+        sb.AppendLine($"📊 SUMMARY STATISTICS:");
+        sb.AppendLine($"   • Total entries analyzed: {entries.Count}");
+        sb.AppendLine($"   • Days with bleeding: {bleedingDays}");
+        sb.AppendLine($"   • Average intensity (when bleeding): {avgIntensity:F1}/2");
+        sb.AppendLine($"   • Average pain level: {avgPain:F1}/2");
+        sb.AppendLine($"   • Average cramps level: {avgCramps:F1}/2");
+
+        // 1. Filter out null records and ensure we only process entries that actually have a RecordDate
+        var validEntries = entries?
+            .Where(e => e != null && e.RecordDate.HasValue)
+            .ToList();
+
+        // 2. Only calculate the range if we have at least one valid entry to compare
+        if (validEntries != null && validEntries.Count > 0)
+        {
+            // Compiler-safe extraction because of the prior HasValue filter
+            DateTime start = validEntries.Min(e => e.RecordDate!.Value);
+            DateTime end = validEntries.Max(e => e.RecordDate!.Value);
+
+            int dateRange = (end - start).Days;
+
+            sb.AppendLine($"   • Date range: {dateRange} days");
+        }
+
+        return sb.ToString();
+    }
+
+    private async Task<string> AskAIAnalysis(string formattedData)
+    {
+        if (_aiService == null || _appState == null) return "No response from AI.";
+
+        string result = string.Empty;
+        string language = string.Empty;
+
+        if (_appState.Catalog.Languages != null)
+            language = _appState.Catalog.Languages.Where(l => l.Key == _appState.SelectedLanguage).FirstOrDefault().Value;
+
+
+
+        // Build system prompt
+        string systemPrompt = $@"You are a professional medical assistant specializing in gynecology and menstrual health. 
+Provide a thorough, evidence-based analysis of the user's cycle data. Your response should include:
+
+CRITICAL RULE: You must write your entire response exclusively in the following language: {language}. Do not use English or any other language for the output.
+
+1. Overall Assessment: Brief summary of the cycle pattern
+2. Symptoms Analysis: Key observations about bleeding, pain, cramps, headaches, fatigue, nausea
+3. Pattern Recognition: Any noticeable trends or cycles
+4. Recommendations: Practical, non-alarming suggestions for symptom management
+5. Red Flags: If any concerning patterns exist (mention cautiously without causing panic)
+
+Important rules:
+- Use professional but compassionate language
+- Never give definitive medical diagnoses
+- Always recommend consulting a doctor for serious concerns
+- Focus on observations, not predictions
+- Keep response to 300-400 words";
+
+        // Build user prompt
+        string userPrompt = $@"Analyze this user's menstrual cycle data and provide a comprehensive health assessment:
+
+{formattedData}
+
+Based on this data, please provide a professional analysis following the guidelines above.";
+
+        var result_AskAI = await _aiService.AskAI(systemPrompt, userPrompt);
+        if (result_AskAI != null && string.IsNullOrEmpty(result_AskAI.out_err))
+            result = result_AskAI.out_value_str ?? "No response from AI.";
+        else
+            errorMessage = result_AskAI?.out_err ?? "Unknown error occurred.";
+
+        return result;
+    }
+
+    private void ClearAnalysis()
+    {
+        analysisResult = string.Empty;
+        errorMessage = null;
+    }
+
+    private string GetIntensityText(int value) => value switch
+    {
+        0 => "None",
+        1 => "Mild",
+        2 => "Severe",
+        _ => "Unknown"
+    };
+
+    private string GetPainText(int value) => value switch
+    {
+        0 => "None",
+        1 => "Mild",
+        2 => "Severe",
+        _ => "Unknown"
+    };
+
+    private string GetSeverityText(int value) => value switch
+    {
+        0 => "None",
+        1 => "Mild",
+        2 => "Severe",
+        _ => "Unknown"
+    };
+}

@@ -1,0 +1,773 @@
+﻿
+<TextToHtml Header="@Header" Body="@Body" IsHeaderHidden="@IsHeaderHidden" />
+
+@code {
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+
+    [Parameter]
+    public bool IsHeaderHidden { get; set; } = false;
+
+    private string? Header = string.Empty;
+    private string? Body = string.Empty;
+    //private string[]? BodyBlocks { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var result = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+                    Language = result.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (result != null && !string.IsNullOrEmpty(result.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!")} {result.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Header = "EULA";
+                Body = $@"
+1. Scope of this Agreement:
+- This End User License Agreement ('Agreement') governs the use of the Software Application ('Application') provided free of charge by True Perfect Code ('Provider'). This Agreement applies exclusively to the free (freemium) version of the Application. Optional voluntary donations do not create any contractual rights or obligations and do not constitute payment for services or digital products. By installing or using the Application, the user ('User') accepts the terms of this Agreement.
+
+2. License Grant:
+- The Provider grants the User a limited, non-exclusive, non-transferable, and revocable license to install and use the Application on personal or business devices for lawful purposes.
+- This license does not constitute a transfer of ownership. All rights, title, and interest in and to the Application remain with the Provider.
+
+3. Restrictions - Users may not:
+- copy, reproduce, distribute, sell, sublicense, rent, lease, or make the Application available to third parties;
+- modify, decompile, reverse engineer, or disassemble the Application, except where expressly permitted by applicable law;
+- remove or alter any copyright, trademark, or proprietary notices.
+- Any unauthorized use may result in civil and/or criminal liability.
+
+4. Donations:
+- Users may voluntarily make donations to support the development of the Application.
+- Donations are purely voluntary contributions and do not grant access to additional features, services, or contractual rights.
+- Donations are not considered payment for digital content or services.
+
+5. Updates and Changes:
+- The Provider may offer updates, patches, or improvements at its sole discretion.
+- All updates provided as part of the free version remain subject to this Agreement.
+- The Provider does not guarantee the availability, continuity, or maintenance of the Application.
+
+6. Intellectual Property:
+- All intellectual property rights in and to the Application, including source code, object code, design, and trademarks, are owned exclusively by the Provider. No rights are granted except those expressly set forth in this Agreement.
+
+7. Termination:
+- This license remains in effect until terminated.
+- The User may terminate this Agreement at any time by deleting the Application and all copies.
+- The Provider may terminate this Agreement at any time if the User violates its terms.
+- Upon termination, the User must cease all use and delete all copies of the Application.
+
+8. Disclaimer of Warranties:
+- The Application is provided 'as is' and 'as available', without any express or implied warranties.
+- The Provider does not guarantee functionality, reliability, availability, or fitness for any particular purpose.
+- The User acknowledges that the use of the Application is at their own risk.
+
+9. Limitation of Liability - To the maximum extent permitted by applicable law:
+- The Provider shall not be liable for any direct, indirect, incidental, consequential, or special damages, including but not limited to data loss, loss of profits, or business interruption.
+- The Provider's liability, if any, shall be limited to cases of intentional misconduct or gross negligence.
+- Nothing in this Agreement excludes liability for death or personal injury caused by negligence.
+
+10. Governing Law and Jurisdiction:
+- This Agreement is governed by the laws of the Republic of Serbia, without regard to conflict-of-law principles.
+- If the User is a consumer and mandatory statutory provisions of their country of residence apply, those provisions remain unaffected.
+- Exclusive jurisdiction lies with the competent courts in Belgrade, Serbia, unless mandatory consumer protection laws provide otherwise.
+
+11. Severability:
+- If any provision of this Agreement is found invalid or unenforceable, the remaining provisions shall continue in full force and effect.
+
+12. Entire Agreement:
+- This Agreement constitutes the entire agreement between the Provider and the User regarding the free use of the Application and supersedes all prior understandings.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "DE":
+                Header = "Lizenzvereinbarung";
+                Body = $@"
+1. Geltungsbereich dieses Vertrags
+- Dieser Endbenutzer-Lizenzvertrag (‚Vertrag‘) regelt die Nutzung der Softwareanwendung (‚Anwendung‘), die von True Perfect Code (‚Anbieter‘) kostenlos bereitgestellt wird. Dieser Vertrag gilt ausschließlich für die kostenlose (Freemium-)Version der Anwendung. Optionale freiwillige Spenden begründen keine vertraglichen Rechte oder Pflichten und stellen keine Zahlung für Dienstleistungen oder digitale Produkte dar. Durch die Installation oder Nutzung der Anwendung akzeptiert der Nutzer (‚Nutzer‘) die Bedingungen dieses Vertrags.
+
+2. Lizenzgewährung
+- Der Anbieter gewährt dem Nutzer eine beschränkte, nicht-ausschließliche, nicht-übertragbare und widerrufliche Lizenz zur Installation und Nutzung der Anwendung auf persönlichen oder geschäftlichen Geräten für rechtmäßige Zwecke.
+- Diese Lizenz stellt keinen Eigentumsübergang dar. Alle Rechte, Titel und Interessen an der Anwendung verbleiben beim Anbieter.
+
+3. Einschränkungen – Nutzer dürfen nicht:
+- die Anwendung kopieren, vervielfältigen, verbreiten, verkaufen, unterlizenzieren, vermieten, verleasten oder Dritten zur Verfügung stellen;
+- die Anwendung modifizieren, dekompilieren, rückentwickeln oder disassemblieren, außer soweit dies durch geltendes Recht ausdrücklich gestattet ist;
+- Urheberrechts-, Marken- oder sonstige Eigentumsvermerke entfernen oder verändern.
+- Jede unbefugte Nutzung kann zivil- und/oder strafrechtliche Haftung nach sich ziehen.
+
+4. Spenden
+- Nutzer können freiwillig Spenden leisten, um die Entwicklung der Anwendung zu unterstützen.
+- Spenden sind rein freiwillige Zuwendungen und gewähren keinen Zugang zu zusätzlichen Funktionen, Dienstleistungen oder vertraglichen Rechten.
+- Spenden gelten nicht als Zahlung für digitale Inhalte oder Dienstleistungen.
+
+5. Aktualisierungen und Änderungen
+- Der Anbieter kann nach eigenem Ermessen Aktualisierungen, Patches oder Verbesserungen anbieten.
+- Alle im Rahmen der kostenlosen Version bereitgestellten Aktualisierungen unterliegen weiterhin diesem Vertrag.
+- Der Anbieter garantiert weder die Verfügbarkeit noch die Kontinuität oder Wartung der Anwendung.
+
+6. Geistiges Eigentum
+- Alle Rechte am geistigen Eigentum an der Anwendung, einschließlich Quellcode, Objektcode, Design und Marken, liegen ausschließlich beim Anbieter. Es werden keine Rechte gewährt außer denen, die in diesem Vertrag ausdrücklich festgelegt sind.
+
+7. Beendigung
+- Diese Lizenz bleibt wirksam, bis sie beendet wird.
+- Der Nutzer kann diesen Vertrag jederzeit durch Löschung der Anwendung und aller Kopien beenden.
+- Der Anbieter kann diesen Vertrag jederzeit kündigen, wenn der Nutzer gegen dessen Bestimmungen verstößt.
+- Bei Beendigung muss der Nutzer die gesamte Nutzung einstellen und alle Kopien der Anwendung löschen.
+
+8. Ausschluss von Gewährleistungen
+- Die Anwendung wird ‚wie gesehen‘ und ‚wie verfügbar‘ bereitgestellt, ohne ausdrückliche oder stillschweigende Gewährleistungen.
+- Der Anbieter übernimmt keine Garantie für Funktionsfähigkeit, Zuverlässigkeit, Verfügbarkeit oder Eignung für einen bestimmten Zweck.
+- Der Nutzer erkennt an, dass die Nutzung der Anwendung auf eigenes Risiko erfolgt.
+
+9. Haftungsbeschränkung – Im gesetzlich zulässigen Höchstmaß:
+- Der Anbieter haftet nicht für direkte, indirekte, zufällige, Folge- oder besondere Schäden, einschließlich, aber nicht beschränkt auf Datenverlust, entgangenen Gewinn oder Betriebsunterbrechung.
+- Eine etwaige Haftung des Anbieters ist auf Fälle vorsätzlichen Fehlverhaltens oder grober Fahrlässigkeit beschränkt.
+- Dieser Vertrag schließt die Haftung für Tod oder Personenschäden, die durch Fahrlässigkeit verursacht wurden, nicht aus.
+
+10. Anwendbares Recht und Gerichtsstand
+- Dieser Vertrag unterliegt dem Recht der Republik Serbien, ohne Berücksichtigung von Kollisionsnormen.
+- Ist der Nutzer Verbraucher und gelten zwingende gesetzliche Bestimmungen seines Wohnsitzlandes, so bleiben diese unberührt.
+- Ausschließlicher Gerichtsstand sind die zuständigen Gerichte in Belgrad, Serbien, soweit nicht zwingende verbraucherschutzrechtliche Vorschriften etwas anderes vorsehen.
+
+11. Salvatorische Klausel
+- Sollte eine Bestimmung dieses Vertrags unwirksam oder undurchsetzbar sein, bleiben die übrigen Bestimmungen uneingeschränkt wirksam.
+
+12. Gesamter Vertrag
+- Dieser Vertrag stellt die gesamte Vereinbarung zwischen Anbieter und Nutzer bezüglich der kostenlosen Nutzung der Anwendung dar und ersetzt alle früheren Vereinbarungen.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Header = "CLUF";
+                Body = $@"
+1. Champ d'application du présent Accord
+- Le présent Contrat de Licence Utilisateur Final („Accord“) régit l'utilisation de l'Application Logicielle („Application“) fournie gratuitement par True Perfect Code („Fournisseur“). Le présent Accord s'applique exclusivement à la version gratuite (freemium) de l'Application. Les dons volontaires optionnels ne créent aucun droit ou obligation contractuels et ne constituent pas un paiement pour des services ou des produits numériques. En installant ou en utilisant l'Application, l'utilisateur („Utilisateur“) accepte les conditions du présent Accord.
+
+2. Octroi de licence
+- Le Fournisseur accorde à l'Utilisateur une licence limitée, non exclusive, non transférable et révocable pour installer et utiliser l'Application sur des appareils personnels ou professionnels à des fins licites.
+- Cette licence ne constitue pas un transfert de propriété. Tous les droits, titres et intérêts relatifs à l'Application restent la propriété du Fournisseur.
+
+3. Restrictions – Les Utilisateurs ne peuvent pas
+- copier, reproduire, distribuer, vendre, sous-licencier, louer, céder ou mettre l'Application à la disposition de tiers ;
+- modifier, décompiler, désosser ou désassembler l'Application, sauf dans la mesure expressément autorisée par la loi applicable ;
+- supprimer ou modifier tout avis de copyright, de marque ou de propriété.
+- Toute utilisation non autorisée peut entraîner une responsabilité civile et/ou pénale.
+
+4. Dons
+- Les Utilisateurs peuvent effectuer volontairement des dons pour soutenir le développement de l'Application.
+- Les dons sont des contributions purement volontaires et ne confèrent pas l'accès à des fonctionnalités supplémentaires, des services ou des droits contractuels.
+- Les dons ne sont pas considérés comme un paiement pour des contenus numériques ou des services.
+
+5. Mises à jour et modifications
+- Le Fournisseur peut proposer des mises à jour, correctifs ou améliorations à sa seule discrétion.
+- Toutes les mises à jour fournies dans le cadre de la version gratuite restent soumises au présent Accord.
+- Le Fournisseur ne garantit ni la disponibilité, ni la continuité, ni la maintenance de l'Application.
+
+6. Propriété intellectuelle
+- Tous les droits de propriété intellectuelle relatifs à l'Application, y compris le code source, le code objet, le design et les marques, appartiennent exclusivement au Fournisseur. Aucun droit n'est accordé sauf ceux expressément prévus dans le présent Accord.
+
+7. Résiliation
+- Cette licence reste en vigueur jusqu'à sa résiliation.
+- L'Utilisateur peut résilier le présent Accord à tout moment en supprimant l'Application et toutes ses copies.
+- Le Fournisseur peut résilier le présent Accord à tout moment si l'Utilisateur viole ses conditions.
+- En cas de résiliation, l'Utilisateur doit cesser toute utilisation et supprimer toutes les copies de l'Application.
+
+8. Exclusion de garanties
+- L'Application est fournie „en l'état“ et „selon disponibilité“, sans aucune garantie expresse ou implicite.
+- Le Fournisseur ne garantit ni la fonctionnalité, ni la fiabilité, ni la disponibilité, ni l'adéquation à un usage particulier.
+- L'Utilisateur reconnaît que l'utilisation de l'Application se fait à ses propres risques.
+
+9. Limitation de responsabilité – Dans la mesure maximale autorisée par la loi applicable
+- Le Fournisseur ne sera pas responsable de tout dommage direct, indirect, accessoire, consécutif ou spécial, y compris, mais sans s'y limiter, la perte de données, le manque à gagner ou l'interruption d'activité.
+- La responsabilité éventuelle du Fournisseur est limitée aux cas de faute intentionnelle ou de négligence grave.
+- Rien dans le présent Accord n'exclut la responsabilité en cas de décès ou de blessures corporelles causés par une négligence.
+
+10. Droit applicable et juridiction
+- Le présent Accord est régi par le droit de la République de Serbie, sans considération des principes de conflit de lois.
+- Si l'Utilisateur est un consommateur et que des dispositions légales impératives de son pays de résidence s'appliquent, ces dispositions restent inchangées.
+- La juridiction exclusive appartient aux tribunaux compétents de Belgrade, Serbie, sauf si des lois impératives de protection des consommateurs en disposent autrement.
+
+11. Clause de divisibilité
+- Si une disposition du présent Accord est jugée invalide ou inapplicable, les autres dispositions restent pleinement en vigueur.
+
+12. Accord intégral
+- Le présent Accord constitue l'intégralité de l'accord entre le Fournisseur et l'Utilisateur concernant l'utilisation gratuite de l'Application et remplace toutes les ententes antérieures.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Header = "EULA";
+                Body = $@"
+1. Ambito di applicazione del presente Contratto
+- Il presente Contratto di Licenza per l'Utente Finale („Contratto“) disciplina l'uso dell'Applicazione Software („Applicazione“) fornita gratuitamente da True Perfect Code („Fornitore“). Il presente Contratto si applica esclusivamente alla versione gratuita (freemium) dell'Applicazione. Le donazioni volontarie facoltative non creano alcun diritto o obbligo contrattuale e non costituiscono un pagamento per servizi o prodotti digitali. Installando o utilizzando l'Applicazione, l'utente („Utente“) accetta i termini del presente Contratto.
+
+2. Concessione della licenza
+- Il Fornitore concede all'Utente una licenza limitata, non esclusiva, non trasferibile e revocabile per installare e utilizzare l'Applicazione su dispositivi personali o aziendali per scopi leciti.
+- Questa licenza non costituisce un trasferimento di proprietà. Tutti i diritti, titoli e interessi relativi all'Applicazione restano di proprietà del Fornitore.
+
+3. Restrizioni – Gli Utenti non possono
+- copiare, riprodurre, distribuire, vendere, concedere in sublicenza, noleggiare, locare o mettere l'Applicazione a disposizione di terzi;
+- modificare, decompilare, decodificare o disassemblare l'Applicazione, salvo nella misura espressamente consentita dalla legge applicabile;
+- rimuovere o alterare qualsiasi avviso di copyright, marchio o altro avviso di proprietà.
+- Qualsiasi uso non autorizzato può comportare responsabilità civile e/o penale.
+
+4. Donazioni
+- Gli Utenti possono effettuare volontariamente donazioni per sostenere lo sviluppo dell'Applicazione.
+- Le donazioni sono contributi puramente volontari e non concedono accesso a funzionalità aggiuntive, servizi o diritti contrattuali.
+- Le donazioni non sono considerate pagamento per contenuti digitali o servizi.
+
+5. Aggiornamenti e modifiche
+- Il Fornitore può offrire aggiornamenti, patch o miglioramenti a sua esclusiva discrezione.
+- Tutti gli aggiornamenti forniti nell'ambito della versione gratuita restano soggetti al presente Contratto.
+- Il Fornitore non garantisce la disponibilità, la continuità o la manutenzione dell'Applicazione.
+
+6. Proprietà intellettuale
+- Tutti i diritti di proprietà intellettuale relativi all'Applicazione, inclusi codice sorgente, codice oggetto, design e marchi, appartengono esclusivamente al Fornitore. Non vengono concessi diritti diversi da quelli espressamente previsti nel presente Contratto.
+
+7. Risoluzione
+- La presente licenza rimane in vigore fino alla sua risoluzione.
+- L'Utente può risolvere il presente Contratto in qualsiasi momento eliminando l'Applicazione e tutte le sue copie.
+- Il Fornitore può risolvere il presente Contratto in qualsiasi momento qualora l'Utente violi i suoi termini.
+- In caso di risoluzione, l'Utente deve cessare ogni utilizzo ed eliminare tutte le copie dell'Applicazione.
+
+8. Esclusione di garanzie
+- L'Applicazione è fornita „così com'è“ e „secondo disponibilità“, senza alcuna garanzia espressa o implicita.
+- Il Fornitore non garantisce la funzionalità, l'affidabilità, la disponibilità o l'idoneità per uno scopo particolare.
+- L'Utente riconosce che l'uso dell'Applicazione avviene a proprio rischio.
+
+9. Limitazione di responsabilità – Nella misura massima consentita dalla legge applicabile
+- Il Fornitore non sarà responsabile per danni diretti, indiretti, incidentali, consequenziali o speciali, inclusi, a titolo esemplificativo ma non esaustivo, perdita di dati, mancato guadagno o interruzione dell'attività.
+- L'eventuale responsabilità del Fornitore è limitata ai casi di dolo o colpa grave.
+- Nulla nel presente Contratto esclude la responsabilità per morte o lesioni personali causate da negligenza.
+
+10. Legge applicabile e foro competente
+- Il presente Contratto è disciplinato dalla legge della Repubblica di Serbia, senza considerare i principi di conflitto di leggi.
+- Se l'Utente è un consumatore e si applicano disposizioni di legge imperative del suo paese di residenza, tali disposizioni restano impregiudicate.
+- La competenza esclusiva spetta ai tribunali competenti di Belgrado, Serbia, salvo che disposizioni imperative di tutela dei consumatori dispongano diversamente.
+
+11. Clausola salvatoria
+- Qualora una disposizione del presente Contratto sia dichiarata invalida o inapplicabile, le restanti disposizioni conservano piena efficacia.
+
+12. Contratto integrale
+- Il presente Contratto costituisce l'intero accordo tra il Fornitore e l'Utente in merito all'uso gratuito dell'Applicazione e sostituisce tutte le intese precedenti.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Header = "اتفاقية ترخيص المستخدم النهائي";
+                Body = $@"
+1. نطاق هذه الاتفاقية
+- تحكم اتفاقية ترخيص المستخدم النهائي هذه ('الاتفاقية') استخدام تطبيق البرمجيات ('التطبيق') الذي يقدم مجانًا من قبل True Perfect Code ('المزود'). تنطبق هذه الاتفاقية حصريًا على الإصدار المجاني (فريميوم) من التطبيق. التبرعات الاختيارية الطوعية لا تخلق أي حقوق أو التزامات تعاقدية ولا تشكل دفعة مقابل خدمات أو منتجات رقمية. بتثبيت التطبيق أو استخدامه، يقبل المستخدم ('المستخدم') شروط هذه الاتفاقية.
+
+2. منح الترخيص
+- يمنح المزود للمستخدم ترخيصًا محدودًا وغير حصري وغير قابل للنقل وقابل للإلغاء لتثبيت التطبيق واستخدامه على أجهزة شخصية أو تجارية لأغراض مشروعة.
+- هذا الترخيص لا يشكل نقل ملكية. تبقى جميع الحقوق والملكية والمصالح في التطبيق ملكًا للمزود.
+
+3. القيود – لا يجوز للمستخدمين:
+- نسخ التطبيق أو إعادة إنتاجه أو توزيعه أو بيعه أو ترخيصه من الباطن أو تأجيره أو تأجيره من الباطن أو إتاحته لأطراف ثالثة؛
+- تعديل التطبيق أو فك ترجمته أو هندسته العكسية أو تفكيكه، إلا في الحدود التي يسمح بها القانون المعمول به صراحةً؛
+- إزالة أو تعديل أي إشعارات بحقوق النشر أو العلامات التجارية أو إشعارات الملكية الأخرى.
+- أي استخدام غير مصرح به قد يؤدي إلى مسؤولية مدنية و/أو جنائية.
+
+4. التبرعات
+- يجوز للمستخدمين التبرع طوعًا لدعم تطوير التطبيق.
+- التبرعات هي مساهمات طوعية بحتة ولا تمنح الوصول إلى ميزات إضافية أو خدمات أو حقوق تعاقدية.
+- لا تُعتبر التبرعات دفعة مقابل محتوى رقمي أو خدمات.
+
+5. التحديثات والتغييرات
+- يجوز للمزود تقديم تحديثات أو تصحيحات أو تحسينات حسب تقديره الخاص.
+- تبقى جميع التحديثات المقدمة ضمن الإصدار المجاني خاضعة لهذه الاتفاقية.
+- لا يضمن المزود توفر التطبيق أو استمراريته أو صيانته.
+
+6. الملكية الفكرية
+- جميع حقوق الملكية الفكرية في التطبيق، بما في ذلك الكود المصدري والكود الشيئي والتصميم والعلامات التجارية، ملك حصري للمزود. لا تُمنح أي حقوق إلا تلك المحددة صراحةً في هذه الاتفاقية.
+
+7. الإنهاء
+- يبقى هذا الترخيص ساري المفعول حتى يتم إنهاؤه.
+- يجوز للمستخدم إنهاء هذه الاتفاقية في أي وقت بحذف التطبيق وجميع نسخه.
+- يجوز للمزود إنهاء هذه الاتفاقية في أي وقت إذا انتهك المستخدم شروطها.
+- عند الإنهاء، يجب على المستخدم التوقف عن كل استخدام وحذف جميع نسخ التطبيق.
+
+8. إخلاء المسؤولية عن الضمانات
+- يُقدم التطبيق „كما هو“ و„حسب التوفر“، دون أي ضمانات صريحة أو ضمنية.
+- لا يضمن المزود الوظيفية أو الموثوقية أو التوفر أو الملاءمة لغرض معين.
+- يقر المستخدم بأن استخدام التطبيق يتم على مسؤوليته الخاصة.
+
+9. تحديد المسؤولية – إلى أقصى حد يسمح به القانون المعمول به:
+- لا يكون المزود مسؤولاً عن أي أضرار مباشرة أو غير مباشرة أو عرضية أو تبعية أو خاصة، بما في ذلك على سبيل المثال لا الحصر فقدان البيانات أو الأرباح أو انقطاع الأعمال.
+- تقتصر مسؤولية المزود، إن وجدت، على حالات السوء المتعمد أو الإهمال الجسيم.
+- لا يستثني شيء في هذه الاتفاقية المسؤولية عن الوفاة أو الإصابة الشخصية الناتجة عن الإهمال.
+
+10. القانون الحاكم والاختصاص القضائي
+- تخضع هذه الاتفاقية لقوانين جمهورية صربيا، دون النظر إلى مبادئ تنازع القوانين.
+- إذا كان المستخدم مستهلكًا وتنطبق أحكام قانونية إلزامية في بلد إقامته، فتبقى تلك الأحكام غير متأثرة.
+- يقع الاختصاص الحصري لدى المحاكم المختصة في بلغراد، صربيا، ما لم تنص قوانين حماية المستهلك الإلزامية على خلاف ذلك.
+
+11. شرط الانفصالية
+- إذا اعتُبر أي بند من بنود هذه الاتفاقية غير صالح أو غير قابل للتنفيذ، تبقى البنود المتبقية سارية المفعول كاملاً.
+
+12. الاتفاقية الكاملة
+- تشكل هذه الاتفاقية الاتفاق الكامل بين المزود والمستخدم فيما يتعلق بالاستخدام المجاني للتطبيق وتحل محل جميع التفاهمات السابقة.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Header = "最终用户许可协议";
+                Body = $@"
+1. 本协议适用范围
+- 本最终用户许可协议（“协议”）规范由 True Perfect Code（“提供方”）免费提供的软件应用程序（“应用”）的使用。本协议仅适用于应用的免费（freemium）版本。用户自愿可选的捐款不会产生任何合同权利或义务，也不构成对服务或数字产品的付款。通过安装或使用应用，用户（“用户”）接受本协议的条款。
+
+2. 许可授予
+- 提供方授予用户有限的、非排他性的、不可转让的且可撤销的许可，允许在个人或商业设备上为合法目的安装和使用应用。
+- 本许可不构成所有权转移。应用的所有权利、所有权和利益仍属于提供方。
+
+3. 使用限制 – 用户不得：
+- 复制、再制、分发、销售、再许可、出租、租赁或将应用提供给第三方；
+- 修改、反向编译、逆向工程或反汇编应用，除非适用法律明确允许；
+- 删除或更改任何版权、商标或其他专有权通知。
+- 任何未经授权的使用可能导致民事和/或刑事责任。
+
+4. 捐款
+- 用户可自愿捐款以支持应用的开发。
+- 捐款纯属自愿贡献，不会授予额外功能、服务或合同权利。
+- 捐款不视为对数字内容或服务的付款。
+
+5. 更新与变更
+- 提供方可自行决定提供更新、补丁或改进。
+- 免费版本中提供的所有更新仍受本协议约束。
+- 提供方不保证应用的可用性、连续性或维护。
+
+6. 知识产权
+- 应用的所有知识产权，包括源代码、目标代码、设计和商标，均独家属于提供方。除本协议明确规定的权利外，不授予任何其他权利。
+
+7. 终止
+- 本许可持续有效，直至终止。
+- 用户可随时通过删除应用及其所有副本终止本协议。
+- 如果用户违反协议条款，提供方可随时终止本协议。
+- 终止后，用户必须停止所有使用并删除应用的所有副本。
+
+8. 免责声明
+- 应用按“现状”和“现有可用”提供，不附带任何明示或暗示的保证。
+- 提供方不保证功能、可靠性、可用性或适用于特定目的。
+- 用户承认使用应用的风险由自己承担。
+
+9. 责任限制 – 在适用法律允许的最大范围内：
+- 提供方不对任何直接、间接、附带、后果性或特殊损害负责，包括但不限于数据丢失、利润损失或业务中断。
+- 提供方的任何责任仅限于故意不当行为或重大过失的情况。
+- 本协议不排除因过失导致的死亡或人身伤害责任。
+
+10. 适用法律和管辖权
+- 本协议受塞尔维亚共和国法律管辖，不考虑法律冲突原则。
+- 如果用户是消费者且其居住国强制性法律规定适用，则这些规定不受影响。
+- 专属管辖权属于塞尔维亚贝尔格莱德有管辖权的法院，除非消费者保护强制性法律另有规定。
+
+11. 可分性条款
+- 如果本协议任何条款被认定无效或不可执行，其余条款继续完全有效。
+
+12. 完整协议
+- 本协议构成提供方与用户关于应用免费使用的完整协议，并取代所有先前理解。
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Header = "अंतिम उपयोगकर्ता लाइसेंस अनुबंध";
+                Body = $@"
+1. इस अनुबंध का दायरा
+- यह अंतिम उपयोगकर्ता लाइसेंस अनुबंध (“अनुबंध”) True Perfect Code (“प्रदाता”) द्वारा निःशुल्क प्रदान किए गए सॉफ़्टवेयर एप्लिकेशन (“एप्लिकेशन”) के उपयोग को नियंत्रित करता है। यह अनुबंध केवल एप्लिकेशन के निःशुल्क (फ्रीमियम) संस्करण पर लागू होता है। वैकल्पिक स्वैच्छिक दान किसी अनुबंधीय अधिकार या दायित्व को उत्पन्न नहीं करते और सेवाओं या डिजिटल उत्पादों के लिए भुगतान नहीं माने जाते। एप्लिकेशन को स्थापित करने या उपयोग करने से उपयोगकर्ता (“उपयोगकर्ता”) इस अनुबंध की शर्तों को स्वीकार करता है।
+
+2. लाइसेंस प्रदान करना
+- प्रदाता उपयोगकर्ता को व्यक्तिगत या व्यावसायिक उपकरणों पर वैध उद्देश्यों के लिए एप्लिकेशन स्थापित करने और उपयोग करने हेतु सीमित, गैर-विशिष्ट, गैर-हस्तांतरणीय तथा निरस्त करने योग्य लाइसेंस प्रदान करता है।
+- यह लाइसेंस स्वामित्व का हस्तांतरण नहीं है। एप्लिकेशन से संबंधित सभी अधिकार, स्वामित्व और हित प्रदाता के पास ही रहते हैं।
+
+3. प्रतिबंध – उपयोगकर्ता निम्नलिखित नहीं कर सकते:
+- एप्लिकेशन की प्रतिलिपि बनाना, पुनरुत्पादन करना, वितरण करना, बेचना, उप-लाइसेंस देना, किराए पर देना, पट्टे पर देना या तीसरे पक्षों को उपलब्ध कराना;
+- एप्लिकेशन को संशोधित करना, डीकंपाइल करना, रिवर्स इंजीनियर करना या डिसअसेंबल करना, सिवाय इसके कि लागू कानून द्वारा स्पष्ट रूप से अनुमति हो;
+- किसी कॉपीराइट, ट्रेडमार्क या अन्य स्वामित्व सूचना को हटाना या बदलना।
+- कोई अनधिकृत उपयोग नागरिक और/या आपराधिक दायित्व का कारण बन सकता है।
+
+4. दान
+- उपयोगकर्ता एप्लिकेशन के विकास का समर्थन करने के लिए स्वेच्छा से दान कर सकते हैं।
+- दान पूरी तरह स्वैच्छिक योगदान हैं और अतिरिक्त सुविधाओं, सेवाओं या अनुबंधीय अधिकारों तक पहुंच नहीं प्रदान करते।
+- दान को डिजिटल सामग्री या सेवाओं के लिए भुगतान नहीं माना जाता।
+
+5. अपडेट और परिवर्तन
+- प्रदाता अपने विवेकाधिकार से अपडेट, पैच या सुधार प्रदान कर सकता है।
+- निःशुल्क संस्करण के अंतर्गत प्रदान किए गए सभी अपडेट इस अनुबंध के अधीन रहते हैं।
+- प्रदाता एप्लिकेशन की उपलब्धता, निरंतरता या रखरखाव की गारंटी नहीं देता।
+
+6. बौद्धिक संपदा
+- एप्लिकेशन से संबंधित सभी बौद्धिक संपदा अधिकार, जिसमें स्रोत कोड, ऑब्जेक्ट कोड, डिज़ाइन और ट्रेडमार्क शामिल हैं, पूरी तरह प्रदाता के पास हैं। इस अनुबंध में स्पष्ट रूप से उल्लिखित अधिकारों को छोड़कर कोई अन्य अधिकार प्रदान नहीं किए जाते।
+
+7. समाप्ति
+- यह लाइसेंस समाप्त होने तक प्रभावी रहता है।
+- उपयोगकर्ता किसी भी समय एप्लिकेशन और उसकी सभी प्रतियों को हटाकर इस अनुबंध को समाप्त कर सकता है।
+- यदि उपयोगकर्ता अनुबंध की शर्तों का उल्लंघन करता है, तो प्रदाता किसी भी समय इस अनुबंध को समाप्त कर सकता है।
+- समाप्ति पर उपयोगकर्ता को सभी उपयोग बंद करना होगा और एप्लिकेशन की सभी प्रतियां हटानी होंगी।
+
+8. वारंटी का अस्वीकरण
+- एप्लिकेशन “जैसा है” और “उपलब्ध होने पर” प्रदान किया जाता है, बिना किसी स्पष्ट या निहित वारंटी के।
+- प्रदाता कार्यक्षमता, विश्वसनीयता, उपलब्धता या किसी विशेष उद्देश्य के लिए उपयुक्तता की गारंटी नहीं देता।
+- उपयोगकर्ता स्वीकार करता है कि एप्लिकेशन का उपयोग उसके अपने जोखिम पर होता है।
+
+9. दायित्व की सीमा – लागू कानून द्वारा अनुमत अधिकतम सीमा तक:
+- प्रदाता किसी प्रत्यक्ष, अप्रत्यक्ष, आकस्मिक, परिणामी या विशेष क्षति के लिए उत्तरदायी नहीं होगा, जिसमें डेटा हानि, लाभ हानि या व्यवसाय में रुकावट शामिल है लेकिन इन्हीं तक सीमित नहीं।
+- प्रदाता का कोई दायित्व, यदि हो, तो केवल जानबूझकर किए गए कदाचार या घोर लापरवाही के मामलों तक सीमित रहेगा।
+- इस अनुबंध में लापरवाही से होने वाली मृत्यु या व्यक्तिगत चोट के लिए दायित्व को बाहर नहीं किया गया है।
+
+10. लागू कानून और क्षेत्राधिकार
+- यह अनुबंध सर्बिया गणराज्य के कानूनों द्वारा शासित होता है, बिना कानून संघर्ष सिद्धांतों पर विचार किए।
+- यदि उपयोगकर्ता उपभोक्ता है और उसके निवास देश की अनिवार्य वैधानिक प्रावधान लागू होते हैं, तो वे प्रावधान अप्रभावित रहते हैं।
+- विशेष क्षेत्राधिकार सर्बिया के बेलग्रेड में सक्षम न्यायालयों का है, जब तक कि अनिवार्य उपभोक्ता संरक्षण कानून अन्यथा न प्रदान करें।
+
+11. पृथक्करणीयता
+- यदि इस अनुबंध का कोई प्रावधान अमान्य या अप्रवर्तनीय पाया जाता है, तो शेष प्रावधान पूर्ण रूप से प्रभावी रहेंगे।
+
+12. पूर्ण अनुबंध
+- यह अनुबंध प्रदाता और उपयोगकर्ता के बीच एप्लिकेशन के निःशुल्क उपयोग से संबंधित पूर्ण अनुबंध है और सभी पूर्व समझौतों को प्रतिस्थापित करता है।
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Header = "EULA";
+                Body = $@"
+1. Ámbito de este Acuerdo
+- El presente Acuerdo de Licencia de Usuario Final („Acuerdo“) regula el uso de la Aplicación de Software („Aplicación“) proporcionada de forma gratuita por True Perfect Code („Proveedor“). Este Acuerdo se aplica exclusivamente a la versión gratuita (freemium) de la Aplicación. Las donaciones voluntarias opcionales no generan derechos ni obligaciones contractuales y no constituyen pago por servicios o productos digitales. Al instalar o utilizar la Aplicación, el usuario („Usuario“) acepta los términos de este Acuerdo.
+
+2. Otorgamiento de licencia
+- El Proveedor concede al Usuario una licencia limitada, no exclusiva, intransferible y revocable para instalar y usar la Aplicación en dispositivos personales o comerciales con fines lícitos.
+- Esta licencia no constituye transferencia de propiedad. Todos los derechos, títulos e intereses sobre la Aplicación permanecen en poder del Proveedor.
+
+3. Restricciones – Los Usuarios no podrán:
+- copiar, reproducir, distribuir, vender, sublicenciar, alquilar, arrendar ni poner la Aplicación a disposición de terceros;
+- modificar, descompilar, realizar ingeniería inversa o desensamblar la Aplicación, salvo en la medida expresamente permitida por la ley aplicable;
+- eliminar o alterar cualquier aviso de copyright, marca registrada u otros avisos de propiedad.
+- Cualquier uso no autorizado podrá dar lugar a responsabilidad civil y/o penal.
+
+4. Donaciones
+- Los Usuarios podrán realizar donaciones voluntarias para apoyar el desarrollo de la Aplicación.
+- Las donaciones son contribuciones puramente voluntarias y no otorgan acceso a funciones adicionales, servicios ni derechos contractuales.
+- Las donaciones no se consideran pago por contenidos digitales o servicios.
+
+5. Actualizaciones y cambios
+- El Proveedor podrá ofrecer actualizaciones, parches o mejoras a su sola discreción.
+- Todas las actualizaciones proporcionadas en el marco de la versión gratuita siguen sujetas a este Acuerdo.
+- El Proveedor no garantiza la disponibilidad, continuidad ni mantenimiento de la Aplicación.
+
+6. Propiedad intelectual
+- Todos los derechos de propiedad intelectual sobre la Aplicación, incluidos el código fuente, código objeto, diseño y marcas, pertenecen exclusivamente al Proveedor. No se conceden derechos salvo los expresamente establecidos en este Acuerdo.
+
+7. Terminación
+- Esta licencia permanece en vigor hasta su terminación.
+- El Usuario podrá terminar este Acuerdo en cualquier momento eliminando la Aplicación y todas sus copias.
+- El Proveedor podrá terminar este Acuerdo en cualquier momento si el Usuario incumple sus términos.
+- Al producirse la terminación, el Usuario deberá cesar todo uso y eliminar todas las copias de la Aplicación.
+
+8. Exención de garantías
+- La Aplicación se proporciona „tal cual“ y „según disponibilidad“, sin garantías expresas ni implícitas de ningún tipo.
+- El Proveedor no garantiza la funcionalidad, fiabilidad, disponibilidad ni idoneidad para un fin particular.
+- El Usuario reconoce que el uso de la Aplicación se realiza bajo su propio riesgo.
+
+9. Limitación de responsabilidad – En la máxima medida permitida por la ley aplicable:
+- El Proveedor no será responsable de daños directos, indirectos, incidentales, consecuentes o especiales, incluidos, entre otros, pérdida de datos, beneficios o interrupción de actividad.
+- La eventual responsabilidad del Proveedor se limitará a casos de dolo o negligencia grave.
+- Nada en este Acuerdo excluye la responsabilidad por muerte o lesiones personales causadas por negligencia.
+
+10. Ley aplicable y jurisdicción
+- Este Acuerdo se rige por las leyes de la República de Serbia, sin considerar principios de conflicto de leyes.
+- Si el Usuario es consumidor y resultan aplicables disposiciones legales imperativas de su país de residencia, dichas disposiciones permanecen inalteradas.
+- La jurisdicción exclusiva corresponde a los tribunales competentes de Belgrado, Serbia, salvo que normas imperativas de protección al consumidor dispongan otra cosa.
+
+11. Cláusula de separabilidad
+- Si alguna disposición de este Acuerdo resultara inválida o inaplicable, las disposiciones restantes conservarán plena vigencia y efecto.
+
+12. Acuerdo íntegro
+- Este Acuerdo constituye el acuerdo completo entre el Proveedor y el Usuario respecto al uso gratuito de la Aplicación y sustituye todos los entendimientos anteriores.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Header = "EULA";
+                Body = $@"
+1. Ruang Lingkup Perjanjian Ini
+- Perjanjian Lisensi Pengguna Akhir ini („Perjanjian“) mengatur penggunaan Aplikasi Perangkat Lunak („Aplikasi“) yang disediakan secara gratis oleh True Perfect Code („Penyedia“). Perjanjian ini berlaku secara eksklusif untuk versi gratis (freemium) Aplikasi. Donasi sukarela opsional tidak menciptakan hak atau kewajiban kontraktual apa pun dan tidak merupakan pembayaran untuk layanan atau produk digital. Dengan menginstal atau menggunakan Aplikasi, pengguna („Pengguna“) menerima ketentuan Perjanjian ini.
+
+2. Pemberian Lisensi
+- Penyedia memberikan kepada Pengguna lisensi terbatas, tidak eksklusif, tidak dapat dipindahtangankan, dan dapat dicabut untuk menginstal serta menggunakan Aplikasi pada perangkat pribadi atau bisnis untuk tujuan yang sah.
+- Lisensi ini tidak merupakan pengalihan kepemilikan. Semua hak, kepemilikan, dan kepentingan atas Aplikasi tetap menjadi milik Penyedia.
+
+3. Pembatasan – Pengguna tidak boleh:
+- menyalin, mereproduksi, mendistribusikan, menjual, mensublisensikan, menyewakan, atau menyediakan Aplikasi kepada pihak ketiga;
+- memodifikasi, mendekompilasi, merekayasa balik, atau membongkar Aplikasi, kecuali sejauh yang secara tegas diizinkan oleh hukum yang berlaku;
+- menghapus atau mengubah pemberitahuan hak cipta, merek dagang, atau pemberitahuan kepemilikan lainnya.
+- Setiap penggunaan tanpa izin dapat mengakibatkan tanggung jawab perdata dan/atau pidana.
+
+4. Donasi
+- Pengguna dapat secara sukarela memberikan donasi untuk mendukung pengembangan Aplikasi.
+- Donasi merupakan kontribusi murni sukarela dan tidak memberikan akses ke fitur tambahan, layanan, atau hak kontraktual.
+- Donasi tidak dianggap sebagai pembayaran untuk konten digital atau layanan.
+
+5. Pembaruan dan Perubahan
+- Penyedia dapat menawarkan pembaruan, patch, atau peningkatan sesuai kebijakannya sendiri.
+- Semua pembaruan yang diberikan dalam versi gratis tetap tunduk pada Perjanjian ini.
+- Penyedia tidak menjamin ketersediaan, kelangsungan, atau pemeliharaan Aplikasi.
+
+6. Kekayaan Intelektual
+- Semua hak kekayaan intelektual atas Aplikasi, termasuk kode sumber, kode objek, desain, dan merek dagang, dimiliki secara eksklusif oleh Penyedia. Tidak ada hak yang diberikan kecuali yang secara tegas ditetapkan dalam Perjanjian ini.
+
+7. Pengakhiran
+- Lisensi ini tetap berlaku sampai diakhiri.
+- Pengguna dapat mengakhiri Perjanjian ini kapan saja dengan menghapus Aplikasi dan semua salinannya.
+- Penyedia dapat mengakhiri Perjanjian ini kapan saja jika Pengguna melanggar ketentuannya.
+- Setelah pengakhiran, Pengguna harus menghentikan semua penggunaan dan menghapus semua salinan Aplikasi.
+
+8. Penolakan Jaminan
+- Aplikasi disediakan „sebagaimana adanya“ dan „sebagaimana tersedia“, tanpa jaminan apa pun baik tersurat maupun tersirat.
+- Penyedia tidak menjamin fungsionalitas, keandalan, ketersediaan, atau kesesuaian untuk tujuan tertentu.
+- Pengguna mengakui bahwa penggunaan Aplikasi dilakukan atas risiko sendiri.
+
+9. Batasan Tanggung Jawab – Sejauh yang diizinkan oleh hukum yang berlaku:
+- Penyedia tidak bertanggung jawab atas kerugian langsung, tidak langsung, insidental, konsekuensial, atau khusus, termasuk namun tidak terbatas pada kehilangan data, kehilangan keuntungan, atau gangguan bisnis.
+- Tanggung jawab Penyedia, jika ada, terbatas pada kasus kesalahan yang disengaja atau kelalaian berat.
+- Tidak ada dalam Perjanjian ini yang mengecualikan tanggung jawab atas kematian atau cedera pribadi yang disebabkan oleh kelalaian.
+
+10. Hukum yang Berlaku dan Yurisdiksi
+- Perjanjian ini diatur oleh hukum Republik Serbia, tanpa memperhatikan prinsip konflik hukum.
+- Jika Pengguna adalah konsumen dan ketentuan hukum wajib negara tempat tinggalnya berlaku, ketentuan tersebut tetap tidak terpengaruh.
+- Yurisdiksi eksklusif berada pada pengadilan yang berwenang di Belgrade, Serbia, kecuali jika undang-undang perlindungan konsumen wajib menetapkan lain.
+
+11. Klausul Pemisahan
+- Jika suatu ketentuan dalam Perjanjian ini dinyatakan tidak sah atau tidak dapat dilaksanakan, ketentuan lainnya tetap berlaku sepenuhnya.
+
+12. Perjanjian Keseluruhan
+- Perjanjian ini merupakan keseluruhan perjanjian antara Penyedia dan Pengguna mengenai penggunaan gratis Aplikasi dan menggantikan semua pemahaman sebelumnya.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Header = "EULA";
+                Body = $@"
+1. Âmbito deste Acordo
+- O presente Contrato de Licença de Usuário Final (“Acordo”) regula o uso do Aplicativo de Software (“Aplicativo”) fornecido gratuitamente pela True Perfect Code (“Fornecedor”). Este Acordo aplica-se exclusivamente à versão gratuita (freemium) do Aplicativo. Doações voluntárias opcionais não criam direitos ou obrigações contratuais e não constituem pagamento por serviços ou produtos digitais. Ao instalar ou usar o Aplicativo, o usuário (“Usuário”) aceita os termos deste Acordo.
+
+2. Concessão de Licença
+- O Fornecedor concede ao Usuário uma licença limitada, não exclusiva, intransferível e revogável para instalar e usar o Aplicativo em dispositivos pessoais ou empresariais para fins lícitos.
+- Esta licença não constitui transferência de propriedade. Todos os direitos, títulos e interesses sobre o Aplicativo permanecem propriedade do Fornecedor.
+
+3. Restrições – Os Usuários não podem:
+- copiar, reproduzir, distribuir, vender, sublicenciar, alugar, arrendar ou disponibilizar o Aplicativo a terceiros;
+- modificar, descompilar, realizar engenharia reversa ou desmontar o Aplicativo, exceto na medida expressamente permitida pela lei aplicável;
+- remover ou alterar quaisquer avisos de direitos autorais, marcas registradas ou outros avisos de propriedade.
+- Qualquer uso não autorizado pode resultar em responsabilidade civil e/ou criminal.
+
+4. Doações
+- Os Usuários podem fazer doações voluntárias para apoiar o desenvolvimento do Aplicativo.
+- As doações são contribuições puramente voluntárias e não concedem acesso a funcionalidades adicionais, serviços ou direitos contratuais.
+- As doações não são consideradas pagamento por conteúdos digitais ou serviços.
+
+5. Atualizações e Alterações
+- O Fornecedor pode oferecer atualizações, patches ou melhorias a seu exclusivo critério.
+- Todas as atualizações fornecidas na versão gratuita continuam sujeitas a este Acordo.
+- O Fornecedor não garante a disponibilidade, continuidade ou manutenção do Aplicativo.
+
+6. Propriedade Intelectual
+- Todos os direitos de propriedade intelectual sobre o Aplicativo, incluindo código-fonte, código-objeto, design e marcas registradas, pertencem exclusivamente ao Fornecedor. Não são concedidos direitos além dos expressamente estabelecidos neste Acordo.
+
+7. Rescisão
+- Esta licença permanece em vigor até ser rescindida.
+- O Usuário pode rescindir este Acordo a qualquer momento excluindo o Aplicativo e todas as suas cópias.
+- O Fornecedor pode rescindir este Acordo a qualquer momento caso o Usuário viole os seus termos.
+- Após a rescisão, o Usuário deve cessar todo o uso e excluir todas as cópias do Aplicativo.
+
+8. Exclusão de Garantias
+- O Aplicativo é fornecido “tal como está” e “conforme disponível”, sem quaisquer garantias expressas ou implícitas.
+- O Fornecedor não garante funcionalidade, confiabilidade, disponibilidade ou adequação a um fim específico.
+- O Usuário reconhece que o uso do Aplicativo é feito por sua conta e risco.
+
+9. Limitação de Responsabilidade – Na máxima extensão permitida pela lei aplicável:
+- O Fornecedor não será responsável por danos diretos, indiretos, incidentais, consequentes ou especiais, incluindo, entre outros, perda de dados, lucros cessantes ou interrupção de atividade.
+- A eventual responsabilidade do Fornecedor limita-se a casos de dolo ou negligência grave.
+- Nada neste Acordo exclui a responsabilidade por morte ou lesões pessoais causadas por negligência.
+
+10. Lei Aplicável e Jurisdição
+- Este Acordo rege-se pela lei da República da Sérvia, sem consideração de princípios de conflito de leis.
+- Se o Usuário for consumidor e disposições legais obrigatórias do seu país de residência forem aplicáveis, essas disposições permanecem inalteradas.
+- A jurisdição exclusiva pertence aos tribunais competentes de Belgrado, Sérvia, salvo se leis obrigatórias de proteção do consumidor dispuserem de outra forma.
+
+11. Cláusula de Separabilidade
+- Se qualquer disposição deste Acordo for considerada inválida ou inexequível, as restantes disposições mantêm plena validade e efeito.
+
+12. Acordo Integral
+- Este Acordo constitui o acordo integral entre o Fornecedor e o Usuário relativamente ao uso gratuito do Aplicativo e substitui todos os entendimentos anteriores.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Header = "EULA";
+                Body = $@"
+1. Opseg ovog Sporazuma
+- Ovaj Ugovor o licenci za krajnjeg korisnika („Sporazum“) reguliše korišćenje Softverske Aplikacije („Aplikacija“) koju besplatno obezbeđuje True Perfect Code („Pružalac“). Ovaj Sporazum se primenjuje isključivo na besplatnu (freemium) verziju Aplikacije. Opcioni dobrovoljni donacije ne stvaraju nikakva ugovorna prava ili obaveze i ne predstavljaju plaćanje za usluge ili digitalne proizvode. Instaliranjem ili korišćenjem Aplikacije, korisnik („Korisnik“) prihvata uslove ovog Sporazuma.
+
+2. Dodela licence
+- Pružalac dodeljuje Korisniku ograničenu, neekskluzivnu, neprenosivu i opozivu licencu za instaliranje i korišćenje Aplikacije na ličnim ili poslovnim uređajima u zakonite svrhe.
+- Ova licenca ne predstavlja prenos vlasništva. Sva prava, vlasništvo i interesi u vezi sa Aplikacijom ostaju kod Pružaoca.
+
+3. Ograničenja – Korisnici ne smeju:
+- kopirati, reprodukovati, distribuirati, prodavati, sublicencirati, iznajmljivati, davati u zakup ili stavljati Aplikaciju na raspolaganje trećim licima;
+- modifikovati, dekompilirati, vršiti reverzni inženjering ili rastavljati Aplikaciju, osim u meri u kojoj to izričito dozvoljava važeći zakon;
+- uklanjati ili menjati bilo kakva obaveštenja o autorskim pravima, žigovima ili drugim obaveštenjima o vlasništvu.
+- Svako neovlašćeno korišćenje može dovesti do građanske i/ili krivične odgovornosti.
+
+4. Donacije
+- Korisnici mogu dobrovoljno dati donacije radi podrške razvoju Aplikacije.
+- Donacije su čisto dobrovoljni prilozi i ne daju pristup dodatnim funkcijama, uslugama ili ugovornim pravima.
+- Donacije se ne smatraju plaćanjem za digitalni sadržaj ili usluge.
+
+5. Ažuriranja i promene
+- Pružalac može po sopstvenom nahođenju ponuditi ažuriranja, zakrpe ili poboljšanja.
+- Sva ažuriranja obezbeđena u okviru besplatne verzije ostaju podložna ovom Sporazumu.
+- Pružalac ne garantuje dostupnost, kontinuitet ili održavanje Aplikacije.
+
+6. Intelektualna svojina
+- Sva prava intelektualne svojine na Aplikaciji, uključujući izvorni kod, objektni kod, dizajn i žigove, isključivo pripadaju Pružaocu. Ne dodeljuju se nikakva prava osim onih izričito navedenih u ovom Sporazumu.
+
+7. Raskid
+- Ova licenca ostaje na snazi dok ne bude raskinuta.
+- Korisnik može raskinuti ovaj Sporazum u bilo kom trenutku brisanjem Aplikacije i svih njenih kopija.
+- Pružalac može raskinuti ovaj Sporazum u bilo kom trenutku ako Korisnik prekrši njegove uslove.
+- Po raskidu, Korisnik mora prestati sa svim korišćenjem i izbrisati sve kopije Aplikacije.
+
+8. Odricanje garancija
+- Aplikacija se obezbeđuje „kakva jeste“ i „kako je dostupna“, bez ikakvih izričitih ili prećutnih garancija.
+- Pružalac ne garantuje funkcionalnost, pouzdanost, dostupnost ili podobnost za određenu svrhu.
+- Korisnik priznaje da korišćenje Aplikacije vrši na sopstveni rizik.
+
+9. Ograničenje odgovornosti – U najvećoj meri dozvoljenoj važećim pravom:
+- Pružalac neće biti odgovoran za bilo kakvu direktnu, indirektnu, slučajnu, posledičnu ili posebnu štetu, uključujući ali ne ograničeno na gubitak podataka, gubitak profita ili prekid poslovanja.
+- Eventualna odgovornost Pružaoca ograničena je na slučajeve namernog nedoličnog ponašanja ili grube nepažnje.
+- Ništa u ovom Sporazumu ne isključuje odgovornost za smrt ili telesne povrede prouzrokovane nepažnjom.
+
+10. Primenjivo pravo i nadležnost
+- Ovaj Sporazum podleže zakonima Republike Srbije, bez obzira na principe sukoba zakona.
+- Ako je Korisnik potrošač i primenjuju se obavezujuće zakonske odredbe njegove zemlje prebivališta, te odredbe ostaju nepromenjene.
+- Isključiva nadležnost pripada nadležnim sudovima u Beogradu, Srbija, osim ako obavezujući propisi o zaštiti potrošača ne predviđaju drugačije.
+
+11. Klauzula o odvojivosti
+- Ako se bilo koja odredba ovog Sporazuma utvrdi kao nevažeća ili neizvršiva, preostale odredbe ostaju u punoj snazi i dejstvu.
+
+12. Celokupan sporazum
+- Ovaj Sporazum predstavlja celokupan dogovor između Pružaoca i Korisnika u vezi sa besplatnim korišćenjem Aplikacije i zamenjuje sve prethodne dogovore.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Header = "ЕУЛА";
+                Body = $@"
+1. Опсег овог Споразума
+- Овај Уговор о лиценци за крајњег корисника („Споразум“) регулише коришћење Софтверске Апликације („Апликација“) коју бесплатно обезбеђује True Perfect Code („Пружалац“). Овај Споразум се примењује искључиво на бесплатну (фримијум) верзију Апликације. Опционе добровољне донације не стварају никаква уговора права или обавезе и не представљају плаћање за услуге или дигиталне производе. Инсталирањем или коришћењем Апликације, корисник („Корисник“) прихвата услове овог Споразума.
+
+2. Додела лиценце
+- Пружалац додељује Кориснику ограничену, неексклузивну, непреносиву и опозиву лиценцу за инсталирање и коришћење Апликације на личним или пословним уређајима у законите сврхе.
+- Ова лиценца не представља пренос власништва. Сва права, власништво и интереси у вези са Апликацијом остају код Пружаоца.
+
+3. Ограничења – Корисници не смеју:
+- копирати, репродуковати, дистрибуирати, продавати, sublicencирати, изнајмљивати, давати у закуп или стављати Апликацију на располагање трећим лицима;
+- модификовати, декомпилирати, вршити реверзни инжењеринг или растављати Апликацију, осим у мери у којој то изричито дозвољава важећи закон;
+- уклањати или мењати било каква обавештења о ауторским правима, жиговима или другим обавештењима о власништву.
+- Свако неовлашћено коришћење може довести до грађанске и/или кривичне одговорности.
+
+4. Донације
+- Корисници могу добровољно дати донације ради подршке развоју Апликације.
+- Донације су чисто добровољни прилози и не дају приступ додатним функцијама, услугама или уговорним правима.
+- Донације се не сматрају плаћањем за дигитални садржај или услуге.
+
+5. Ажурирања и промене
+- Пружалац може по сопственом нахођењу понудити ажурирања, закрпе или побољшања.
+- Сва ажурирања обезбеђена у оквиру бесплатне верзије остају подложна овом Споразуму.
+- Пружалац не гарантује доступност, континуитет или одржавање Апликације.
+
+6. Интелектуална својина
+- Сва права интелектуалне својине на Апликацији, укључујући изворни код, објектни код, дизајн и жигове, искључиво припадају Пружаоцу. Не додељују се никаква права осим оних изричито наведених у овом Споразуму.
+
+7. Раскид
+- Ова лиценца остаје на снази док не буде раскинута.
+- Корисник може раскинути овај Споразум у било ком тренутку брисањем Апликације и свих њених копија.
+- Пружалац може раскинути овај Споразум у било ком тренутку ако Корисник прекрши његове услове.
+- По раскиду, Корисник мора престати са свим коришћењем и избрисати све копије Апликације.
+
+8. Одрицање гаранција
+- Апликација се обезбеђује „каква јесте“ и „како је доступна“, без икаквих изричитих или прећутних гаранција.
+- Пружалац не гарантује функционалност, поузданост, доступност или подобност за одређену сврху.
+- Корисник признаје да коришћење Апликације врши на сопствени ризик.
+
+9. Ограничење одговорности – У највећој мери дозвољеној важећим правом:
+- Пружалац неће бити одговоран за било какву директну, индиректну, случајну, последичну или посебну штету, укључујући али не ограничено на губитак података, губитак профита или прекид пословања.
+- Евентуална одговорност Пружаоца ограничена је на случајеве намерног недоличног понашања или грубе непажње.
+- Ништа у овом Споразуму не искључује одговорност за смрт или телесне повреде проузроковане непажњом.
+
+10. Применљиво право и надлежност
+- Овај Споразум подлеже законима Републике Србије, без обзира на принципе сукоба закона.
+- Ако је Корисник потрошач и примењују се обавезујуће законске одредбе његове земље пребивалишта, те одредбе остају непромењене.
+- Искључива надлежност припада надлежним судовима у Београду, Србија, осим ако обавезујући прописи о заштити потрошача не предвиђају другачије.
+
+11. Клаузула о одвојивости
+- Ако се било која одредба овог Споразума утврди као неважећа или неизвршива, преостале одредбе остају у пуној снази и дејству.
+
+12. Целокупан споразум
+- Овај Споразум представља целокупан договор између Пружаоца и Корисника у вези са бесплатним коришћењем Апликације и замењује све претходне договоре.
+";
+                break;
+        }
+
+    }
+
+}
+

@@ -1,0 +1,44 @@
+﻿@page "/"
+@page "/{Para}"
+@using Microsoft.AspNetCore.Components.Authorization
+@using pFemmeExample.Shared.Pages.Components
+
+
+@if (!string.IsNullOrEmpty(Para))
+{
+    <pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationError ErrorCode="@Para" />
+}
+
+<AuthorizeView>
+    <Authorized Context="context">
+
+        <div class="d-flex flex-column min-vh-100">
+            <!-- Hauptinhalt -->
+            <div class="flex-grow-1">
+                <div class="mb-2 px-2">
+                    <pFemmeExample.Shared.Pages.Components.Header />
+
+                    <pFemmeExample.Shared.Pages.Components.CycleDays />
+
+                    <pFemmeExample.Shared.Pages.Components.CyclePhases />
+
+                    <pFemmeExample.Shared.Pages.Components.Trends />
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <pFemmeExample.Shared.Pages.Components.Footer />
+        </div>
+
+    </Authorized>
+    <NotAuthorized>
+
+        @* WEBSITE *@
+        <Landing IsShowingSpinner="false" />
+
+    </NotAuthorized>
+</AuthorizeView>
+
+
+<!-- Modal-Native Fenster -->
+<Modals />

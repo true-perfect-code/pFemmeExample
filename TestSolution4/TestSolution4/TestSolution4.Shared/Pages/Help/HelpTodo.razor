@@ -1,0 +1,503 @@
+﻿@using p11.UI
+@using Microsoft.AspNetCore.Components.Web
+
+
+<TestSolution4.Shared.Pages.Common.Help DocumentBody="@Body" Language="@Language" />
+
+@code {
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+    private string? Body = string.Empty;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var language = await _platform!.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (language != null && string.IsNullOrEmpty(language.out_err) && !string.IsNullOrEmpty(language.out_value_str))
+                    Language = language.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (language != null && !string.IsNullOrEmpty(language.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {language.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Body =$@"
+1. Creating a New To-Do Entry:
+- New To-Do entries are created using the button <b>'Add Todo'</b> in the top left of the menu bar.
+- Clicking it opens an input panel where you define the main To-Do entry.
+- You can select a <b>Category</b> ('Urgent', 'Pending', 'Optional', 'Miscellaneous') from the static list.
+- <b>Tasks (Sub-tasks)</b> can be entered directly in the panel by separating them with a comma (e.g., 'Task 1, Task 2, Task 3').
+- Activate the <b>Notification Checkbox</b> to set a local notification with a specific date and time.
+- Use the checkbox <b>'Archive'</b> to move an existing or newly created entry directly to the archive.
+- Save the entry using the button <b>'Save'</b> or discard it with <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Managing and Customizing Tasks (Sub-tasks):
+- A To-Do entry can be expanded by clicking the <b>left opening button</b> to view the associated tasks.
+- Individual tasks can be marked as completed using the <b>Checkbox</b>, which then displays the text as struck through.
+- To adjust or edit a task in detail, click the <b>unfold button</b> on the right side of the task.
+- In the Task Panel, you can <b>adjust</b> the task text, <b>add an image</b>, or <b>delete the task</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Editing and Deleting To-Do Entries:
+- To edit an existing To-Do entry, use the <b>'Edit-Button'</b> (pencil icon) next to the entry.
+- In the edit mode, you can change the main entry text, category, notification settings, or archive status.
+- The <b>Deletion</b> of To-Do entries is also performed via the edit dialog.
+- Individual tasks can be deleted directly in the <b>Task Panel</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Data Synchronization (Migration Options):
+- If the storage mode <b>'Cloud/Local'</b> is selected and the data is not synchronized, <b>Migration Options</b> appear next to the To-Do entry.
+- These options allow you to manually upload the entry to the Cloud or download it from the Cloud.
+
+Note
+A detailed description of the application can be found in our linked user manual
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            case "DE":
+                Body =$@"
+1. Erstellen eines neuen To-Do-Eintrags:
+- Neue To-Do-Einträge werden mit der Schaltfläche <b>'Add Todo'</b> oben links in der Menüleiste erstellt.
+- Durch Klicken öffnet sich ein Eingabepanel, in dem der Haupt-To-Do-Eintrag definiert wird.
+- Es kann eine <b>Kategorie</b> ('Dringend', 'Ausstehend', 'Optional', 'Sonstiges') aus der statischen Liste ausgewählt werden.
+- <b>Tasks (Unteraufgaben)</b> können direkt im Panel durch Komma-Trennung eingegeben werden (z. B. 'Task 1, Task 2, Task 3').
+- Aktivieren Sie das <b>Benachrichtigungs-Checkbox</b>, um eine lokale Benachrichtigung mit einem bestimmten Datum und Uhrzeit festzulegen.
+- Verwenden Sie das Checkbox <b>'Archiv'</b>, um einen bestehenden oder neu erstellten Eintrag direkt ins Archiv zu verschieben.
+- Speichern Sie den Eintrag mit der Schaltfläche <b>'Save'</b> oder verwerfen Sie ihn mit <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Verwalten und Anpassen von Tasks (Unteraufgaben):
+- Ein To-Do-Eintrag kann durch Klicken auf die <b>linke Öffnungsschaltfläche</b> erweitert werden, um die zugehörigen Tasks anzuzeigen.
+- Einzelne Tasks können mit dem <b>Checkbox</b> als erledigt markiert werden, wodurch der Text durchgestrichen angezeigt wird.
+- Um eine Task detailliert zu bearbeiten, klicken Sie auf die <b>Aufklappschaltfläche</b> rechts neben der Task.
+- Im Task-Panel können Sie den Task-Text <b>anpassen</b>, ein <b>Bild hinzufügen</b> oder die Task <b>löschen</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Bearbeiten und Löschen von To-Do-Einträgen:
+- Um einen bestehenden To-Do-Eintrag zu bearbeiten, verwenden Sie die <b>'Edit-Schaltfläche'</b> (Bleistift-Symbol) neben dem Eintrag.
+- Im Bearbeitungsmodus können der Haupttext, die Kategorie, Benachrichtigungseinstellungen oder der Archivstatus geändert werden.
+- Das <b>Löschen</b> von To-Do-Einträgen erfolgt ebenfalls über den Bearbeitungsdialog.
+- Einzelne Tasks können direkt im <b>Task-Panel</b> gelöscht werden.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Datensynchronisation (Migrationsoptionen):
+- Wenn der Speichermodus <b>'Cloud/Lokal'</b> gewählt ist und die Daten nicht synchronisiert sind, erscheinen <b>Migrationsoptionen</b> neben dem To-Do-Eintrag.
+- Diese Optionen ermöglichen das manuelle Hochladen des Eintrags in die Cloud oder das Herunterladen aus der Cloud.
+
+Hinweis
+Eine detaillierte Beschreibung der Anwendung finden Sie in unserem verlinkten Benutzerhandbuch
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Body = $@"
+1. Création d'une nouvelle entrée To-Do :
+- Les nouvelles entrées To-Do sont créées à l'aide du bouton <b>'Add Todo'</b> en haut à gauche de la barre de menu.
+- Un clic ouvre un panneau de saisie où l'entrée To-Do principale est définie.
+- Une <b>Catégorie</b> ('Urgent', 'En attente', 'Optionnel', 'Divers') peut être sélectionnée dans la liste statique.
+- Les <b>Tasks (Sous-tâches)</b> peuvent être saisies directement dans le panneau en les séparant par une virgule (ex. 'Tâche 1, Tâche 2, Tâche 3').
+- Activez la <b>case à cocher Notification</b> pour définir une notification locale avec une date et une heure spécifiques.
+- Utilisez la case à cocher <b>'Archive'</b> pour déplacer une entrée existante ou nouvellement créée directement dans l'archive.
+- Enregistrez l'entrée avec le bouton <b>'Save'</b> ou annulez-la avec <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Gestion et personnalisation des Tasks (Sous-tâches) :
+- Une entrée To-Do peut être développée en cliquant sur le <b>bouton d'ouverture à gauche</b> pour afficher les tasks associées.
+- Les tasks individuelles peuvent être marquées comme terminées à l'aide de la <b>case à cocher</b>, ce qui affiche alors le texte barré.
+- Pour ajuster ou éditer une task en détail, cliquez sur le <b>bouton de dépliage</b> à droite de la task.
+- Dans le panneau Task, vous pouvez <b>modifier</b> le texte de la task, <b>ajouter une image</b> ou <b>supprimer la task</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Édition et suppression des entrées To-Do :
+- Pour éditer une entrée To-Do existante, utilisez le <b>'Bouton Edit'</b> (icône crayon) à côté de l'entrée.
+- En mode édition, vous pouvez modifier le texte principal, la catégorie, les paramètres de notification ou le statut d'archive.
+- La <b>Suppression</b> des entrées To-Do s'effectue également via le dialogue d'édition.
+- Les tasks individuelles peuvent être supprimées directement dans le <b>panneau Task</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Synchronisation des données (Options de migration) :
+- Si le mode de stockage <b>'Cloud/Local'</b> est sélectionné et que les données ne sont pas synchronisées, des <b>Options de migration</b> apparaissent à côté de l'entrée To-Do.
+- Ces options permettent de télécharger manuellement l'entrée dans le Cloud ou de la télécharger depuis le Cloud.
+
+Note
+Une description détaillée de l'application se trouve dans notre manuel utilisateur lié
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Body = $@"
+1. Creazione di una nuova voce To-Do:
+- Le nuove voci To-Do vengono create utilizzando il pulsante <b>'Add Todo'</b> in alto a sinistra della barra del menu.
+- Un clic apre un pannello di inserimento dove si definisce la voce To-Do principale.
+- È possibile selezionare una <b>Categoria</b> ('Urgente', 'In attesa', 'Opzionale', 'Varie') dalla lista statica.
+- Le <b>Tasks (Sottotasks)</b> possono essere inserite direttamente nel pannello separandole con una virgola (es. 'Task 1, Task 2, Task 3').
+- Attivare la <b>casella di notifica</b> per impostare una notifica locale con data e ora specifiche.
+- Utilizzare la casella <b>'Archivio'</b> per spostare una voce esistente o appena creata direttamente nell'archivio.
+- Salvare la voce con il pulsante <b>'Save'</b> o annullarla con <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Gestione e personalizzazione delle Tasks (Sottotasks):
+- Una voce To-Do può essere espansa cliccando sul <b>pulsante di apertura a sinistra</b> per visualizzare le tasks associate.
+- Le tasks individuali possono essere marcate come completate utilizzando la <b>casella di controllo</b>, che visualizza poi il testo barrato.
+- Per regolare o modificare una task in dettaglio, cliccare sul <b>pulsante di espansione</b> a destra della task.
+- Nel pannello Task è possibile <b>modificare</b> il testo della task, <b>aggiungere un'immagine</b> o <b>cancellare la task</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Modifica e cancellazione delle voci To-Do:
+- Per modificare una voce To-Do esistente, utilizzare il <b>'Pulsante Edit'</b> (icona matita) accanto alla voce.
+- In modalità modifica è possibile cambiare il testo principale, la categoria, le impostazioni di notifica o lo stato di archivio.
+- La <b>Cancellazione</b> delle voci To-Do avviene anch'essa tramite il dialogo di modifica.
+- Le tasks individuali possono essere cancellate direttamente nel <b>pannello Task</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Sincronizzazione dati (Opzioni di migrazione):
+- Se la modalità di archiviazione <b>'Cloud/Local'</b> è selezionata e i dati non sono sincronizzati, appaiono <b>Opzioni di migrazione</b> accanto alla voce To-Do.
+- Queste opzioni consentono di caricare manualmente la voce nel Cloud o di scaricarla dal Cloud.
+
+Nota
+Una descrizione dettagliata dell'applicazione si trova nel nostro manuale utente collegato
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Body = $@"
+1. إنشاء إدخال To-Do جديد:
+- يتم إنشاء إدخالات To-Do جديدة باستخدام الزر <b>'Add Todo'</b> في أعلى اليسار في شريط القائمة.
+- النقر عليه يفتح لوحة إدخال حيث يتم تحديد إدخال To-Do الرئيسي.
+- يمكن اختيار <b>فئة</b> ('عاجل', 'معلق', 'اختياري', 'متنوع') من القائمة الثابتة.
+- يمكن إدخال <b>المهام الفرعية (Tasks)</b> مباشرة في اللوحة بفصلها بفاصلة (مثل 'مهمة 1, مهمة 2, مهمة 3').
+- فعّل <b>مربع الإشعار</b> لتحديد إشعار محلي بتاريخ وساعة محددين.
+- استخدم مربع <b>'أرشيف'</b> لنقل إدخال موجود أو جديد مباشرة إلى الأرشيف.
+- احفظ الإدخال باستخدام الزر <b>'Save'</b> أو ألغِه بـ <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. إدارة وتخصيص المهام الفرعية (Tasks):
+- يمكن توسيع إدخال To-Do بالنقر على <b>زر الفتح الأيسر</b> لعرض المهام الفرعية المرتبطة.
+- يمكن وضع علامة إكمال على المهام الفردية باستخدام <b>مربع الاختيار</b>, مما يعرض النص مشطوبًا.
+- لتعديل مهمة بالتفصيل, انقر على <b>زر الفتح</b> على الجانب الأيمن من المهمة.
+- في لوحة المهمة, يمكن <b>تعديل</b> نص المهمة, <b>إضافة صورة</b>, أو <b>حذف المهمة</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. تعديل وحذف إدخالات To-Do:
+- لتعديل إدخال To-Do موجود, استخدم <b>'زر التحرير'</b> (أيقونة قلم رصاص) بجانب الإدخال.
+- في وضع التحرير, يمكن تغيير النص الرئيسي, الفئة, إعدادات الإشعار, أو حالة الأرشيف.
+- يتم <b>الحذف</b> إدخالات To-Do أيضًا عبر حوار التحرير.
+- يمكن حذف المهام الفردية مباشرة في <b>لوحة المهمة</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. مزامنة البيانات (خيارات الترحيل):
+- إذا تم اختيار وضع التخزين <b>'Cloud/Local'</b> والبيانات غير متزامنة, تظهر <b>خيارات الترحيل</b> بجانب إدخال To-Do.
+- تتيح هذه الخيارات رفع الإدخال يدويًا إلى السحابة أو تنزيله من السحابة.
+
+ملاحظة
+وصف مفصل للتطبيق موجود في دليل المستخدم المرتبط لدينا
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Body = $@"
+1. 创建新 To-Do 条目：
+- 使用菜单栏左上角的按钮 <b>'Add Todo'</b> 创建新 To-Do 条目。
+- 点击它会打开输入面板，在其中定义主 To-Do 条目。
+- 可以从静态列表中选择 <b>类别</b> ('紧急', '待处理', '可选', '杂项')。
+- <b>任务 (子任务)</b> 可以直接在面板中输入，用逗号分隔 (例如 '任务 1, 任务 2, 任务 3')。
+- 激活 <b>通知复选框</b> 以设置特定日期和时间的本地通知。
+- 使用复选框 <b>'存档'</b> 将现有或新创建的条目直接移到存档。
+- 使用按钮 <b>'Save'</b> 保存条目，或用 <b>'Cancel'</b> 取消。
+_content/Shared/img/video_CreateTodo.gif
+
+2. 管理和自定义任务 (子任务)：
+- 通过点击 <b>左侧展开按钮</b> 可以展开 To-Do 条目查看关联任务。
+- 使用 <b>复选框</b> 将单个任务标记为完成，然后文本会显示为删除线。
+- 要详细调整或编辑任务，点击任务右侧的 <b>展开按钮</b>。
+- 在任务面板中，可以 <b>调整</b> 任务文本、<b>添加图像</b> 或 <b>删除任务</b>。
+_content/Shared/img/video_EditTask.gif
+
+3. 编辑和删除 To-Do 条目：
+- 要编辑现有 To-Do 条目，使用条目旁边的 <b>'编辑按钮'</b> (铅笔图标)。
+- 在编辑模式下，可以更改主条目文本、类别、通知设置或存档状态。
+- To-Do 条目的 <b>删除</b> 也通过编辑对话框进行。
+- 单个任务可以直接在 <b>任务面板</b> 中删除。
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. 数据同步 (迁移选项)：
+- 如果选择存储模式 <b>'云端/本地'</b> 且数据未同步，则 To-Do 条目旁边会出现 <b>迁移选项</b>。
+- 这些选项允许手动将条目上传到云端或从云端下载。
+
+注意
+应用的详细描述可在我们链接的用户手册中找到
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Body = $@"
+1. नया To-Do एंट्री बनाना:
+- मेनू बार के ऊपरी बाएँ कोने में <b>'Add Todo'</b> बटन का उपयोग करके नई To-Do एंट्री बनाई जाती हैं।
+- क्लिक करने पर एक इनपुट पैनल खुलता है जहां मुख्य To-Do एंट्री परिभाषित की जाती है।
+- स्थिर सूची से <b>श्रेणी</b> ('तत्काल', 'लंबित', 'वैकल्पिक', 'विविध') चुन सकते हैं।
+- <b>टास्क (सब-टास्क)</b> को पैनल में सीधे दर्ज किया जा सकता है, अल्पविराम से अलग करके (उदाहरण 'टास्क 1, टास्क 2, टास्क 3')।
+- विशिष्ट तारीख और समय के साथ स्थानीय सूचना सेट करने के लिए <b>सूचना चेकबॉक्स</b> सक्रिय करें।
+- मौजूदा या नई बनाई गई एंट्री को सीधे आर्काइव में ले जाने के लिए <b>'आर्काइव'</b> चेकबॉक्स का उपयोग करें।
+- <b>'Save'</b> बटन से एंट्री सेव करें या <b>'Cancel'</b> से रद्द करें।
+_content/Shared/img/video_CreateTodo.gif
+
+2. टास्क (सब-टास्क) का प्रबंधन और अनुकूलन:
+- To-Do एंट्री को <b>बाएँ खोलने वाले बटन</b> पर क्लिक करके विस्तारित किया जा सकता है ताकि संबंधित टास्क दिखें।
+- व्यक्तिगत टास्क को <b>चेकबॉक्स</b> का उपयोग करके पूरा चिह्नित किया जा सकता है, जिससे टेक्स्ट कटा हुआ दिखाई देता है।
+- टास्क को विस्तार से समायोजित या संपादित करने के लिए टास्क के दाएँ तरफ <b>अनफोल्ड बटन</b> पर क्लिक करें।
+- टास्क पैनल में आप टास्क टेक्स्ट <b>समायोजित</b> कर सकते हैं, <b>इमेज जोड़</b> सकते हैं, या टास्क <b>डिलीट</b> कर सकते हैं।
+_content/Shared/img/video_EditTask.gif
+
+3. To-Do एंट्री का संपादन और हटाना:
+- मौजूदा To-Do एंट्री संपादित करने के लिए एंट्री के बगल में <b>'एडिट-बटन'</b> (पेंसिल आइकन) का उपयोग करें।
+- संपादन मोड में मुख्य टेक्स्ट, श्रेणी, सूचना सेटिंग्स या आर्काइव स्थिति बदल सकते हैं।
+- To-Do एंट्री का <b>हटाना</b> भी संपादन डायलॉग से किया जाता है।
+- व्यक्तिगत टास्क को <b>टास्क पैनल</b> में सीधे हटाया जा सकता है।
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. डेटा सिंक्रोनाइज़ेशन (माइग्रेशन विकल्प):
+- यदि स्टोरेज मोड <b>'क्लाउड/लोकल'</b> चुना गया है और डेटा सिंक्रोनाइज़ नहीं है, तो To-Do एंट्री के बगल में <b>माइग्रेशन विकल्प</b> दिखाई देते हैं।
+- ये विकल्प एंट्री को क्लाउड पर मैनुअली अपलोड करने या क्लाउड से डाउनलोड करने की अनुमति देते हैं।
+
+नोट
+एप्लिकेशन का विस्तृत विवरण हमारे लिंक किए गए यूज़र मैनुअल में मिल सकता है
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Body = $@"
+1. Creación de una nueva entrada To-Do:
+- Las nuevas entradas To-Do se crean utilizando el botón <b>'Add Todo'</b> en la parte superior izquierda de la barra de menú.
+- Al hacer clic se abre un panel de entrada donde se define la entrada To-Do principal.
+- Se puede seleccionar una <b>Categoría</b> ('Urgente', 'Pendiente', 'Opcional', 'Varios') de la lista estática.
+- Las <b>Tasks (Subtareas)</b> se pueden introducir directamente en el panel separándolas con una coma (p. ej. 'Tarea 1, Tarea 2, Tarea 3').
+- Active la <b>casilla de notificación</b> para establecer una notificación local con una fecha y hora específicas.
+- Utilice la casilla <b>'Archivo'</b> para mover una entrada existente o recién creada directamente al archivo.
+- Guarde la entrada con el botón <b>'Save'</b> o descártela con <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Gestión y personalización de Tasks (Subtareas):
+- Una entrada To-Do se puede expandir haciendo clic en el <b>botón de apertura izquierdo</b> para ver las tasks asociadas.
+- Las tasks individuales se pueden marcar como completadas utilizando la <b>casilla de verificación</b>, lo que muestra el texto tachado.
+- Para ajustar o editar una task en detalle, haga clic en el <b>botón de desplegar</b> a la derecha de la task.
+- En el panel Task, puede <b>ajustar</b> el texto de la task, <b>añadir una imagen</b> o <b>eliminar la task</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Edición y eliminación de entradas To-Do:
+- Para editar una entrada To-Do existente, utilice el <b>'Botón Edit'</b> (icono de lápiz) junto a la entrada.
+- En el modo de edición, puede cambiar el texto principal, la categoría, los ajustes de notificación o el estado de archivo.
+- La <b>Eliminación</b> de entradas To-Do también se realiza a través del diálogo de edición.
+- Las tasks individuales se pueden eliminar directamente en el <b>panel Task</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Sincronización de datos (Opciones de migración):
+- Si el modo de almacenamiento <b>'Cloud/Local'</b> está seleccionado y los datos no están sincronizados, aparecen <b>Opciones de migración</b> junto a la entrada To-Do.
+- Estas opciones permiten subir manualmente la entrada a la nube o descargarla desde la nube.
+
+Nota
+Una descripción detallada de la aplicación se encuentra en nuestro manual de usuario vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Body = $@"
+1. Membuat Entri To-Do Baru:
+- Entri To-Do baru dibuat menggunakan tombol <b>'Add Todo'</b> di kiri atas bilah menu.
+- Mengkliknya membuka panel input di mana entri To-Do utama didefinisikan.
+- Kategori <b>Kategori</b> ('Mendesak', 'Tertunda', 'Opsional', 'Lain-lain') dapat dipilih dari daftar statis.
+- <b>Tasks (Sub-task)</b> dapat dimasukkan langsung di panel dengan memisahkannya dengan koma (misalnya 'Task 1, Task 2, Task 3').
+- Aktifkan <b>Kotak Centang Notifikasi</b> untuk mengatur notifikasi lokal dengan tanggal dan waktu tertentu.
+- Gunakan kotak centang <b>'Arsip'</b> untuk memindahkan entri yang ada atau baru dibuat langsung ke arsip.
+- Simpan entri menggunakan tombol <b>'Save'</b> atau batalkan dengan <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Mengelola dan Menyesuaikan Tasks (Sub-task):
+- Entri To-Do dapat diperluas dengan mengklik <b>tombol pembuka kiri</b> untuk melihat task yang terkait.
+- Task individu dapat ditandai sebagai selesai menggunakan <b>Kotak Centang</b>, yang kemudian menampilkan teks dicoret.
+- Untuk menyesuaikan atau mengedit task secara rinci, klik <b>tombol unfold</b> di sisi kanan task.
+- Di Panel Task, Anda dapat <b>menyesuaikan</b> teks task, <b>menambahkan gambar</b>, atau <b>menghapus task</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Mengedit dan Menghapus Entri To-Do:
+- Untuk mengedit entri To-Do yang ada, gunakan <b>'Tombol Edit'</b> (ikon pensil) di samping entri.
+- Dalam mode edit, Anda dapat mengubah teks utama, kategori, pengaturan notifikasi, atau status arsip.
+- <b>Penghapusan</b> entri To-Do juga dilakukan melalui dialog edit.
+- Task individu dapat dihapus langsung di <b>Panel Task</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Sinkronisasi Data (Opsi Migrasi):
+- Jika mode penyimpanan <b>'Cloud/Local'</b> dipilih dan data tidak tersinkronisasi, <b>Opsi Migrasi</b> muncul di samping entri To-Do.
+- Opsi ini memungkinkan pengunggahan manual entri ke Cloud atau pengunduhan dari Cloud.
+
+Catatan
+Deskripsi rinci aplikasi dapat ditemukan di manual pengguna yang tertaut kami
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Body = $@"
+1. Criação de uma nova entrada To-Do:
+- As novas entradas To-Do são criadas usando o botão <b>'Add Todo'</b> no canto superior esquerdo da barra de menu.
+- Ao clicar, abre-se um painel de entrada onde você define a entrada To-Do principal.
+- Pode ser selecionada uma <b>Categoria</b> ('Urgente', 'Pendente', 'Opcional', 'Diversos') da lista estática.
+- As <b>Tasks (Subtarefas)</b> podem ser inseridas diretamente no painel separando-as por vírgula (ex. 'Tarefa 1, Tarefa 2, Tarefa 3').
+- Ative a <b>caixa de notificação</b> para definir uma notificação local com data e hora específicas.
+- Use a caixa <b>'Arquivo'</b> para mover uma entrada existente ou recém-criada diretamente para o arquivo.
+- Salve a entrada com o botão <b>'Save'</b> ou cancele com <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Gerenciamento e personalização de Tasks (Subtarefas):
+- Uma entrada To-Do pode ser expandida clicando no <b>botão de abertura à esquerda</b> para visualizar as tasks associadas.
+- As tasks individuais podem ser marcadas como concluídas usando a <b>caixa de seleção</b>, que então exibe o texto riscado.
+- Para ajustar ou editar uma task em detalhe, clique no <b>botão de expansão</b> à direita da task.
+- No painel Task, você pode <b>ajustar</b> o texto da task, <b>adicionar uma imagem</b> ou <b>excluir a task</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Edição e exclusão de entradas To-Do:
+- Para editar uma entrada To-Do existente, use o <b>'Botão Edit'</b> (ícone de lápis) ao lado da entrada.
+- No modo de edição, você pode alterar o texto principal, a categoria, as configurações de notificação ou o status de arquivo.
+- A <b>Exclusão</b> de entradas To-Do também é feita pelo diálogo de edição.
+- As tasks individuais podem ser excluídas diretamente no <b>painel Task</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Sincronização de dados (Opções de migração):
+- Se o modo de armazenamento <b>'Nuvem/Local'</b> estiver selecionado e os dados não estiverem sincronizados, aparecem <b>Opções de migração</b> ao lado da entrada To-Do.
+- Essas opções permitem carregar manualmente a entrada para a nuvem ou baixá-la da nuvem.
+
+Nota
+Uma descrição detalhada do aplicativo está disponível em nosso manual do usuário vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Body = $@"
+1. Kreiranje novog To-Do unosa:
+- Novi To-Do unosi se kreiraju pomoću dugmeta <b>'Add Todo'</b> u gornjem levom uglu menijske trake.
+- Klikom se otvara panel za unos gde se definiše glavni To-Do unos.
+- Može se izabrati <b>Kategorija</b> ('Hitno', 'Na čekanju', 'Opcionalno', 'Razno') iz statičke liste.
+- <b>Tasks (Podzadaci)</b> se mogu uneti direktno u panelu razdvajajući ih zarezom (npr. 'Zadatak 1, Zadatak 2, Zadatak 3').
+- Aktivirajte <b>Checkbox za obaveštenje</b> da biste postavili lokalno obaveštenje sa određenim datumom i vremenom.
+- Koristite checkbox <b>'Arhiva'</b> da premestite postojeći ili novo kreirani unos direktno u arhivu.
+- Sačuvajte unos pomoću dugmeta <b>'Save'</b> ili ga otkažite sa <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Upravljanje i prilagođavanje Tasks (Podzadataka):
+- To-Do unos se može proširiti klikom na <b>levi dugme za otvaranje</b> da bi se prikazali povezani zadaci.
+- Pojedinačni zadaci se mogu označiti kao završeni pomoću <b>Checkbox-a</b>, što zatim prikazuje tekst precrtan.
+- Za detaljno prilagođavanje ili uređivanje zadatka, kliknite na <b>dugme za rasklapanje</b> sa desne strane zadatka.
+- U Panelu za zadatak možete <b>prilagoditi</b> tekst zadatka, <b>dodati sliku</b> ili <b>obrisati zadatak</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Uređivanje i brisanje To-Do unosa:
+- Za uređivanje postojećeg To-Do unosa koristite <b>'Dugme za uređivanje'</b> (ikona olovke) pored unosa.
+- U režimu uređivanja možete promeniti glavni tekst, kategoriju, podešavanja obaveštenja ili status arhive.
+- <b>Brisanje</b> To-Do unosa takođe se vrši preko dijaloga za uređivanje.
+- Pojedinačni zadaci se mogu obrisati direktno u <b>Panelu za zadatak</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Sinhronizacija podataka (Opcije migracije):
+- Ako je izabran režim skladištenja <b>'Cloud/Lokalno'</b> i podaci nisu sinhronizovani, pored To-Do unosa se pojavljuju <b>Opcije migracije</b>.
+- Ove opcije omogućavaju ručno učitavanje unosa u Cloud ili preuzimanje iz Clouda.
+
+Napomena
+Detaljan opis aplikacije nalazi se u našem povezanom korisničkom priručniku
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Body = $@"
+1. Креирање новог To-Do уноса:
+- Нови To-Do уноси се креирају помоћу дугмета <b>'Add Todo'</b> у горњем левом углу менијске траке.
+- Кликом се отвара панел за унос где се дефинише главни To-Do унос.
+- Може се изабрати <b>Категорија</b> ('Хитно', 'На чекању', 'Опционално', 'Разно') из статичке листе.
+- <b>Tasks (Подзадати)</b> се могу унети директно у панелу раздвајајући их зарезом (нпр. 'Задатак 1, Задатак 2, Задатак 3').
+- Активирајте <b>Checkbox за обавештење</b> да бисте поставили локално обавештење са одређеним датумом и временом.
+- Користите checkbox <b>'Архива'</b> да преместите постојећи или ново креирани унос директно у архиву.
+- Сачувајте унос помоћу дугмета <b>'Save'</b> или га откажите са <b>'Cancel'</b>.
+_content/Shared/img/video_CreateTodo.gif
+
+2. Управљање и прилагођавање Tasks (Подзадатака):
+- To-Do унос се може проширити кликом на <b>лево дугме за отварање</b> да би се приказали повезани задаци.
+- Појединачни задаци се могу означити као завршени помоћу <b>Checkbox-а</b>, што затим приказује текст прецртан.
+- За детаљно прилагођавање или уређивање задатка, кликните на <b>дугме за расклапање</b> са десне стране задатка.
+- У Панелу за задатак можете <b>прилагодити</b> текст задатка, <b>додати слику</b> или <b>обрисати задатак</b>.
+_content/Shared/img/video_EditTask.gif
+
+3. Уређивање и брисање To-Do уноса:
+- За уређивање постојећег To-Do уноса користите <b>'Дугме за уређивање'</b> (икона оловке) поред уноса.
+- У режиму уређивања можете променити главни текст, категорију, подешавања обавештења или статус архиве.
+- <b>Брисање</b> To-Do уноса такође се врши преко дијалога за уређивање.
+- Појединачни задаци се могу обрисати директно у <b>Панелу за задатак</b>.
+_content/Shared/img/video_EditDeleteTodo.gif
+
+4. Синхронизација података (Опције миграције):
+- Ако је изабран режим складиштења <b>'Cloud/Локално'</b> и подаци нису синхронизовани, поред To-Do уноса се појављују <b>Опције миграције</b>.
+- Ове опције омогућавају ручно учитавање уноса у Cloud или преузимање из Clouda.
+
+Напомена
+Детаљан опис апликације налази се у нашем повезаном корисничком приручнику
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+        }
+    }
+
+}
+

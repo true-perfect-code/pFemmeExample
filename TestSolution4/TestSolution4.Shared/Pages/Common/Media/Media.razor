@@ -1,0 +1,260 @@
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Text
+@using Microsoft.JSInterop
+@using p11.UI
+@using BlazorCore.Services.ImageOptimizer
+@using BlazorCore.Services.SqlClient
+
+<div class="mb-3">
+
+    @if (_hasConfigurationError)
+    {
+        <div class="alert alert-danger" style="border: 2px solid red; padding: 10px; margin: 5px 0; font-size: 0.9em; z-index: 1000;">
+            <p><strong>Media Component Configuration Error:</strong></p>
+            <p>@_configurationErrorMessage</p>
+            <p>This message is only visible in development. Please correct the parameters or set <code>@nameof(SkipValidation)</code> to <code>true</code> to suppress this warning.</p>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_userErrorMessage))
+    {
+        <div class="alert alert-warning" style="border: 2px solid orange; padding: 10px; margin: 5px 0; font-size: 0.9em; z-index: 1000;">
+            <p><strong>Oops! An error occurred:</strong></p>
+            <p>@_userErrorMessage</p>
+            <p>Please check your device's camera settings or try again.</p>
+        </div>
+    }
+
+    <ErrorBoundary>
+        <ChildContent>
+            @if (!_hasConfigurationError)
+            {
+                @if (!string.IsNullOrEmpty(Label))
+                {
+                    <label class="form-label">@Label</label>
+                }
+
+                @if (_appState!.IsPhone)
+                {
+                    <div class="d-flex justify-content-center">
+                        <div class="position-relative d-inline-block shadow-sm rounded">
+
+                            @* LOGIK: Wenn Bild da ist, zeige Base64. Wenn nicht, zeige den Standard-Platzhalter *@
+                            @if (!string.IsNullOrEmpty(ThumbnailDataUrl) || !string.IsNullOrEmpty(ImageDataUrl))
+                            {
+                                <img src="@(ThumbnailSize.HasValue ? $"data:{BlazorCore.Utilities.DetectMimeFromBase64(ThumbnailDataUrl!)};base64,{ThumbnailDataUrl}" : $"data:{BlazorCore.Utilities.DetectMimeFromBase64(ImageDataUrl!)};base64,{ImageDataUrl}")"
+                                     class="img-thumbnail rounded"
+                                     style="@($"max-height: {ImageDisplayedMaxHeight}px; width: {ImageDisplayedWidth}px; display: block;" + (PreventPhonePreviewOpen ? "" : " cursor: pointer;"))"
+                                     @onclick="OnclickPreview" />
+
+                                @* DELETE-Button (Unten Links) - Nur anzeigen, wenn ein Bild existiert *@
+                                <div class="position-absolute bottom-0 start-0 m-2">
+                                    <button type="button"
+                                            class="btn btn-danger btn-sm rounded-circle d-flex align-items-center justify-content-center shadow"
+                                            style="border: 2px solid white;"
+                                            @onclick="OnDeletePhoto"
+                                            @onclick:stopPropagation="true">
+                                        @* Verhindert, dass die Kamera versehentlich mit aufgeht *@
+                    
+                                        <i class="bi bi-trash3-fill text-white"></i>
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                @* HIER  STANDARD-PLATZHALTER (Die graue Berglandschaft) *@
+                                <img src="_content/BlazorCore/img/empty.jpg"
+                                     class="img-thumbnail rounded"
+                                     style="@($"max-height: {ImageDisplayedMaxHeight}px; width: {ImageDisplayedWidth}px; cursor: pointer; display: block;")"
+                                     @onclick="OnStartCamera" />
+                            }
+
+                            @* Das Floating-Icon Overlay (Bootstrap 5 Utilities) *@
+                            <div class="position-absolute bottom-0 end-0 m-2">
+                                <button type="button"
+                                        class="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center shadow"
+                                        style="border: 2px solid white;"
+                                        @onclick="OnStartCamera">
+                    
+                                    @if (_isCameraProcessing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-camera-fill text-white"></i>
+                                    }
+                                </button>
+                            </div>
+
+                            @* Optionaler Badge für "Ändern", falls bereits ein Bild da ist *@
+                            @* @if (!string.IsNullOrEmpty(ImageDataUrl) && !ImageDataUrl.Contains("placeholder")) // Hier deine Logik für 'Bild vorhanden'
+                            {
+                                <span class="position-absolute top-0 start-0 m-2 badge rounded-pill bg-dark bg-opacity-50 border border-light">
+                                    Tap to change
+                                </span>
+                            } *@
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="@GetLayoutClass()">
+                        @if (ShowInlinePreview && !string.IsNullOrEmpty(ImageDataUrl))
+                        {
+                            <div class="mb-2">
+                                @* <img src="@(ThumbnailSize.HasValue? ThumbnailDataUrl : ImageDataUrl)" class="img-thumbnail" style="max-height: 200px; cursor: pointer;" @onclick="OnclickPreview" /> *@
+                                <img src="@(ThumbnailSize.HasValue ? $"data:{BlazorCore.Utilities.DetectMimeFromBase64(ThumbnailDataUrl!)};base64,{ThumbnailDataUrl}" : $"data:{BlazorCore.Utilities.DetectMimeFromBase64(ImageDataUrl!)};base64,{ImageDataUrl}")" class="img-thumbnail" style="max-height: 200px; cursor: pointer;" @onclick="OnclickPreview" />
+                            </div>
+                        }
+
+                        <div class="@(ButtonOrientation == p11.UI.ButtonOrientation.Horizontal ? "d-flex gap-2" : "d-grid gap-2")" role="group">
+                            @if (ShowFilePickerButton)
+                            {
+                                <P11Button SkipValidation="true"
+                                           id="idDatei"
+                                           Text="@FilePickerText"
+                                           OnClick="OnPickPhoto"
+                                           IconClass="@GetIconClass(FilePickerText, FilePickerIconClass)"
+                                           Size="@Size"
+                                           style="@(string.IsNullOrEmpty(ButtonMinWidth) ? "" : $"min-width: {ButtonMinWidth};")"
+                                           IsLoading="@_isFileProcessing" />
+                            }
+                            @if (ShowCameraButton)
+                            {
+                                <P11Button SkipValidation="true"
+                                           id="idKamera"
+                                           Text="@CameraText"
+                                           OnClick="OnStartCamera"
+                                           IconClass="@GetIconClass(CameraText, CameraButtonIconClass)"
+                                           Size="@Size"
+                                           style="@(string.IsNullOrEmpty(ButtonMinWidth) ? "" : $"min-width: {ButtonMinWidth};")"
+                                           IsLoading="@_isCameraProcessing" />
+                            }
+                        </div>
+                    </div>
+
+                    <input type="file" @ref="_fileInput" accept=".jpg, .jpeg, .png" style="display:none;" />
+                }
+            }
+        </ChildContent>
+        <ErrorContent Context="ex">
+            <div class="alert alert-warning" style="border: 2px solid orange; padding: 10px; margin: 5px 0; font-size: 0.9em;">
+                <p><strong>A problem occurred:</strong></p>
+                <p>The media component encountered a runtime error. Please reload the page.</p>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+
+
+    @if (_showCameraDialog)
+    {
+        <P11Modal @bind-Visible="_showCameraDialog"
+                  Id="@_idGuid"
+                  AriaLabelledby="cameraModalTitle"
+                  ShowDevelopmentErrors="true">
+            <HeaderContent>
+                @if (_DisableWebCameraButton)
+                {
+                    <div class="d-flex justify-content-center align-items-center" style="width: 100%; height: 32px;">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <h5 id="cameraModalTitle" class="modal-title">@CameraModalTitle</h5>
+                }
+            </HeaderContent>
+            <BodyContent>
+                <ErrorBoundary>
+                    <ChildContent>
+                        <video id="cameraFeed" autoplay playsinline muted class="w-100"></video>
+                    </ChildContent>
+                    <ErrorContent Context="ex">
+                        <div class="alert alert-danger">
+                            <p><strong>Media Error:</strong></p>
+                            <pre style="white-space: pre-wrap;">@ex.Message</pre>
+                            @if (ex.InnerException != null)
+                            {
+                                <p><em>Inner: @ex.InnerException.Message</em></p>
+                            }
+                        </div>
+                    </ErrorContent>
+                </ErrorBoundary>
+            </BodyContent>
+            <FooterContent>
+                <P11Button id="idAbbrechen"
+                           Text="@CancelText"
+                           OnClick="async() =>await  OnCancelCamera(true)"
+                           SkipValidation=true
+                           IconClass="@GetIconClass(CancelText, "bi bi-x-lg")" />
+                <P11Button id="idAufnehmen"
+                           Text="@CaptureText"
+                           OnClick="OnCapturePhoto"
+                           SkipValidation=true
+                           IsDisabled=@_DisableWebCameraButton
+                           IconClass="@GetIconClass(CaptureText, "bi bi-camera-fill")"
+                           IsLoading="@_isProcessing" />
+            </FooterContent>
+        </P11Modal>
+    }
+
+    @if (IsPreviewOpen && !PreventPhonePreviewOpen)
+    {
+        <P11ModalNative @bind-Visible="IsPreviewOpen"
+                        Id="@_idGuidNative"
+                        NativeDevice="@_appState!.NativeDeviceType"
+                        ShowHeaderSeparator="true"
+                        CloseButtonText="@_appState!.T("Back")"
+                        CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                        AriaLabelledby="modalTitle1Media"
+                        ShowDevelopmentErrors="true">
+            <HeaderContent>
+                <h5 id="modalTitle1Media" class="modal-title">@PreviewModalTitle</h5>
+            </HeaderContent>
+            <BodyContent>
+                <!-- <img src="@ImageDataUrl" class="img-fluid" /> -->
+                <ErrorBoundary>
+                    <ChildContent>
+                        @if (string.IsNullOrEmpty(ThumbnailDataUrl))
+                        {
+                            <img class="img-thumbnail" style="height: 56px; width: auto; object-fit: cover;" src="_content/BlazorCore/img/empty.jpg" alt="Empty image">
+                        }
+                        else
+                        {
+                            <img src="@($"data:{BlazorCore.Utilities.DetectMimeFromBase64(ThumbnailDataUrl!)};base64,{ThumbnailDataUrl}")" class="img-fluid" style="object-fit: contain;" />
+                        }
+                    </ChildContent>
+                    <ErrorContent Context="ex">
+                        <div class="alert alert-danger">
+                            <p><strong>Media Error:</strong></p>
+                            <pre style="white-space: pre-wrap;">@ex.Message</pre>
+                            @if (ex.InnerException != null)
+                            {
+                                <p><em>Inner: @ex.InnerException.Message</em></p>
+                            }
+                        </div>
+                    </ErrorContent>
+                </ErrorBoundary>
+            </BodyContent>
+            @* <FooterContent>
+                    <P11Button id="idAccept"
+                                Text="@AcceptText"
+                                OnClick="async() => {
+                                    await ImageDataUrlChanged.InvokeAsync(ImageDataUrl);
+                                    await ThumbnailDataUrlChanged.InvokeAsync(ThumbnailDataUrl);
+                                    IsPreviewOpen = false;
+                                    await Task.Delay(100);
+                                    await OnCancelCamera(false);
+                                }"
+                                SkipValidation=true
+                                IconClass="@GetIconClass(AcceptText, "bi bi-check2")" />
+                </FooterContent> *@
+        </P11ModalNative>
+    }
+    
+</div>

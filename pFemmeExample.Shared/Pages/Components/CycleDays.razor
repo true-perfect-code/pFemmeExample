@@ -1,0 +1,455 @@
+﻿@* CycleDays.razor - Sa potpuno obojenim progress bar-om i internacionalizacijom *@
+@implements IDisposable
+@using pFemmeExample.Shared.Services
+@using pFemmeExample.Shared.Models
+
+
+@if (_appState != null && _cycleDays != null)
+{
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.PressDown">
+        <P11Button id="detailsButton" ButtonVariant="ButtonVariant.None"
+                   AriaLabel="@_appState.T("Cycle Details")"
+                   CssClass="w-100 p-0 border-0 bg-transparent"
+                   OnClick="@(() => _showModal = true)">
+
+            <div class="card border-0" style="cursor: pointer; transition: all 0.2s ease; background: var(--tpc-body); border-radius: var(--tpc-btn-border-radius);">
+
+                <!-- Hauptdiv mit 5 Segmenten -->
+                <div class="position-relative mt-3">
+
+                    <div class="d-flex w-100" style="height: 70px; border-radius: 35px; overflow: hidden;">
+
+                        <!-- Segment 1 -->
+                        <div class="d-flex justify-content-center align-items-center"
+                             style="flex: 0 0 14%; background: linear-gradient(90deg, rgba(122, 93, 82, 1) 0%, rgba(199, 100, 87, 1) 49%, rgba(232, 213, 196, 1) 100%);">
+                            @if (DisplayRemainingDays < 0)
+                            {
+                                <i class="bi-exclamation-triangle mb-4 text-white fw-bold" title="@_appState!.T("Overdue")" />
+                            }
+                        </div>
+
+                        <!-- Segment 2 -->
+                        <div style="flex: 0 0 14%; background: #e8d5c4;">
+                        </div>
+
+                        <!-- Segment 3 -->
+                        <div class="d-flex justify-content-end align-items-center position-relative"
+                             style="flex: 0 0 25%; background: linear-gradient(90deg,rgba(232, 213, 196, 1) 0%, rgba(90, 123, 110, 1) 94%, rgba(232, 213, 196, 1) 100%);">
+                            <i class="bi bi-flower1 position-absolute fs-3 opacity-75 me-2" style="color: #faa371;" />
+                        </div>
+
+                        <!-- Segment 4 -->
+                        <div style="flex: 0 0 33%; background: #e8d5c4;">
+                        </div>
+
+                        <!-- Segment 5 -->
+                        <div class="d-flex justify-content-end align-items-center pe-2"
+                             style="flex: 0 0 14%; background: linear-gradient(90deg,rgba(232, 213, 196, 1) 0%, rgba(252, 158, 104, 1) 49%, rgba(247, 109, 109, 1) 100%);">
+                            <span class="text-white d-none d-sm-inline">
+                                @DisplayRemainingDays / @((int)_cycleDays.MedianCycleLength)
+                            </span>
+                            <span class="text-white d-inline d-sm-none" style="font-size: 0.8rem;">
+                                @DisplayRemainingDays/@((int)_cycleDays.MedianCycleLength)
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <!-- Fortschrittsbalken mit Zahl am Ende -->
+                    <div class="position-absolute start-0 top-50 w-100"
+                         style="transform:translateY(-50%); z-index:20;">
+
+                        <!-- Container für Fortschritt + Zahl nebeneinander -->
+                        <div class="d-flex align-items-center gap-1" style="width:@($"{ProgressPercentage}%")">
+
+                            <!-- Fortschrittsbalken (Linie) -->
+                            <div style="flex: 1; height: 4px;">
+                                <div class="w-100 h-100 rounded-1" style="background: rgba(122, 93, 82, 0.5)">
+                                </div>
+                            </div>
+
+                            <!-- Zahl am Ende -->
+                            <span class="text-dark" style="font-size: 0.8rem; background: rgba(255,255,255,0.9); padding: 0px 7px; margin-left: 10px; margin-bottom: 40px; border-radius: 10px; white-space: nowrap;">
+                                @_cycleDays.CurrentCycleDay
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </P11Button>
+    </P11HoverEffect>
+
+    <P11ModalNative @bind-Visible="_showModal"
+                    Id="@ModalId"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    Size="Size.Large"
+                    Title="@_appState.T("Cycle Details")"
+                    ShowHeaderSeparator="true"
+                    CloseOnOutsideClick="false"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)">
+        <BodyContent>
+
+            <!-- Two main boxes side by side -->
+            <div class="row g-4">
+
+                <!-- Left Box - Cycle Statistics -->
+                <div class="col-12 col-md-6">
+                    <div class="p-3 h-100 border rounded-3" style="background-color: var(--tpc-background); border-color: var(--tpc-border-color) !important;">
+                        <h6 class="pb-2 mb-3 border-bottom d-flex align-items-center gap-2" style="color: var(--tpc-text-color); border-bottom-color: var(--tpc-border-color) !important;">
+                            <i class="bi bi-graph-up"></i> @_appState.T("Cycle Statistics")
+                        </h6>
+
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-bottom-color: var(--tpc-border-color) !important;">
+                            <span style="color: var(--tpc-text-color);">@_appState.T("Median (last 12 months)")</span>
+                            <strong style="color: var(--tpc-text-color);">@_cycleDays.MedianCycleLength @_appState.T("days")</strong>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-bottom-color: var(--tpc-border-color) !important;">
+                            <span style="color: var(--tpc-text-color);">@_appState.T("From cycle start")</span>
+                            <strong style="color: var(--tpc-text-color);">@_cycleDays.CurrentCycleDay @_appState.T("days")</strong>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom-color: var(--tpc-border-color) !important;">
+                            @if (DisplayRemainingDays < 0)
+                            {
+                                <span class="fw-bold text-info">@_appState.T("Overdue")</span>
+                                <strong class="text-info">
+                                    @Math.Abs(DisplayRemainingDays) @_appState.T("days") *
+                                </strong>
+                            }
+                            else
+                            {
+                                <span style="color: var(--tpc-text-color);">@_appState.T("Days remaining")</span>
+                                <strong class="opacity-75" style="color: var(--tpc-text-color);">
+                                    @DisplayRemainingDays @_appState.T("days") *
+                                </strong>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Box - Important Dates -->
+                <div class="col-12 col-md-6">
+                    <div class="p-3 h-100 border rounded-3" style="background-color: var(--tpc-background); border-color: var(--tpc-border-color) !important;">
+                        <h6 class="pb-2 mb-3 border-bottom d-flex align-items-center gap-2" style="color: var(--tpc-text-color); border-bottom-color: var(--tpc-border-color) !important;">
+                            <i class="bi bi-calendar-event"></i> @_appState.T("Important Dates")
+                        </h6>
+
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-bottom-color: var(--tpc-border-color) !important;">
+                            <span style="color: var(--tpc-text-color);">@_appState.T("Last cycle started")</span>
+                            @if (_cycleDays.LastCycleStartDay != null)
+                            {
+                                <span class="fw-semibold" style="color: var(--tpc-text-color);">@_cycleDays.LastCycleStartDay.Value.ToString("dd MMM yyyy")</span>
+                            }
+                            else
+                            {
+                                <span class="fw-semibold" style="color: var(--tpc-text-color);">-</span>
+                            }
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-bottom-color: var(--tpc-border-color) !important;">
+                            <span style="color: var(--tpc-text-color);">@_appState.T("Expected ovulation")</span>
+                            @if (_cycleDays.Ovulation != null)
+                            {
+                                <span class="fw-semibold opacity-75" style="color: var(--tpc-text-color);">@_cycleDays.Ovulation.Value.ToString("dd MMM yyyy") *</span>
+                            }
+                            else
+                            {
+                                <span class="fw-semibold opacity-75" style="color: var(--tpc-text-color);">-</span>
+                            }
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom-color: var(--tpc-border-color) !important;">
+                            <span style="color: var(--tpc-text-color);">@_appState.T("Next cycle predicted")</span>
+                            @if (_cycleDays.NextCyclePredicted != null)
+                            {
+                                <span class="fw-semibold opacity-75" style="color: var(--tpc-text-color);">@_cycleDays.NextCyclePredicted.Value.ToString("dd MMM yyyy") *</span>
+                            }
+                            else
+                            {
+                                <span class="fw-semibold opacity-75" style="color: var(--tpc-text-color);">-</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Full Width Section - Accordions -->
+            <div class="mt-4">
+                <div class="p-3 border rounded-3" style="background-color: var(--tpc-background); border-color: var(--tpc-border-color) !important;">
+
+                    <!-- Accordion Item 1 - Prediction Disclaimer -->
+                    <div class="mb-3">
+                        <div class="border rounded-3 overflow-hidden" style="border-color: #DDB7A8 !important;">
+                            <button class="btn w-100 text-start p-3 d-flex align-items-center gap-2 collapsed"
+                                    type="button"
+                                    style="background-color: rgba(221, 183, 168, 0.15); color: var(--tpc-text-color); font-weight: 500;"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapsePrediction"
+                                    aria-expanded="false">
+                                <span class="fw-bold" style="color: #DDB7A8;">*</span>
+                                <span>@_appState.T("Predicted values information")</span>
+                                <i class="bi bi-chevron-down ms-auto transition"></i>
+                            </button>
+                            <div id="collapsePrediction" class="collapse">
+                                <div class="p-3" style="background-color: rgba(221, 183, 168, 0.08); color: var(--tpc-text-color);">
+                                    <i class="bi bi-info-circle me-2" style="color: #DDB7A8;"></i>
+                                    @_appState.T("Numbers marked with * are predictions based on your cycle history and may vary from actual dates.")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accordion Item 2 - Median Info -->
+                    <div>
+                        <div class="border rounded-3 overflow-hidden" style="border-color: #A7C5BD !important;">
+                            <button class="btn w-100 text-start p-3 d-flex align-items-center gap-2 collapsed"
+                                    type="button"
+                                    style="background-color: rgba(167, 197, 189, 0.08); color: var(--tpc-text-color); font-weight: 500;"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapseMedian"
+                                    aria-expanded="false">
+                                <span>@_appState.T("About median calculation")</span>
+                                <i class="bi bi-chevron-down ms-auto transition"></i>
+                            </button>
+                            <div id="collapseMedian" class="collapse">
+                                <div class="p-3" style="background-color: rgba(167, 197, 189, 0.08); color: var(--tpc-text-color);">
+                                    <i class="bi bi-graph-up me-2" style="color: #A7C5BD;"></i>
+                                    @_appState.T("Median is calculated from the last 6 completed cycles to exclude outliers and give you a more accurate prediction.")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Bottom Phase Legend - Full Width -->
+            <div class="mt-4">
+                <div class="p-3 border rounded-3 text-center" style="background-color: var(--tpc-background); border-color: var(--tpc-border-color) !important;">
+                    <div class="row g-0 align-items-center">
+                        <div class="col-4">
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <div style="width: 20px; height: 12px; background: linear-gradient(90deg, rgba(89,41,22,1) 0%, rgba(199,100,87,1) 49%, #e8d5c4 100%); border-radius: 2px;"></div>
+                                <span style="color: var(--tpc-text-color);">@_appState.T("Follicular")</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <div style="width: 20px; height: 12px; background: linear-gradient(90deg, #e8d5c4 0%, rgba(109,163,104,1) 50%, #e8d5c4 100%); border-radius: 2px;"></div>
+                                <span style="color: var(--tpc-text-color);">@_appState.T("Ovulation")</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <div style="width: 20px; height: 12px; background: linear-gradient(90deg, #e8d5c4 0%, rgba(252,158,104,1) 49%, rgba(247,109,109,1) 100%); border-radius: 2px;"></div>
+                                <span style="color: var(--tpc-text-color);">@_appState.T("Luteal")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </BodyContent>
+    </P11ModalNative>
+}
+else
+{
+    <div class="w-100 d-flex align-items-center justify-content-center">
+        <i class="bi bi-exclamation-triangle-fill text-warning display-5 me-3" title="@_appState!.T("Warning")" />
+        <div class="text-start">
+            <span class="fw-bold d-block" style="color: var(--tpc-text-color);">@_appState!.T("Calculation suspended")</span>
+            <span class="small text-muted text-wrap">@_appState!.T("There is no data!")</span>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.LogicService _logicService { get; set; } = default!;
+
+
+    // Place this at the very beginning of your @code block
+    private CycleDaysModel _cycleDays = new();
+    private bool _showModal = false;
+    public readonly Guid ModalId = Guid.NewGuid();
+    private readonly DateTime _today = DateTime.Now.Date; // Testing -> DateTime.Now.Date.AddDays(11);
+
+    /// <summary>
+    /// Safely calculates and clamps the progress percentage between 2% and 98%
+    /// to prevent the tracking node from clipping outside the visual container bounds.
+    /// </summary>
+    private int ProgressPercentage
+    {
+        get
+        {
+            if (_cycleDays.MedianCycleLength <= 0)
+                return 2;
+
+            double rawPercentage =
+                ((double)_cycleDays.CurrentCycleDay / _cycleDays.MedianCycleLength) * 100;
+
+            return Math.Min(98, Math.Max(2, (int)Math.Round(rawPercentage)));
+        }
+    }
+
+    /// <summary>
+    /// Calculates the remaining days until the predicted period onset using accurate mathematical rounding.
+    /// Allows negative values to indicate the exact number of days the cycle is overdue.
+    /// </summary>
+    private int DisplayRemainingDays
+    {
+        get
+        {
+            int roundedMedian = (int)Math.Round(_cycleDays.MedianCycleLength, MidpointRounding.AwayFromZero);
+            return roundedMedian - _cycleDays.CurrentCycleDay;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+
+        if (_eventAggregatorProject != null)
+        {
+            _eventAggregatorProject.OnFireAfterCycleData += LoadCycleData;
+            _eventAggregatorProject.OnRefreshingData += LoadCycleData;
+        }
+
+        await LoadCycleData();
+    }
+
+    public void Dispose()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+
+        if (_eventAggregatorProject != null)
+        {
+            _eventAggregatorProject.OnFireAfterCycleData -= LoadCycleData;
+            _eventAggregatorProject.OnRefreshingData -= LoadCycleData;
+        }
+    }
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// Asynchronously loads user cycle metadata from the enterprise SQL engine, evaluates average durations,
+    /// and dynamically processes key physiological parameters including current cycle milestones,
+    /// remaining duration countdowns, and standard luteal-phase ovulation windows.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation execution lifecycle.</returns>
+    private async Task LoadCycleData()
+    {
+        try
+        {
+            // Periodendauer Min/Max
+            BlazorCore.Services.SqlClient.ReadModel<CyclePhasesModel?> result_Days = await _logicService.LoadCurrentPhase();
+            if (result_Days != null && !string.IsNullOrEmpty(result_Days.out_err))
+            {
+                string? err = result_Days != null ? result_Days.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T("An unexpected error occurred.") + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Description") + ": " + err)
+                );
+            }
+
+            if (result_Days != null && result_Days!.out_list != null)
+            {
+                // Durschnittliche Zykluslänge (in der Regel 28 Tage)
+                _cycleDays.MedianCycleLength = result_Days.out_list.FirstOrDefault()?.MedianCycleLength ?? 28;
+
+                // Durschnittliche Periodendauer (zwischen 5 und 7 Tagen, hier als Default-Durchschnitt genommen)
+                var min = result_Days?.out_list?.FirstOrDefault()?.avgDurationMin ?? 5;
+                var max = result_Days?.out_list?.FirstOrDefault()?.avgDurationMax ?? 7;
+                _cycleDays.avgCycleDuration = (min + max) / 2.0;
+
+                // Der letzte Starttag der Periode
+                _cycleDays.LastCycleStartDay = result_Days.out_list.FirstOrDefault()?.LastCycleStartDay;
+
+                if (_cycleDays.LastCycleStartDay != null)
+                {
+                    // Added +1 modifier to properly evaluate the onset date as Day 1 instead of Day 0
+                    _cycleDays.CurrentCycleDay = (_today - _cycleDays.LastCycleStartDay.Value).Days + 1;
+
+                    // Safely calculating time passed since the beginning of the last recorded period
+                    _cycleDays.FromCycleStar = (int)(_today - _cycleDays.LastCycleStartDay.Value).TotalDays;
+                    if (_cycleDays.FromCycleStar < 0) _cycleDays.FromCycleStar = 0;
+
+                    DateTime nextPeriodPredicted = _cycleDays.LastCycleStartDay.Value.AddDays(_cycleDays.MedianCycleLength);
+                    _cycleDays.NextCyclePredicted = nextPeriodPredicted;
+
+                    // Safely evaluate remaining days inside the bounds of the structured data engine contract
+                    _cycleDays.DaysRemaining = (int)(nextPeriodPredicted - _today).TotalDays;
+                    if (_cycleDays.DaysRemaining < 0)
+                    {
+                        _cycleDays.DaysRemaining = 0;
+                    }
+
+                    // Calculate the physiological ovulation window anchor based on the 14-day luteal standard
+                    DateTime calculatedOvulation = _cycleDays.LastCycleStartDay.Value.AddDays(_cycleDays.MedianCycleLength - 14);
+                    _cycleDays.OvulationBar = calculatedOvulation;
+
+                    // Shift prediction to the next cycle if the calculated ovulation date is already in the past
+                    if (calculatedOvulation < _today)
+                    {
+                        int cyclesToAdd = (int)Math.Ceiling((_today - calculatedOvulation).TotalDays / _cycleDays.MedianCycleLength);
+                        _cycleDays.Ovulation = calculatedOvulation.AddDays(cyclesToAdd * _cycleDays.MedianCycleLength);
+                    }
+                    else
+                    {
+                        _cycleDays.Ovulation = calculatedOvulation;
+                    }
+                }
+                else
+                {
+                    ResetCycleModelMetrics();
+                }
+
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: _appState.T("An unexpected error occurred.") + (string.IsNullOrEmpty(ex.Message) ? "" : " " + _appState.T("Description") + ": " + ex.Message)
+            );
+        }
+    }
+
+    /// <summary>
+    /// Cleans downstream variables in structural state mismatch exceptions safely.
+    /// </summary>
+    private void ResetCycleModelMetrics()
+    {
+        _cycleDays.DaysRemaining = 0;
+        _cycleDays.Ovulation = null;
+        _cycleDays.OvulationBar = null;
+        _cycleDays.NextCyclePredicted = null;
+        _cycleDays.CurrentCycleDay = 0;
+        _cycleDays.FromCycleStar = 0;
+    }
+
+   
+}

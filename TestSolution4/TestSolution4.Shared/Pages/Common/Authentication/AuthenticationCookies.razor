@@ -1,0 +1,211 @@
+﻿@using p11.UI
+
+<div class="container mt-2">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th scope="col">@_appState!.T("Cookies")</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (cookies != null)
+            {
+                @foreach (var cookie in cookies)
+                {
+                    <tr>
+                        <td class="text-break">@cookie.Key : <b>@cookie.Value</b></td>
+                        <td class="text-end">
+                            <P11Button AriaLabel="@($"{_appState.T("Delete cookie")} {cookie.Key}")"
+                                        ButtonVariant="ButtonVariant.Danger"
+                                        OnClick="async() => await OnClick_DeleteCookie(cookie.Key)"
+                                        IsDisabled="@(cookie.Value == "******")"
+                                        IconClass="bi bi-trash" />
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (_appState != null && !_appState!.IsPhone)
+{
+    <div class="d-flex w-100 gap-4 mt-4">
+        <P11Button OnClick="OnClick_DeleteAllCookies" Text="@_appState.T("Delete all cookies")" CssClass="flex-fill" />
+
+        <P11Button Text="@_appState!.T("Close")" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" CssClass="flex-fill" />
+    </div>
+}
+                               
+
+@code {
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter] public EventCallback<bool> OnChangeVisibleCookies { get; set; }
+    [Parameter] public EventCallback OnLogout { get; set; }
+    [Parameter] public bool OauthTokenEnableDeleteButton { get; set; } = false;
+
+
+    //private Platform.LocalStorageModel _localStorageModel = new();
+    private System.Reflection.FieldInfo[]? _fields;
+    private Dictionary<string, string>? cookies;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (cookies == null)
+            cookies = new();
+
+        await LoadCookies();
+
+    }
+
+    private async Task LoadCookies()
+    {
+        if (_appState?.Catalog.LocalStorage == null) return;
+
+        _fields = typeof(BlazorCore.Services.GlobalState.LocalStorageModel)
+        .GetFields(System.Reflection.BindingFlags.Public |
+                   System.Reflection.BindingFlags.Instance);
+
+        if (cookies != null)
+            cookies.Clear();
+
+        // Auth-Cookie hinzufügen
+        var cookievalueAuth = await _platform!.GetAsync(_appState.Catalog.LocalStorage.oauth_token);
+        if (cookievalueAuth != null && string.IsNullOrEmpty(cookievalueAuth.out_err) && !string.IsNullOrEmpty(cookievalueAuth.out_value_str))
+        {
+            cookies!.Add(_appState.Catalog.LocalStorage.oauth_token, OauthTokenEnableDeleteButton ? "*****" : "******");
+        }
+
+        // Speicherlokation hinzufügen
+        var cookievalueStorageLocation = await _platform!.GetAsync(_appState.Catalog.LocalStorage.storagelocation);
+        if (cookievalueStorageLocation != null && string.IsNullOrEmpty(cookievalueStorageLocation.out_err) && !string.IsNullOrEmpty(cookievalueStorageLocation.out_value_str))
+        {
+            cookies!.Add(_appState.Catalog.LocalStorage.storagelocation, cookievalueStorageLocation.out_value_str);
+        }
+
+        foreach (var field in _fields)
+        {
+            //var cookiename = field.GetValue(_appState.Catalog.LocalStorage);
+            var cookiename = field.GetValue(_appState.Catalog.LocalStorage)?.ToString();
+            if (!string.IsNullOrEmpty(cookiename))
+            {
+                var cookievalue = await _platform!.GetAsync(cookiename.ToString());
+                if (cookievalue != null && string.IsNullOrEmpty(cookievalue.out_err) && !string.IsNullOrEmpty(cookievalue.out_value_str))
+                {
+                    if (cookies != null && cookiename != null)
+                    {
+                        if (cookiename.ToString() == _appState.Catalog.LocalStorage.sqlitekey)
+                            cookies.Add(cookiename, "******");
+                        else
+                            cookies.Add(cookiename, cookievalue.out_value_str);
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task OnClick_DeleteCookie(string cookie)
+    {
+        if (_appState?.Catalog.LocalStorage == null) return;
+
+        if (cookie == _appState.Catalog.LocalStorage.storagelocation)
+        {
+            MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+                title: _appState!.T("Confirmation"),
+                message: _appState!.T("If you delete the cookie storage location, you will be automatically logged out. Would you like to continue with the deletion process?"),
+                yestext: @_appState!.T("Yes"),
+                notext: @_appState!.T("No")
+            );
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    await _platform!.RemoveAsync(cookie);
+                    await LoadCookies();
+                    StateHasChanged();
+
+                    if (cookie == _appState.Catalog.LocalStorage.storagelocation)
+                    {
+                        if (OnLogout.HasDelegate)
+                            await OnLogout.InvokeAsync();
+                    }
+                    break;
+                case MessageBoxResult.No:
+                case MessageBoxResult.None:
+                    break;
+            }
+        }
+        else
+        {
+            await _platform!.RemoveAsync(cookie);
+            await LoadCookies();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnClick_DeleteAllCookies()
+    {
+        if (OnChangeVisibleCookies.HasDelegate)
+            await OnChangeVisibleCookies.InvokeAsync(false);
+
+        //StateHasChanged();
+        MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+            title: _appState!.T("Confirmation"),
+            message: _appState!.T("Do you want to delete all cookies?"),
+            yestext: @_appState!.T("Yes"),
+            notext: @_appState!.T("No")
+        );
+
+        switch (result)
+        {
+            case MessageBoxResult.Yes:
+                if(cookies != null)
+                {
+                    foreach (var cookie in cookies)
+                    {
+                        if(cookie.Value != "******")
+                            await _platform!.RemoveAsync(cookie.Key);
+                    }
+                }
+
+                await LoadCookies();
+                StateHasChanged();
+                if (OnLogout.HasDelegate)
+                    await OnLogout.InvokeAsync();
+                break;
+            case MessageBoxResult.No:
+                //Visible = true;
+                if (OnChangeVisibleCookies.HasDelegate)
+                    await OnChangeVisibleCookies.InvokeAsync(true);
+                break;
+            case MessageBoxResult.None:
+                //Visible = true;
+                if (OnChangeVisibleCookies.HasDelegate)
+                    await OnChangeVisibleCookies.InvokeAsync(true);
+                break;
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        if (OnChangeVisibleCookies.HasDelegate)
+            await OnChangeVisibleCookies.InvokeAsync(false);
+    }
+
+
+}

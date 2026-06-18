@@ -1,0 +1,182 @@
+﻿@using p11.UI
+
+@if (Visible)
+{
+    <div class="@($"{ClassAlert} position-relative")">
+
+        @* CLOSE BUTTON *@
+        @if (ShowCloseButton)
+        {
+            <P11Button OnClick="() => { Visible = false; StateHasChanged(); }"
+                       CssClass="position-absolute top-0 end-0"
+                       IconClass="bi bi-x"
+                       ButtonVariant="ButtonVariant.None"
+                       AriaLabel="@_appState!.T("Close")"
+                       Title="@_appState!.T("Close")" />
+        }
+
+        @if (VisibleAlertTitle)
+        {
+            <h6 class="alert-heading">
+                <i class="@ClassIconAlertTitle"></i> @AlertTitle
+            </h6>
+        }
+
+        <div class="mb-0 small">
+            <span>@AlertText</span>
+
+            @if (VisibleDokuButton)
+            {
+                <P11Button OnClick="OnOpenDoku"
+                           IconClass="@ClassIconDokuButton"
+                           AriaLabel="@AriaLabelDokuButton"
+                           Size="@SizeDokuButton"
+                           ButtonVariant="@ButtonVariant"
+                           Title="@AriaLabelDokuButton" />
+            }
+
+        </div>
+
+        @if (OnClickOpenDokuInfo.HasDelegate)
+        {
+            <div class="mb-0 small">
+                <span>@InfoText</span>
+                <P11Button OnClick="OnOpenDokuInfo"
+                           IconClass="@ClassIconDokuInfoButton"
+                           AriaLabel="@AriaLabelDokuInfoButton"
+                           Size="@SizeDokuButton"
+                           ButtonVariant="@ButtonVariant"
+                           Title="@AriaLabelDokuInfoButton" />
+            </div>
+        }
+
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; } = true;
+
+    [Parameter]
+    public bool ShowCloseButton { get; set; } = true;
+
+    [Parameter]
+    public string CloseButtonAriaLabel { get; set; } = "Close alert";
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter]
+    public EventCallback OnClickOpenDoku { get; set; }
+
+    [Parameter]
+    public EventCallback OnClickOpenDokuInfo { get; set; }
+
+    [Parameter]
+    public string ClassAlert { get; set; } = "alert alert-secondary mt-1 pt-2 pb-0";
+
+    [Parameter]
+    public string ClassIconAlertTitle { get; set; } = "bi bi-info-circle";
+
+    [Parameter]
+    public bool VisibleAlertTitle { get; set; } = true;
+
+    [Parameter]
+    public string? AlertTitle { get; set; }
+
+    [Parameter]
+    public string? AlertText { get; set; }
+
+    [Parameter]
+    public string? InfoText { get; set; }
+
+    [Parameter]
+    public string ClassIconDokuButton { get; set; } = "bi bi-question-circle fs-4";
+
+    [Parameter]
+    public string ClassIconDokuInfoButton { get; set; } = "bi bi-info-circle fs-4";
+
+    [Parameter]
+    public bool VisibleDokuButton { get; set; } = true;
+
+    [Parameter]
+    public string? AriaLabelDokuButton { get; set; }
+
+    [Parameter]
+    public string? AriaLabelDokuInfoButton { get; set; }
+
+    [Parameter]
+    public string AriaLabelDokuTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public Size SizeDokuButton { get; set; } = Size.Small;
+
+    [Parameter]
+    public ButtonVariant ButtonVariant { get; set; } = ButtonVariant.None;
+
+
+    protected override void OnInitialized()
+    {
+        if(_appState != null)
+        {
+            if (AlertTitle == null)
+                AlertTitle = _appState!.T("Information");
+
+            if (AlertText == null)
+                AlertText = _appState!.T("For more information, see the help section here");
+
+            if (InfoText == null)
+                InfoText = _appState!.T("Additional infos, see");
+
+            if (AriaLabelDokuButton == null)
+                AriaLabelDokuButton = _appState!.T("Help");
+
+            if (AriaLabelDokuInfoButton == null)
+                AriaLabelDokuInfoButton = _appState!.T("Info");
+        }
+    }
+
+    private async Task OnOpenDoku()
+    {
+        try
+        {
+            if (OnClickOpenDoku.HasDelegate)
+            {
+                await OnClickOpenDoku.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnOpenDokuInfo()
+    {
+        try
+        {
+            if (OnClickOpenDokuInfo.HasDelegate)
+            {
+                await OnClickOpenDokuInfo.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+}

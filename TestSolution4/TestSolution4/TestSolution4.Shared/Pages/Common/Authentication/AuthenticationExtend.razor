@@ -1,0 +1,286 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using p11.UI
+@using BlazorCore.Models
+@using BlazorCore.Services.Authentication
+@using BlazorCore.Services.Platform
+@using BlazorCore.Services.SqlClient
+
+
+<div class="card mb-3" >
+    <div class="row g-0">
+
+        <div class="d-flex flex-wrap gap-2">
+            @if(!_useNativeFeatures)
+            {
+                @if (string.IsNullOrEmpty(itemClone.imgJpegThumbnail))
+                {
+                    <img class="img-thumbnail rounded-circle" style="height: 130px; width: 130px; object-fit: cover;" src="_content/BlazorCore/img/empty.jpg" alt="@_appState!.T("Account image")">
+                }
+                else
+                {
+                    <img src="@($"data:{BlazorCore.Utilities.DetectMimeFromBase64(itemClone.imgJpegThumbnail!)};base64,{itemClone.imgJpegThumbnail}")" class="img-thumbnail rounded-circle" style="height: 130px; width: 130px; object-fit: cover;" />
+                }                
+            }
+            <div class="mt-2">
+                <div class="d-flex flex-column">
+                    <TestSolution4.Shared.Pages.Common.Media.Media Size="Size.Small"
+                                            ImageQuality="65"
+                                            ShowInlinePreview=false
+                                            PreventPhonePreviewOpen="@PreventPhonePreviewOpen"
+                                            CropToSquare="true"
+                                            ButtonOrientation="ButtonOrientation.Vertical"
+                                            ImageDataUrl="@imgJpeg"
+                                            ThumbnailDataUrl="@itemClone.imgJpegThumbnail"
+                                            ThumbnailSize="64"
+                                            ImageDataUrlChanged="@( (newValue) => { 
+                                                imgJpeg = newValue; 
+                                                StateHasChanged(); 
+                                            })"
+                                            ThumbnailDataUrlChanged="@((newValue) => { 
+                                                itemClone.imgJpegThumbnail = newValue; 
+                                                _appState!.UpdateAliasImg(newValue);
+                                                StateHasChanged(); 
+                                            })"
+                                            OnDelete="async() => { 
+                                                imgJpeg = string.Empty;
+                                                itemClone.imgJpegThumbnail = string.Empty; 
+                                                StateHasChanged();   
+                                            }" />
+
+                    @if (!string.IsNullOrEmpty(itemClone.imgJpegThumbnail))
+                    {
+                        @if(!_useNativeFeatures)
+                        {
+                            <P11Button 
+                                OnClick="async() => { 
+                                    imgJpeg = string.Empty;
+                                    itemClone.imgJpegThumbnail = string.Empty; 
+                                    StateHasChanged();   
+                                }" 
+                                IconClass="bi bi-trash3" 
+                                AriaLabel="@_appState!.T("Delete")" 
+                                Size="Size.Small"
+                                Title="@_appState!.T("Delete image")" 
+                                ButtonVariant="ButtonVariant.Light" />                            
+                        }
+                    }
+                </div>
+            </div>
+            @* <div class="card-body"> style="min-width: 150px;" *@
+            <div class="flex-grow-1 mt-2 me-2" >
+                <P11Input TValue="string" @bind-Value="itemClone.DisplayName" Label="@_appState!.T("Alias")" UseFloatingLabel="true" Description="@_appState!.T("Description")" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2 mt-2">
+    <P11Button Text="@_appState!.T("Save")" OnClick="OnSave" IconClass="bi bi-save" AriaLabel="@_appState!.T("Save")" Title="@_appState!.T("Save")" />
+    @if(!IsCancelButtonHidden)
+    {
+        <P11Button Text="@_appState!.T("Cancel")" OnClick="OnCancel" IconClass="bi bi-x" AriaLabel="@_appState!.T("Cancel")" Title="@_appState!.T("Cancel")" ButtonVariant="ButtonVariant.Secondary" /> 
+    }
+    <div class="ms-4">
+        <P11Button Text="@_appState!.T("Delete")" OnClick="OnDelete" IconClass="bi bi-trash3" AriaLabel="@_appState!.T("Delete")" Title="@_appState!.T("Delete")" ButtonVariant="ButtonVariant.Danger" />
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase _dam { get; set; } = default!;
+
+
+    [Parameter]
+    public bool IsCancelButtonHidden { get; set; } = false;
+
+    [Parameter]
+    public bool PreventPhonePreviewOpen { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<AuthUsersExtendModel> OnClickSave { get; set; }
+    [Parameter]
+    public EventCallback OnClickCancel { get; set; }
+    [Parameter]
+    public EventCallback OnClickDelete { get; set; }
+
+
+    // Lokale Kopie des Item-Modells
+    private AuthUsersExtendModel itemClone = new();
+
+    // ButtonMinWidth
+    private string ButtonMinWidth = "48px";
+    private string imgJpeg = string.Empty;
+    private bool _useNativeFeatures = false;
+
+
+
+    // Methode, die aufgerufen wird, wenn die Parameter gesetzt sind
+    protected override void OnParametersSet()
+    {
+    }
+
+    protected override void OnInitialized()
+    {
+        if (_appState != null)
+        {
+            _appState.OnParametersSetAuthenticationExtend += ParametersSet;
+
+            itemClone.DisplayName = _appState.Alias.ToString();
+            itemClone.imgJpegThumbnail = _appState.AliasImg;
+        }           
+
+        if (_platform != null)
+        {
+            var platform = _platform.GetCurrPlatform();
+
+            if(platform == PLATFORMS.ANDROID || platform == PLATFORMS.IOS)
+                _useNativeFeatures = true;
+        }
+    }
+    public void Dispose()
+    {
+        if (_appState != null)
+            _appState.OnParametersSetAuthenticationExtend -= ParametersSet;
+    }
+
+    private async Task OnSave()
+    {
+        BlazorCore.Services.SqlClient.ScalarModel result = new();
+
+        try
+        {
+            // UnixTS ermitteln
+            itemClone.UnixTS = _appState!.GenerateUniqueId();
+
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "Save>>AuthUsersExtend" },
+                { "@UnixTS", itemClone.UnixTS },
+                { "@AuthUsers_UnixTS", _appState!.UnixTS },
+                { "@DisplayName", itemClone.DisplayName! },
+                { "@imgJpegThumbnail", itemClone.imgJpegThumbnail! },
+            };
+
+            result = await _dam.Save(db_para)!; // Abfrage ausführen
+            if (result != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            {
+                if(result.out_value_str != null && result.out_value_str.Contains(BlazorCore.MSG_CODES.record_exists_no_adding.ToString()))
+                {
+                    await _toastService!.ShowWarningAsync(_appState.T("This alias is already in use by another user. Please choose a different alias."), _appState.T("Warning"), position: ToastPosition.BottomEnd, durationMs: 5000);
+                    itemClone.DisplayName = string.Empty;
+                }
+                else
+                {
+                    await _toastService!.ShowSuccessAsync(_appState.T("Data has been successfully saved."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 1000);
+                    _appState.UpdateAlias(itemClone.DisplayName!);
+                    _appState.UpdateAliasImg(itemClone.imgJpegThumbnail!);                
+                }
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "Save>>AuthUsersExtend";
+                await _messageBoxService.ShowOkAsync(
+                   title: _appState!.T("Error"),
+                   message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+
+            if (OnClickSave.HasDelegate)
+            {
+                await OnClickSave.InvokeAsync(itemClone);
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnCancel()
+    {
+        if (OnClickCancel.HasDelegate)
+        {
+            await OnClickCancel.InvokeAsync();
+        }
+    }
+
+    private async Task OnDelete()
+    {
+        BlazorCore.Services.SqlClient.ScalarModel result = new();
+
+        try
+        {
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "Delete>>AuthUsersExtend" },
+                { "@AuthUsers_UnixTS", _appState!.UnixTS },
+            };
+            result = await _dam.ExecQuery(db_para)!; // Abfrage ausführen
+            if (result != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            {
+                await _toastService!.ShowSuccessAsync(_appState!.T("Data has been successfully deleted."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 1000);
+                itemClone = new();
+                _appState.UpdateAlias(string.Empty);
+                _appState.UpdateAliasImg(string.Empty);
+                imgJpeg = string.Empty;
+                itemClone.imgJpegThumbnail = string.Empty;
+                StateHasChanged();
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "Delete>>AuthUsersExtend";
+                await _messageBoxService.ShowOkAsync(
+                   title: _appState!.T("Error"),
+                   message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+
+            if (OnClickDelete.HasDelegate)
+            {
+                await OnClickDelete.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+
+    }
+
+    private void ParametersSet()
+    {
+        if (_appState != null)
+        {
+            itemClone.DisplayName = _appState.Alias;
+            itemClone.imgJpegThumbnail = _appState.AliasImg;
+        }
+        else
+            itemClone = new();
+
+        StateHasChanged();
+    }
+}

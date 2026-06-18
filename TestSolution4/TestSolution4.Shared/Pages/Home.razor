@@ -1,0 +1,633 @@
+﻿@page "/"
+@page "/{Para}"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Options
+@using p11.UI.Services
+@using BlazorCore.Services.AppState
+@using BlazorCore.Services.LocalNotification
+
+
+
+@if (!string.IsNullOrEmpty(Para))
+{
+    <TestSolution4.Shared.Pages.Common.Authentication.AuthenticationError ErrorCode="@Para" />
+}
+
+<AuthorizeView>
+    <Authorized Context="context">
+
+        <br />
+        <h1 class="p-4 text-center">Blazor-Cross-Host logged successfully!</h1>
+        <br />
+        <div class="d-flex w-100 mt-1">
+            <TestSolution4.Shared.Pages.Common.Authentication.AuthenticationLogout @ref="_home.LogoutComponent"
+                                                                                        IsButtonHidden="false"
+                                                                                        UseNativeFeatures="@(_appState.IsNativeApp ?? false)" 
+                                                                                        CssClass="w-100" />
+        </div>
+
+
+
+
+        @* A C O U N T   P A N E L *@
+        @* <P11Dropdown @bind-IsOpen="_home.IsOpenDropdownAccount" CloseOnOutsideClick="false" StylePanel="margin-top: -15px;" Alignment="@(_appState.LtrRtl == LTR_RTL.LTR ?  DropdownAlignment.BottomEnd : DropdownAlignment.BottomStart)">
+            <ChildContent>
+                <button type="button"
+                        class="btn btn-link p-0 border-0 bg-transparent w3-tooltip"
+                        @onclick="OnToggleUserExpand"
+                        aria-expanded="@_home.IsOpenDropdownAccount">
+
+                        <img src="@(_appState.HasAliasImg() ? $"data:{BlazorCore.Utilities.DetectMimeFromBase64(_appState.AliasImg)};base64,{_appState.AliasImg}" : "_content/BlazorCore/img/avatar.jpg")"
+                                alt="@_appState.T("Avatar")"
+                                class="rounded-circle img-fluid tpc-img"
+                                style="width: 3rem; height: 3rem; object-fit: cover;">
+                    <strong class="w3-tooltiptext">@(string.IsNullOrEmpty(@_appState.Alias) ? "" : _appState.T("Hi") + ", " + _appState.Alias)</strong>
+                </button>
+            </ChildContent>
+            <DropdownContent>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 text-muted">@_appState.T("User avatar and alias")</h6>
+                    <button type="button" 
+                            class="btn-close" 
+                            @onclick="OnToggleUserExpand"
+                            aria-label="@_appState.T("Close panel")"
+                            title="@_appState.T("Close panel")">
+                    </button>
+                </div>
+        
+                <hr class="my-2">
+        
+                <TestSolution4.Shared.Pages.Common.Authentication.AuthenticationExtend OnClickSave="OnToggleUserExpand" OnClickDelete="OnToggleUserExpand" IsCancelButtonHidden="true" />
+            </DropdownContent>
+        </P11Dropdown> *@
+
+        @* H E L P *@
+        @if(_appState != null && _appState!.IsPhone)
+        {
+            @if(_home.IsOpenHelp)
+            {
+                <P11ModalNative @bind-Visible="@_home.IsOpenHelp" OnClose="async() => {}"
+                        Id="@_home.IdHelp"
+                        IsHeaderHide="@_home.IsHeaderHide"
+                        IsFooterHide="@_home.IsFooterHide"
+                        NativeDevice="@_appState!.NativeDeviceType"
+                        ShowHeaderSeparator="true"
+                        CloseButtonText="@_appState.T("Back")"
+                        CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                        AriaLabelledby="specific-position-panel-settings"
+                        CssClassContent="tpc-form-bg-01"
+                        Size="Size.Large"
+                        ShowDevelopmentErrors="true">
+                    <HeaderContent>
+                        <h5 id="specific-position-panel-settings" class="modal-title">@_appState.T("Help Todo")</h5>
+                    </HeaderContent>
+                    <BodyContent>
+
+                        <TestSolution4.Shared.Pages.Help.HelpTodo />
+
+                    </BodyContent>
+                </P11ModalNative> 
+            }            
+        }
+        else
+        {
+            <P11FloatingPanel Id="@_home.IdHelp"
+                                Title="@_appState!.T("Help Todo")"
+                                @bind-Visible="@_home.IsOpenHelp"
+                                EnableDragDrop="true"
+                                OnClose="@(() => _home.IsOpenHelp = false)">
+                <ChildContent>
+                    <TestSolution4.Shared.Pages.Help.HelpTodo />
+                </ChildContent>
+            </P11FloatingPanel>            
+        }
+
+        @* S E T T I N G S *@
+        @if(_home.IsOpenModalSettings)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalSettings" OnClose="() => {}"
+                    Id="@_home.IdSettings"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Settings"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderAction>
+                    @switch(_appState!.NativeDeviceType)
+                    {
+                        case NativeDevice.IPHONE:
+                            <button class="btn btn-link p-0 text-decoration-none fw-bold" style="color: #007aff; font-size: 1rem;" @onclick="_saveSettings!">@_appState.T("Save")</button>
+                            break;
+
+                        case NativeDevice.ANDROID:
+                            <button class="btn btn-link text-dark p-1" @onclick="_saveSettings!"><i class="bi bi-check2 fs-4"></i></button>
+                            break;
+                    }
+                </HeaderAction>
+                <HeaderContent>
+                    <h5 id="modalTitle1Settings" class="modal-title">@_appState.T("Settings")</h5>
+                </HeaderContent>
+                <BodyContent>
+            
+                    <TestSolution4.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelpSettings = true" />
+
+                    <TestSolution4.Shared.Pages.Common.AppState.AppStateSettings OnProvideSaveAction="@(action => _saveSettings = action)" OnClickCancel="() => _home.IsOpenModalSettings = false" />
+
+                </BodyContent>
+            </P11ModalNative> 
+        } 
+        @* H E L P   S E T T I N G S *@
+        @if(_appState != null && _appState!.IsPhone)
+        {
+            @if(_home.IsOpenHelpSettings)
+            {
+                <P11ModalNative @bind-Visible="@_home.IsOpenHelpSettings" OnClose="async() => {}"
+                        Id="@_home.IdHelpSettings"
+                        IsHeaderHide="@_home.IsHeaderHide"
+                        IsFooterHide="@_home.IsFooterHide"
+                        NativeDevice="@_appState!.NativeDeviceType"
+                        ShowHeaderSeparator="true"
+                        CloseButtonText="@_appState.T("Back")"
+                        CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                        AriaLabelledby="specific-position-panel-settings"
+                        CssClassContent="tpc-form-bg-01"
+                        Size="Size.Large"
+                        ShowDevelopmentErrors="true">
+                    <HeaderContent>
+                        <h5 id="specific-position-panel-settings" class="modal-title">@_appState.T("Help Settings")</h5>
+                    </HeaderContent>
+                    <BodyContent>
+
+                        <TestSolution4.Shared.Pages.Help.HelpSettings />
+
+                    </BodyContent>
+                </P11ModalNative> 
+            }
+        }
+        else
+        {
+            <P11FloatingPanel Id="@_home.IdHelpSettings"
+                                Title="@_appState!.T("Help Settings")"
+                                @bind-Visible="@_home.IsOpenHelpSettings"
+                                EnableDragDrop="true"
+                                OnClose="@(() => _home.IsOpenHelpSettings = false)">
+                <ChildContent>
+                    <TestSolution4.Shared.Pages.Help.HelpSettings />
+                </ChildContent>
+            </P11FloatingPanel>            
+        }        
+
+        @* A C C O U N T *@
+        @if(_home.IsOpenModalAccount)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalAccount" OnClose="() => {}"
+                    Id="@_home.IdAccount"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Account"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1Account" class="modal-title">@_appState.T("Account")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <TestSolution4.Shared.Pages.Common.Alert              
+                        OnClickOpenDoku="() => _home.IsOpenHelpAccount = true"
+                        OnClickOpenDokuInfo="() => _home.IsOpenHelp2FA = true" />
+
+                    <TestSolution4.Shared.Pages.Common.Authentication.AuthenticationForm 
+                        OnChangeVisible="(bool visible) => _home.IsOpenModalAccount = visible"
+                        OnClickCancel="() => _home.IsOpenModalAccount = false" 
+                        OnClick2FASetup="OnClick_Open2FASetup" 
+                        OnClick2FARevoke="OnClick_Open2FARevoke" 
+                        CssClassModalContent="tpc-form-bg-03" /> 
+
+                </BodyContent>
+            </P11ModalNative>
+
+            @* H E L P   A C C O U N T *@
+            @if(_appState != null && _appState!.IsPhone)
+            {
+                @if(_home.IsOpenHelpAccount)
+                {
+                    <P11ModalNative @bind-Visible="@_home.IsOpenHelpAccount" OnClose="async() => {}"
+                            Id="@_home.IdHelpAccount"
+                            IsHeaderHide="@_home.IsHeaderHide"
+                            IsFooterHide="@_home.IsFooterHide"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="specific-position-panel-settings"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                        <HeaderContent>
+                            <h5 id="specific-position-panel-settings" class="modal-title">@_appState.T("Help Account")</h5>
+                        </HeaderContent>
+                        <BodyContent>
+
+                            <TestSolution4.Shared.Pages.Help.HelpAccount />
+
+                        </BodyContent>
+                    </P11ModalNative> 
+                }
+            }
+            else
+            {
+                <P11FloatingPanel Id="@_home.IdHelpAccount"
+                                    Title="@_appState!.T("Help Account")"
+                                    @bind-Visible="@_home.IsOpenHelpAccount"
+                                    EnableDragDrop="true"
+                                    OnClose="@(() => _home.IsOpenHelpAccount = false)">
+                    <ChildContent>
+                        <TestSolution4.Shared.Pages.Help.HelpAccount />
+                    </ChildContent>
+                </P11FloatingPanel>            
+            }
+        }
+
+        @* S H A R I N G *@
+        @if(_home.IsOpenModalSharing)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalSharing" OnClose="() => {}"
+                    Id="@_home.IdSharing"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Sharing"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1Sharing" class="modal-title">@_appState.T("Sharing")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <TestSolution4.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelpSharing = true" />
+
+                    <TestSolution4.Shared.Pages.Common.Sharing OnClickCancel="() => _home.IsOpenModalSharing = false" CssClassModalContent="tpc-form-bg-02" />
+
+                </BodyContent>
+            </P11ModalNative> 
+
+            @* H E L P   S H A R I N G *@
+            @if(_appState != null && _appState!.IsPhone)
+            {
+                @if(_home.IsOpenHelpSharing)
+                {
+                    <P11ModalNative @bind-Visible="@_home.IsOpenHelpSharing" OnClose="async() => {}"
+                            Id="@_home.IdHelpSharing"
+                            IsHeaderHide="@_home.IsHeaderHide"
+                            IsFooterHide="@_home.IsFooterHide"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="specific-position-panel-settings"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                        <HeaderContent>
+                            <h5 id="specific-position-panel-settings" class="modal-title">@_appState.T("Help Sharing")</h5>
+                        </HeaderContent>
+                        <BodyContent>
+
+                            <TestSolution4.Shared.Pages.Help.HelpSharing />
+
+                        </BodyContent>
+                    </P11ModalNative> 
+                }
+            }
+            else
+            {
+                <P11FloatingPanel Id="@_home.IdHelpSharing"
+                                    Title="@_appState!.T("Help Sharing")"
+                                    @bind-Visible="@_home.IsOpenHelpSharing"
+                                    EnableDragDrop="true"
+                                    OnClose="@(() => _home.IsOpenHelpSharing = false)">
+                    <ChildContent>
+                        <TestSolution4.Shared.Pages.Help.HelpSharing />
+                    </ChildContent>
+                </P11FloatingPanel>            
+            }
+        } 
+
+        @* E X P O R T / I M P O R T *@
+        @if(_home.IsOpenModalExportImport)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalExportImport" OnClose="() => {}"
+                    Id="@_home.IdExportImport"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Sharing"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderAction>
+                    @switch(_appState!.NativeDeviceType)
+                    {
+                        case NativeDevice.IPHONE:
+                            <button class="btn btn-link p-0 text-decoration-none fw-bold" style="color: #007aff; font-size: 1rem;" @onclick="_saveExportImport!">@_appState.T("Exp./Imp.")</button>
+                            break;
+
+                        case NativeDevice.ANDROID:
+                            <button class="btn btn-link text-dark p-1" @onclick="_saveExportImport!"><i class="bi bi-arrow-down-up fs-4"></i></button>
+                            break;
+                    }
+                </HeaderAction>
+                <HeaderContent>
+                    <h5 id="modalTitle1Sharing" class="modal-title">@_appState.T("Export/Import")</h5>
+                </HeaderContent>
+                <BodyContent>
+            
+                    <TestSolution4.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelpExportImport = true" />
+
+                    <TestSolution4.Shared.Pages.Common.ExportImport 
+                                    DataContainer="@_home.ContainerExportimport"
+                                    CssClassModalContent="tpc-form-bg-01"
+                                    HideExportPanel="@(_home.ContainerExportimport.Any() ? false : true)" 
+                                    OnClickCancel="() => _home.IsOpenModalExportImport = false"
+                                    OnImport="(data) => OnImportData(data)"
+                                    OnProvideSaveAction="@(action => _saveExportImport = action)" />
+
+                </BodyContent>
+            </P11ModalNative>
+
+            @* H E L P   E X P O R T  /  I M P O R T *@
+            @if(_appState != null && _appState!.IsPhone)
+            {
+                @if(_home.IsOpenHelpExportImport)
+                {
+                    <P11ModalNative @bind-Visible="@_home.IsOpenHelpExportImport" OnClose="async() => {}"
+                            Id="@_home.IdHelpExportImport"
+                            IsHeaderHide="@_home.IsHeaderHide"
+                            IsFooterHide="@_home.IsFooterHide"
+                            NativeDevice="@_appState!.NativeDeviceType"
+                            ShowHeaderSeparator="true"
+                            CloseButtonText="@_appState.T("Back")"
+                            CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                            AriaLabelledby="specific-position-panel-settings"
+                            CssClassContent="tpc-form-bg-01"
+                            Size="Size.Large"
+                            ShowDevelopmentErrors="true">
+                        <HeaderContent>
+                            <h5 id="specific-position-panel-settings" class="modal-title">@_appState.T("Help Export/Import")</h5>
+                        </HeaderContent>
+                        <BodyContent>
+
+                            <TestSolution4.Shared.Pages.Help.HelpExportImport />
+
+                        </BodyContent>
+                    </P11ModalNative> 
+                }
+            }
+            else
+            {
+                <P11FloatingPanel Id="@_home.IdHelpExportImport"
+                                    Title="@_appState!.T("Help Export/Import")"
+                                    @bind-Visible="@_home.IsOpenHelpExportImport"
+                                    EnableDragDrop="true"
+                                    OnClose="@(() => _home.IsOpenHelpExportImport = false)">
+                    <ChildContent>
+                        <TestSolution4.Shared.Pages.Help.HelpExportImport />
+                    </ChildContent>
+                </P11FloatingPanel>            
+            }
+        }
+
+        @* 2 F A   S E T U P *@
+        @if(_home.IsOpenModal2FASetup)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModal2FASetup" OnClose="() => {}"
+                    Id="@_home.Id2FASetup"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle12FASetup"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle12FASetup" class="modal-title">@_appState.T("2FA / Otp Setup")</h5>
+                </HeaderContent>
+                <BodyContent>
+            
+                    <TestSolution4.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelp2FA = true" />
+
+                    <TestSolution4.Shared.Pages.Common.Otp.OtpSetup OnClickCancel="() => _home.IsOpenModal2FASetup = false" QrWidth="250" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* 2 F A   R E V O K E *@
+        @if(_home.IsOpenModal2FARevoke)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModal2FARevoke" OnClose="() => {}"
+                    Id="@_home.Id2FARevoke"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle12FARevoke"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle12FARevoke" class="modal-title">@_appState.T("2FA / Otp Revoke")</h5>
+                </HeaderContent>
+                <BodyContent>
+            
+                    <TestSolution4.Shared.Pages.Common.Alert OnClickOpenDoku="() => _home.IsOpenHelp2FA = true" />
+
+                    <TestSolution4.Shared.Pages.Common.Otp.Otp OnSecretEntered="OnClick_2FARevoke" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* H E L P   2 F A / 2 F A  R E V O K E *@
+        @if(_appState != null && _appState!.IsPhone)
+        {
+            @if(_home.IsOpenHelp2FA)
+            {
+                <P11ModalNative @bind-Visible="@_home.IsOpenHelp2FA" OnClose="async() => {}"
+                        Id="@_home.IdHelp2FA"
+                        IsHeaderHide="@_home.IsHeaderHide"
+                        IsFooterHide="@_home.IsFooterHide"
+                        NativeDevice="@_appState!.NativeDeviceType"
+                        ShowHeaderSeparator="true"
+                        CloseButtonText="@_appState.T("Back")"
+                        CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                        AriaLabelledby="specific-position-panel-settings"
+                        CssClassContent="tpc-form-bg-01"
+                        Size="Size.Large"
+                        ShowDevelopmentErrors="true">
+                    <HeaderContent>
+                        <h5 id="specific-position-panel-settings" class="modal-title">@_appState.T("Help 2FA")</h5>
+                    </HeaderContent>
+                    <BodyContent>
+
+                        <TestSolution4.Shared.Pages.Help.Help2FA />
+
+                    </BodyContent>
+                </P11ModalNative> 
+            }
+        }
+        else
+        {
+            <P11FloatingPanel Id="@_home.IdHelp2FA"
+                                Title="@_appState!.T("Help 2FA")"
+                                @bind-Visible="@_home.IsOpenHelp2FA"
+                                EnableDragDrop="true"
+                                OnClose="@(() => _home.IsOpenHelp2FA = false)">
+                <ChildContent>
+                    <TestSolution4.Shared.Pages.Help.Help2FA />
+                </ChildContent>
+            </P11FloatingPanel>            
+        }
+
+
+
+
+        @* I M P R E S S U M *@
+        @if(_home.IsOpenModalImprint)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalImprint" OnClose="() => {}"
+                    Id="@_home.IdImprint"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitleImpressum"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitleImpressum" class="modal-title">@_appState!.T("Imprint")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <TestSolution4.Shared.Pages.Common.ImprintCommon />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* D A T E N S C H U T Z *@
+        @if(_home.IsOpenModalPrivacy)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalPrivacy" OnClose="() => {}"
+                    Id="@_home.IdPrivacy"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitlePrivacy"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitlePrivacy" class="modal-title">@_appState!.T("Privacy")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <TestSolution4.Shared.Pages.Common.PrivacyCommon />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* A G B *@
+        @if(_home.IsOpenModalTerms)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalTerms" OnClose="() => {}"
+                    Id="@_home.IdTerms"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitleTerms"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitleTerms" class="modal-title">@_appState!.T("Terms")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <TestSolution4.Shared.Pages.Common.TermsCommon />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* A B O U T *@
+        @if(_home.IsOpenModalAbout)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalAbout" OnClose="() => {}"
+                    Id="@_home.IdAbout"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitleAbout"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitleAbout" class="modal-title">@_appState!.T("About")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <TestSolution4.Shared.Pages.Common.About OnClose="@(() => _home.IsOpenModalAbout = false)" CssClassModalContent="tpc-form-bg-01" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+        @* D O N A T E *@
+        @if(_home.IsOpenModalDonate)
+        {
+            <P11ModalNative @bind-Visible="@_home.IsOpenModalDonate" OnClose="() => {}"
+                    Id="@_home.IdDonate"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Donate"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+                <HeaderContent>
+                    <h5 id="modalTitle1Donate" class="modal-title">@_appState!.T("Donate")</h5>
+                </HeaderContent>
+                <BodyContent>
+
+                    <TestSolution4.Shared.Pages.Common.Donate OnClose="@(() => _home.IsOpenModalDonate = false)" CssClassModalContent="tpc-form-bg-02" />
+
+                </BodyContent>
+            </P11ModalNative>
+        }
+
+    </Authorized>
+    <NotAuthorized>
+
+        @* WEBSITE *@
+        <Landing />
+
+    </NotAuthorized>
+</AuthorizeView>

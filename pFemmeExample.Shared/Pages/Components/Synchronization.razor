@@ -1,0 +1,287 @@
+﻿@using System.Globalization
+@using p11.UI.Services
+@using pFemmeExample.Shared.Models
+
+
+@if (_items != null)
+{
+    @if (_isLoading)
+    {
+        <link rel="stylesheet" href="_content/pFemmeExample.Shared/loading.css" />
+
+        <div class="fixed-top d-flex justify-content-center tpc-spinner-container" style="z-index: 2000; top: 20px;">
+            <div class="bg-white border border-secondary rounded-pill px-4 py-2 d-flex align-items-center gap-3"
+                 style="box-shadow: 0 10px 30px rgba(69, 90, 123, 0.45); border-width: 2px !important;">
+
+                <div class="spinner-border spinner-border-sm text-dark" role="status" style="border-width: 0.2em;">
+                    <span class="visually-hidden">@_appState!.T("Loading...")</span>
+                </div>
+
+                <span class="small fw-bold text-dark text-uppercase tpc-spinner-text" style="letter-spacing: 1.5px; font-size: 0.75rem;">
+                    @_appState.T("Reloading application...")
+                </span>
+            </div>
+        </div>
+    }
+
+    <div class="container px-0">
+        <div class="p-3 mb-3 border rounded-3" style="background-color: var(--tpc-background); border-color: var(--tpc-border-color) !important;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-cloud-sync fs-5" style="color: var(--tpc-text-color);"></i>
+                    <span style="font-weight: 500; color: var(--tpc-text-color);">@_appState.T("Synchronization preview")</span>
+                    <span class="badge bg-secondary rounded-pill">@_items.Where(x => x != null && (x.Int__MigrationToCloud || x.Int__MigrationToLocal)).Count() @_appState.T("Item(s)")</span>
+                </div>
+                <div class="d-flex gap-2">
+                    @if (_items.Any(x => x != null && x.Int__MigrationToCloud))
+                    {
+                        <P11Button ButtonVariant="ButtonVariant.Light"
+                                   Text="@_appState.T("Upload all")"
+                                   IconClass="bi bi-cloud-upload fs-3 mt-1 me-2"
+                                   CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                                   AriaLabel="@_appState.T("Upload all")"
+                                   OnClick="() => UploadAllItems()" />
+                    }
+                    @if (_items.Any(x => x != null && x.Int__MigrationToLocal))
+                    {
+                        <P11Button ButtonVariant="ButtonVariant.Light"
+                                   Text="@_appState.T("Download all")"
+                                   IconClass="bi bi-download fs-3 mt-1 me-2"
+                                   CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                                   AriaLabel="@_appState.T("Download all")"
+                                   OnClick="() => DownloadAllItems()" />
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div style="max-height:70vh; overflow-y:auto; scrollbar-width:thin;">
+            @foreach (var item in _items.Where(x => x != null && (x.Int__MigrationToCloud || x.Int__MigrationToLocal)))
+            {
+                if (item == null) continue;
+
+                <div class="p-3 mb-3 border rounded-3" style="background-color: var(--tpc-background); border-color: var(--tpc-border-color) !important;">
+                    <div class="d-flex flex-column">
+
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="border-bottom-color: var(--tpc-border-color) !important;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div>
+                                    <span style="font-weight: 500; color: var(--tpc-text-color);">@(item.RecordDate?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? @_appState.T("No date selected"))</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    @if (item.Int__MigrationToCloud)
+                                    {
+                                        <P11Button ButtonVariant="ButtonVariant.Light"
+                                                   Text="@_appState.T("Upload data")"
+                                                   IconClass="bi bi-cloud-upload fs-3 mt-1 me-2"
+                                                   CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                                                   AriaLabel="Accountdaten öffnen"
+                                                   OnClick="() => UploadItem(item)" />
+                                    }
+                                    @if (item.Int__MigrationToLocal)
+                                    {
+                                        <P11Button ButtonVariant="ButtonVariant.Light"
+                                                   Text="@_appState.T("Download data")"
+                                                   IconClass="bi bi-download fs-3 mt-1 me-2"
+                                                   CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                                                   AriaLabel="Accountdaten öffnen"
+                                                   OnClick="() => DownloadItem(item)" />
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 py-2">
+                            <div class="col-md-6 col-lg-4">
+                                <div class="d-flex justify-content-between align-items-center pe-2">
+                                    <div style="color: var(--tpc-text-color);">
+                                        <span style="font-size: 0.8rem; opacity: 0.7;">@_appState.T("Bleeding")</span>
+                                        <span class="d-block fw-semibold">
+                                            @if (item.bleeding)
+                                            {
+                                                <span>✅ @_appState.T("Yes")</span>
+                                                <span class="badge bg-secondary rounded-pill ms-1">
+                                                    @(item.intensity switch { 0 => @_appState.T("Few"), 1 => @_appState.T("Mild"), 2 => @_appState.T("Severe"), _ => "" })
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span>❌ @_appState.T("No")</span>
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @foreach (var metric in new[] { ("Pain", GetPainText(item.pain)), ("Headache", GetSeverityText(item.headache)), ("Fatigue", GetSeverityText(item.fatigue)), ("Nausea", GetSeverityText(item.nausea)), ("Cramps", GetSeverityText(item.cramps)) })
+                            {
+                                <div class="col-md-6 col-lg-4">
+                                    <div style="color: var(--tpc-text-color);">
+                                        <span style="font-size: 0.8rem; opacity: 0.7;">@_appState.T(metric.Item1)</span>
+                                        <span class="d-block fw-semibold">@metric.Item2</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(item.Details))
+                        {
+                            <div class="border-top pt-2 mt-1" style="border-top-color: var(--tpc-border-color) !important; color: var(--tpc-text-color);">
+                                <span style="font-size: 0.7rem; opacity: 0.6;">@_appState.T("Notes")</span>
+                                <p class="small mb-1 mt-1" style="opacity: 0.8;">@item.Details</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.LogicService? _logicService { get; set; }
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.CyclesService? _cyclesService { get; set; }
+
+    [Inject]
+    private IMessageBoxService? _messageBoxService { get; set; }
+
+
+    // Eigene Testdaten – direkt in der Komponente!
+    private List<CyclesCompareModel?> _items = new();
+
+    private bool _isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        if (_logicService == null || _messageBoxService == null) return;
+
+        var result_cycle_compare = await _logicService.LoadCompared();
+        if (result_cycle_compare != null
+            && string.IsNullOrEmpty(result_cycle_compare.out_err)
+            && result_cycle_compare.out_list != null)
+        {
+            _items = result_cycle_compare.out_list;
+        }
+        else
+        {
+            MessageBoxResult result = await _messageBoxService.ShowOkAsync(
+                title: "Information",
+                message: "There is no data!"
+            );
+
+            switch (result)
+            {
+                case MessageBoxResult.Ok:
+                    break;
+
+                case MessageBoxResult.None:
+                    break;
+            }
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(_items.Count < 5 ? 300 : (_items.Count < 15 ? 100 : 5));
+        _isLoading = false;
+    }
+
+    private async Task Save(CyclesCompareModel item, BlazorCore.Services.AppState.STORAGE_LOCATION storageLocation)
+    {
+        if (_cyclesService == null || _messageBoxService == null) return;
+
+        try
+        {
+            var result = await _cyclesService!.Save(item, storageLocation);
+
+            if (result != null && string.IsNullOrEmpty(result.out_err))
+            {
+                await Load();
+            }
+            else
+            {
+                string err = result?.out_err ?? string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T("An unexpected error occurred.") +
+                             (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Description") + ": " + err)
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState.T("Error"),
+                message: _appState.T("An unexpected error has occurred. Please contact support.") +
+                         " " + _appState.T("Info") + ": " + BlazorCore.ErrorHelper.GetErrorContext(ex.Message)
+            );
+        }
+    }
+
+    private async Task UploadItem(CyclesCompareModel item)
+    {
+        _isLoading = true;
+        await Save(item, BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD);
+    }
+
+    private async Task DownloadItem(CyclesCompareModel item)
+    {
+        _isLoading = true;
+        await Save(item, BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL);
+    }
+
+    private async Task UploadAllItems()
+    {
+        _isLoading = true;
+        foreach (var item in _items.Where(x => x != null && x.Int__MigrationToCloud))
+        {
+            if (item != null)
+            {
+                await UploadItem(item);
+            }
+        }
+    }
+
+    private async Task DownloadAllItems()
+    {
+        _isLoading = true;
+        foreach (var item in _items.Where(x => x != null && x.Int__MigrationToLocal))
+        {
+            if (item != null)
+            {
+                await DownloadItem(item);
+            }
+        }
+    }
+
+
+    private string GetPainText(int pain) => pain switch
+    {
+        0 => _appState.T("None"),
+        1 => _appState.T("Mild"),
+        2 => _appState.T("Severe"),
+        _ => ""
+    };
+
+    private string GetSeverityText(int value) => value switch
+    {
+        0 => _appState.T("None"),
+        1 => @_appState.T("Mild"),
+        2 => @_appState.T("Severe"),
+        _ => ""
+    };
+}

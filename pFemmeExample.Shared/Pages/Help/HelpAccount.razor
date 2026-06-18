@@ -1,0 +1,589 @@
+﻿@using p11.UI
+@using Microsoft.AspNetCore.Components.Web
+
+
+<pFemmeExample.Shared.Pages.Common.Help DocumentBody="@Body" Language="@Language" />
+
+@code {
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+    private string? Body = string.Empty;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var language = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (language != null && string.IsNullOrEmpty(language.out_err) && !string.IsNullOrEmpty(language.out_value_str))
+                    Language = language.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (language != null && !string.IsNullOrEmpty(language.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {language.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Body =$@"
+1. Account (Account Management):
+- The Account form is divided into four main areas: Actions, User Information (Profile), Two-Factor Authentication (2FA), and GDPR Options.
+_content/Shared/img/video_Account.gif
+
+2. Actions:
+- In this area, **Logging out** (Logout) of the app is possible.
+- The **Password Change** for the user account can also be performed here.
+
+3. User Information (Profile):
+- Here, the user's **Avatar Image** can be taken via the camera or selected from a directory.
+- The creation of a unique **Alias Name** is possible here, which is mandatory for the Data Sharing functionality.
+
+4. Two-Factor Authentication (2FA):
+- This section is used to perform the **setup of Two-Factor Authentication** for the account.
+
+4.1 Important Note on 2FA:
+- The activation of 2FA carries the risk of cloud-data loss if the instructions are not followed correctly.
+- The most important security precaution is to <b>store the 2FA Backup Code</b> securely.
+- The Backup Code can be used to deactivate 2FA on cloud if access to the authenticator is lost (e.g., if the phone is lost or the authenticator app is accidentally deleted).
+- It is advisable to additionally set a PIN under <b>'Settings'</b>, in case 2FA is active but there is no internet connection.
+- This local PIN protects the local data, as it would otherwise be unprotected despite the active 2FA.
+
+5. GDPR Options:
+- This area allows for various deletion processes in accordance with data protection regulations (GDPR).
+- For the **Deletion of Cookies**, every individual stored cookie can be deleted, or all cookies can be deleted together.
+- Options are available for the deletion of **Cloud Data**, **Local Data**, the **Local Account**, or the complete deletion of the **Cloud and Local Accounts**.
+
+5.1 Important Note on Data Deletion:
+- The deletion of data, both locally and in the Cloud, is <b>irrevocable</b>.
+- **No backup** of user cloud data is made by the app owner.
+- It is highly recommended to use the **Export function** of the app from time to time to back up your own cloud data.
+- The hosting provider Firestorm.ch creates cloud data backups according to Swiss legal requirements.
+- <b>Attention:</b> Cloud-Data restore from these provider backups is not possible.
+- This is because, due to the hashing method (Account/Password) and the unreliability of the Debug ID, the identity of the user cannot be securely verified.
+
+Note
+A detailed description of the application can be found in our linked user manual
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            case "DE":
+                Body =$@"
+1. Konto (Kontoverwaltung):
+- Das Konto-Formular ist in vier Hauptbereiche unterteilt: Aktionen, Benutzerinformationen (Profil), Zwei-Faktor-Authentifizierung (2FA) und DSGVO-Optionen.
+_content/Shared/img/video_Account.gif
+
+2. Aktionen:
+- In diesem Bereich ist das **Abmelden** (Logout) aus der App möglich.
+- Der **Passwortwechsel** für das Benutzerkonto kann ebenfalls hier durchgeführt werden.
+
+3. Benutzerinformationen (Profil):
+- Hier kann das **Avatar-Bild** des Benutzers per Kamera aufgenommen oder aus einem Verzeichnis ausgewählt werden.
+- Die Erstellung eines eindeutigen **Alias-Namens** ist hier möglich, der für die Data-Sharing-Funktionalität obligatorisch ist.
+
+4. Zwei-Faktor-Authentifizierung (2FA):
+- Dieser Abschnitt dient zur Durchführung der **Einrichtung der Zwei-Faktor-Authentifizierung** für das Konto.
+
+4.1 Wichtiger Hinweis zu 2FA:
+- Die Aktivierung von 2FA birgt das Risiko eines Cloud-Datenverlusts, wenn die Anweisungen nicht korrekt befolgt werden.
+- Die wichtigste Sicherheitsmaßnahme ist, den <b>2FA-Backup-Code</b> sicher zu speichern.
+- Der Backup-Code kann verwendet werden, um 2FA in der Cloud zu deaktivieren, falls der Zugriff auf die Authentifizierungs-App verloren geht (z. B. bei Verlust des Handys oder versehentlichem Löschen der Authentifizierungs-App).
+- Es wird empfohlen, zusätzlich eine PIN unter <b>„Einstellungen“</b> festzulegen, falls 2FA aktiv ist, aber keine Internetverbindung besteht.
+- Diese lokale PIN schützt die lokalen Daten, da diese sonst trotz aktiver 2FA ungeschützt wären.
+
+5. DSGVO-Optionen:
+- Dieser Bereich ermöglicht verschiedene Löschvorgänge gemäß den Datenschutzbestimmungen (DSGVO).
+- Für das **Löschen von Cookies** kann jeder einzeln gespeicherte Cookie gelöscht werden oder alle Cookies gemeinsam.
+- Es stehen Optionen zum Löschen von **Cloud-Daten**, **Lokalen Daten**, dem **Lokalen Konto** oder zur vollständigen Löschung der **Cloud- und Lokalen Konten** zur Verfügung.
+
+5.1 Wichtiger Hinweis zum Datenlöschen:
+- Das Löschen von Daten, sowohl lokal als auch in der Cloud, ist <b>unumkehrbar</b>.
+- Vom App-Betreiber wird **kein Backup** der Cloud-Daten des Benutzers erstellt.
+- Es wird dringend empfohlen, von Zeit zu Zeit die **Export-Funktion** der App zu nutzen, um die eigenen Cloud-Daten zu sichern.
+- Der Hosting-Anbieter Firestorm.ch erstellt Backups der Cloud-Daten gemäß schweizerischen gesetzlichen Vorgaben.
+- <b>Achtung:</b> Eine Wiederherstellung von Cloud-Daten aus diesen Provider-Backups ist nicht möglich.
+- Dies liegt daran, dass aufgrund der Hash-Methode (Konto/Passwort) und der Unzuverlässigkeit der Debug-ID die Identität des Benutzers nicht sicher verifiziert werden kann.
+
+Hinweis
+Eine detaillierte Beschreibung der Anwendung finden Sie in unserem verlinkten Benutzerhandbuch
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Body = $@"
+1. Compte (Gestion du compte) :
+- Le formulaire Compte est divisé en quatre zones principales : Actions, Informations utilisateur (Profil), Authentification à deux facteurs (2FA) et Options RGPD.
+_content/Shared/img/video_Account.gif
+
+2. Actions :
+- Dans cette zone, il est possible de se **déconnecter** (Logout) de l'application.
+- Le **changement de mot de passe** pour le compte utilisateur peut également être effectué ici.
+
+3. Informations utilisateur (Profil) :
+- Ici, l'**image d'avatar** de l'utilisateur peut être prise via la caméra ou sélectionnée dans un répertoire.
+- La création d'un **nom d'alias** unique est possible ici, obligatoire pour la fonctionnalité de partage de données.
+
+4. Authentification à deux facteurs (2FA) :
+- Cette section sert à effectuer la **configuration de l'authentification à deux facteurs** pour le compte.
+
+4.1 Note importante sur la 2FA :
+- L'activation de la 2FA comporte le risque de perte de données cloud si les instructions ne sont pas suivies correctement.
+- La mesure de sécurité la plus importante est de <b>stocker le code de secours 2FA</b> en lieu sûr.
+- Le code de secours peut être utilisé pour désactiver la 2FA sur le cloud si l'accès à l'application d'authentification est perdu (par ex. perte du téléphone ou suppression accidentelle de l'app d'authentification).
+- Il est recommandé de définir en plus un PIN sous <b>« Paramètres »</b>, au cas où la 2FA est active mais qu'il n'y a pas de connexion internet.
+- Ce PIN local protège les données locales, car elles seraient sinon non protégées malgré la 2FA active.
+
+5. Options RGPD :
+- Cette zone permet différents processus de suppression conformément aux réglementations de protection des données (RGPD).
+- Pour la **suppression des cookies**, chaque cookie stocké individuellement peut être supprimé, ou tous les cookies ensemble.
+- Des options sont disponibles pour la suppression des **données cloud**, des **données locales**, du **compte local**, ou la suppression complète des **comptes cloud et locaux**.
+
+5.1 Note importante sur la suppression de données :
+- La suppression des données, tant locales que dans le cloud, est <b>irréversible</b>.
+- L'exploitant de l'app ne crée **aucune sauvegarde** des données cloud de l'utilisateur.
+- Il est vivement recommandé d'utiliser de temps en temps la **fonction d'export** de l'app pour sauvegarder vos propres données cloud.
+- Le fournisseur d'hébergement Firestorm.ch crée des sauvegardes des données cloud conformément aux exigences légales suisses.
+- <b>Attention :</b> La restauration des données cloud à partir de ces sauvegardes du fournisseur n'est pas possible.
+- Cela est dû au fait que, en raison de la méthode de hachage (compte/mot de passe) et de la non-fiabilité de l'ID de débogage, l'identité de l'utilisateur ne peut pas être vérifiée de manière sûre.
+
+Note
+Une description détaillée de l'application se trouve dans notre manuel utilisateur lié
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Body = $@"
+1. Account (Gestione account):
+- Il modulo Account è diviso in quattro aree principali: Azioni, Informazioni utente (Profilo), Autenticazione a due fattori (2FA) e Opzioni GDPR.
+_content/Shared/img/video_Account.gif
+
+2. Azioni:
+- In quest'area è possibile eseguire il **Logout** dall'app.
+- Qui può essere effettuato anche il **Cambio password** per l'account utente.
+
+3. Informazioni utente (Profilo):
+- Qui è possibile scattare l'**Immagine avatar** dell'utente tramite fotocamera o selezionarla da una cartella.
+- Qui è possibile creare un **Nome alias** unico, obbligatorio per la funzionalità di condivisione dati.
+
+4. Autenticazione a due fattori (2FA):
+- Questa sezione serve per eseguire la **configurazione dell'autenticazione a due fattori** per l'account.
+
+4.1 Nota importante su 2FA:
+- L'attivazione della 2FA comporta il rischio di perdita dei dati cloud se le istruzioni non vengono seguite correttamente.
+- La misura di sicurezza più importante è <b>conservare il Codice di backup 2FA</b> in modo sicuro.
+- Il Codice di backup può essere utilizzato per disattivare la 2FA sul cloud se si perde l'accesso all'app di autenticazione (ad es. perdita del telefono o cancellazione accidentale dell'app di autenticazione).
+- È consigliabile impostare inoltre un PIN sotto <b>'Impostazioni'</b>, nel caso in cui la 2FA sia attiva ma non ci sia connessione internet.
+- Questo PIN locale protegge i dati locali, altrimenti sarebbero non protetti nonostante la 2FA attiva.
+
+5. Opzioni GDPR:
+- Quest'area consente vari processi di cancellazione in conformità con le normative sulla protezione dei dati (GDPR).
+- Per la **Cancellazione dei cookie**, è possibile eliminare ogni cookie memorizzato singolarmente o tutti i cookie insieme.
+- Sono disponibili opzioni per la cancellazione dei **Dati cloud**, dei **Dati locali**, dell'**Account locale** o la cancellazione completa degli **Account cloud e locali**.
+
+5.1 Nota importante sulla cancellazione dei dati:
+- La cancellazione dei dati, sia locali che nel cloud, è <b>irrevocabile</b>.
+- L'operatore dell'app non crea **nessun backup** dei dati cloud dell'utente.
+- Si raccomanda vivamente di utilizzare di tanto in tanto la **funzione di esportazione** dell'app per eseguire il backup dei propri dati cloud.
+- Il provider di hosting Firestorm.ch crea backup dei dati cloud in conformità con i requisiti legali svizzeri.
+- <b>Attenzione:</b> Il ripristino dei dati cloud da questi backup del provider non è possibile.
+- Questo perché, a causa del metodo di hashing (Account/Password) e dell'inaffidabilità dell'ID di debug, l'identità dell'utente non può essere verificata in modo sicuro.
+
+Nota
+Una descrizione dettagliata dell'applicazione si trova nel nostro manuale utente collegato
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Body = $@"
+1. الحساب (إدارة الحساب):
+- نموذج الحساب مقسم إلى أربع مناطق رئيسية: الإجراءات، معلومات المستخدم (الملف الشخصي)، التحقق بخطوتين (2FA)، وخيارات GDPR.
+_content/Shared/img/video_Account.gif
+
+2. الإجراءات:
+- في هذه المنطقة يمكن **تسجيل الخروج** (Logout) من التطبيق.
+- يمكن أيضًا تنفيذ **تغيير كلمة المرور** لحساب المستخدم هنا.
+
+3. معلومات المستخدم (الملف الشخصي):
+- هنا يمكن التقاط **صورة الأفاتار** للمستخدم عبر الكاميرا أو اختيارها من دليل.
+- يمكن إنشاء **اسم مستعار** فريد هنا، وهو إلزامي لوظيفة مشاركة البيانات.
+
+4. التحقق بخطوتين (2FA):
+- هذا القسم يُستخدم لتنفيذ **إعداد التحقق بخطوتين** للحساب.
+
+4.1 ملاحظة مهمة بشأن 2FA:
+- تفعيل 2FA يحمل خطر فقدان بيانات السحابة إذا لم تُتبع التعليمات بشكل صحيح.
+- أهم إجراء أمان هو <b>تخزين كود النسخ الاحتياطي لـ 2FA</b> بأمان.
+- يمكن استخدام كود النسخ الاحتياطي لإلغاء تفعيل 2FA في السحابة إذا فقد الوصول إلى تطبيق المصادقة (مثل فقدان الهاتف أو حذف تطبيق المصادقة عن طريق الخطأ).
+- يُنصح بتحديد PIN إضافي تحت <b>'الإعدادات'</b>، في حال كانت 2FA نشطة لكن لا يوجد اتصال بالإنترنت.
+- هذا الـ PIN المحلي يحمي البيانات المحلية، وإلا فإنها ستكون غير محمية رغم تفعيل 2FA.
+
+5. خيارات GDPR:
+- تتيح هذه المنطقة عمليات حذف مختلفة وفقًا للوائح حماية البيانات (GDPR).
+- لـ **حذف الكوكيز**، يمكن حذف كل كوكي مخزن بشكل فردي أو جميع الكوكيز معًا.
+- تتوفر خيارات لحذف **بيانات السحابة**، **البيانات المحلية**، **الحساب المحلي**، أو الحذف الكامل لـ **الحسابات السحابية والمحلية**.
+
+5.1 ملاحظة مهمة بشأن حذف البيانات:
+- حذف البيانات، سواء محليًا أو في السحابة، هو <b>غير قابل للعكس</b>.
+- لا يقوم مالك التطبيق بإنشاء **نسخ احتياطية** لبيانات السحابة الخاصة بالمستخدم.
+- يُوصى بشدة باستخدام **وظيفة التصدير** في التطبيق من وقت لآخر لعمل نسخ احتياطية لبيانات السحابة الخاصة بك.
+- يقوم مزود الاستضافة Firestorm.ch بإنشاء نسخ احتياطية لبيانات السحابة وفقًا للمتطلبات القانونية السويسرية.
+- <b>انتبه:</b> استعادة بيانات السحابة من نسخ الاحتياطية هذه للمزود غير ممكنة.
+- ذلك لأن طريقة الهاش (الحساب/كلمة المرور) وعدم موثوقية معرف التصحيح تجعل التحقق من هوية المستخدم غير آمن.
+
+ملاحظة
+وصف مفصل للتطبيق موجود في دليل المستخدم المرتبط لدينا
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Body = $@"
+1. 账户（账户管理）：
+- 账户表单分为四个主要区域：操作、用户信息（个人资料）、双因素认证（2FA）和 GDPR 选项。
+_content/Shared/img/video_Account.gif
+
+2. 操作：
+- 在此区域，可以执行**注销**（Logout）应用程序。
+- 这里也可以进行用户账户的**密码更改**。
+
+3. 用户信息（个人资料）：
+- 这里可以通过相机拍摄或从目录选择用户的**头像图像**。
+- 这里可以创建唯一的**别名**，这是数据共享功能所必需的。
+
+4. 双因素认证（2FA）：
+- 本节用于为账户执行**双因素认证设置**。
+
+4.1 关于 2FA 的重要说明：
+- 激活 2FA 如果未正确遵循说明，可能导致云数据丢失的风险。
+- 最重要的安全措施是 <b>安全保存 2FA 备份代码</b>。
+- 如果丢失对认证应用的访问权限（例如丢失手机或意外删除认证应用），备份代码可用于停用云端 2FA。
+- 建议在 <b>'设置'</b> 下额外设置 PIN，以防 2FA 激活但无互联网连接。
+- 此本地 PIN 保护本地数据，否则尽管 2FA 激活，本地数据仍不受保护。
+
+5. GDPR 选项：
+- 此区域允许根据数据保护法规（GDPR）执行各种删除过程。
+- 对于**删除 Cookie**，可以单独删除每个存储的 Cookie，或一起删除所有 Cookie。
+- 提供删除**云数据**、**本地数据**、**本地账户**或完全删除**云和本地账户**的选项。
+
+5.1 关于数据删除的重要说明：
+- 数据删除（本地和云端）是 <b>不可逆的</b>。
+- 应用所有者不为用户云数据创建**任何备份**。
+- 强烈建议不时使用应用的**导出功能**来备份自己的云数据。
+- 托管提供商 Firestorm.ch 根据瑞士法律要求创建云数据备份。
+- <b>注意：</b> 从这些提供商备份恢复云数据不可能。
+- 这是因为哈希方法（账户/密码）和调试 ID 的不可靠性，无法安全验证用户身份。
+
+注意
+应用的详细描述可在我们链接的用户手册中找到
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Body = $@"
+1. खाता (खाता प्रबंधन):
+- खाता फॉर्म चार मुख्य क्षेत्रों में विभाजित है: कार्रवाइयाँ, उपयोगकर्ता जानकारी (प्रोफ़ाइल), दो-कारक प्रमाणीकरण (2FA), और GDPR विकल्प।
+_content/Shared/img/video_Account.gif
+
+2. कार्रवाइयाँ:
+- इस क्षेत्र में ऐप से **लॉगआउट** करना संभव है।
+- उपयोगकर्ता खाते के लिए **पासवर्ड परिवर्तन** भी यहां किया जा सकता है।
+
+3. उपयोगकर्ता जानकारी (प्रोफ़ाइल):
+- यहां उपयोगकर्ता का **अवतार चित्र** कैमरा से लिया जा सकता है या निर्देशिका से चुना जा सकता है।
+- यहां एक अद्वितीय **उपनाम** बनाना संभव है, जो डेटा शेयरिंग कार्यक्षमता के लिए अनिवार्य है।
+
+4. दो-कारक प्रमाणीकरण (2FA):
+- यह खंड खाते के लिए **दो-कारक प्रमाणीकरण सेटअप** करने के लिए उपयोग किया जाता है।
+
+4.1 2FA पर महत्वपूर्ण नोट:
+- 2FA सक्रिय करने से क्लाउड डेटा हानि का जोखिम होता है यदि निर्देशों का सही पालन नहीं किया जाता।
+- सबसे महत्वपूर्ण सुरक्षा उपाय <b>2FA बैकअप कोड</b> को सुरक्षित रखना है।
+- यदि ऑथेंटिकेटर ऐप तक पहुंच खो जाती है (जैसे फोन खोना या ऑथेंटिकेटर ऐप गलती से डिलीट होना), तो बैकअप कोड क्लाउड पर 2FA निष्क्रिय करने के लिए उपयोग किया जा सकता है।
+- <b>'सेटिंग्स'</b> के तहत अतिरिक्त PIN सेट करना उचित है, यदि 2FA सक्रिय है लेकिन इंटरनेट कनेक्शन नहीं है।
+- यह स्थानीय PIN स्थानीय डेटा की रक्षा करता है, अन्यथा सक्रिय 2FA के बावजूद वे असुरक्षित रहेंगे।
+
+5. GDPR विकल्प:
+- यह क्षेत्र डेटा संरक्षण विनियमों (GDPR) के अनुसार विभिन्न विलोपन प्रक्रियाओं की अनुमति देता है।
+- **कुकीज़ हटाने** के लिए प्रत्येक संग्रहीत कुकी को अलग-अलग हटाया जा सकता है, या सभी कुकीज़ एक साथ।
+- **क्लाउड डेटा**, **स्थानीय डेटा**, **स्थानीय खाते**, या **क्लाउड और स्थानीय खातों** की पूर्ण हटाने के विकल्प उपलब्ध हैं।
+
+5.1 डेटा हटाने पर महत्वपूर्ण नोट:
+- डेटा हटाना, स्थानीय और क्लाउड दोनों, <b>अपूरणीय</b> है।
+- ऐप मालिक उपयोगकर्ता क्लाउड डेटा का **कोई बैकअप** नहीं बनाता।
+- अपनी क्लाउड डेटा का बैकअप लेने के लिए समय-समय पर ऐप की **निर्यात कार्यक्षमता** का उपयोग करने की दृढ़ता से अनुशंसा की जाती है।
+- होस्टिंग प्रदाता Firestorm.ch स्विस कानूनी आवश्यकताओं के अनुसार क्लाउड डेटा बैकअप बनाता है।
+- <b>ध्यान दें:</b> इन प्रदाता बैकअप से क्लाउड डेटा पुनर्स्थापना संभव नहीं है।
+- यह इसलिए क्योंकि हैश विधि (खाता/पासवर्ड) और डिबग आईडी की अविश्वसनीयता के कारण उपयोगकर्ता की पहचान सुरक्षित रूप से सत्यापित नहीं की जा सकती।
+
+नोट
+एप्लिकेशन का विस्तृत विवरण हमारे लिंक किए गए उपयोगकर्ता मैनुअल में मिल सकता है
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Body = $@"
+1. Cuenta (Gestión de cuenta):
+- El formulario de Cuenta está dividido en cuatro áreas principales: Acciones, Información del usuario (Perfil), Autenticación de dos factores (2FA) y Opciones GDPR.
+_content/Shared/img/video_Account.gif
+
+2. Acciones:
+- En esta área es posible realizar el **Cierre de sesión** (Logout) de la aplicación.
+- Aquí también se puede llevar a cabo el **Cambio de contraseña** para la cuenta de usuario.
+
+3. Información del usuario (Perfil):
+- Aquí se puede capturar la **Imagen de avatar** del usuario mediante la cámara o seleccionarla de un directorio.
+- Aquí es posible crear un **Nombre alias** único, obligatorio para la funcionalidad de intercambio de datos.
+
+4. Autenticación de dos factores (2FA):
+- Esta sección se utiliza para realizar la **configuración de la autenticación de dos factores** para la cuenta.
+
+4.1 Nota importante sobre 2FA:
+- La activación de 2FA conlleva el riesgo de pérdida de datos en la nube si no se siguen correctamente las instrucciones.
+- La medida de seguridad más importante es <b>guardar el Código de respaldo de 2FA</b> de forma segura.
+- El Código de respaldo puede utilizarse para desactivar 2FA en la nube si se pierde el acceso a la aplicación de autenticación (por ejemplo, pérdida del teléfono o desinstalación accidental de la app de autenticación).
+- Se recomienda establecer además un PIN en <b>'Configuración'</b>, en caso de que 2FA esté activa pero no haya conexión a internet.
+- Este PIN local protege los datos locales, ya que de lo contrario estarían desprotegidos a pesar de la 2FA activa.
+
+5. Opciones GDPR:
+- Esta área permite diversos procesos de eliminación de acuerdo con las normativas de protección de datos (GDPR).
+- Para la **Eliminación de cookies**, se puede borrar cada cookie almacenada individualmente o todas juntas.
+- Hay opciones disponibles para la eliminación de **Datos en la nube**, **Datos locales**, la **Cuenta local** o la eliminación completa de las **Cuentas en la nube y locales**.
+
+5.1 Nota importante sobre la eliminación de datos:
+- La eliminación de datos, tanto locales como en la nube, es <b>irreversible</b>.
+- El propietario de la app no realiza **ninguna copia de seguridad** de los datos en la nube del usuario.
+- Se recomienda encarecidamente utilizar de vez en cuando la **función de exportación** de la app para respaldar tus propios datos en la nube.
+- El proveedor de hosting Firestorm.ch crea copias de seguridad de los datos en la nube conforme a los requisitos legales suizos.
+- <b>Atención:</b> La restauración de datos en la nube desde estas copias de seguridad del proveedor no es posible.
+- Esto se debe a que, por el método de hash (Cuenta/Contraseña) y la falta de fiabilidad del ID de depuración, no se puede verificar de forma segura la identidad del usuario.
+
+Nota
+Una descripción detallada de la aplicación se encuentra en nuestro manual de usuario vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Body = $@"
+1. Akun (Manajemen Akun):
+- Formulir Akun dibagi menjadi empat area utama: Tindakan, Informasi Pengguna (Profil), Autentikasi Dua Faktor (2FA), dan Opsi GDPR.
+_content/Shared/img/video_Account.gif
+
+2. Tindakan:
+- Di area ini, **Keluar** (Logout) dari aplikasi dimungkinkan.
+- **Perubahan Kata Sandi** untuk akun pengguna juga dapat dilakukan di sini.
+
+3. Informasi Pengguna (Profil):
+- Di sini, **Gambar Avatar** pengguna dapat diambil melalui kamera atau dipilih dari direktori.
+- Pembuatan **Nama Alias** unik dimungkinkan di sini, yang wajib untuk fungsi Berbagi Data.
+
+4. Autentikasi Dua Faktor (2FA):
+- Bagian ini digunakan untuk melakukan **pengaturan Autentikasi Dua Faktor** untuk akun.
+
+4.1 Catatan Penting tentang 2FA:
+- Pengaktifan 2FA membawa risiko kehilangan data cloud jika instruksi tidak diikuti dengan benar.
+- Langkah keamanan terpenting adalah <b>menyimpan Kode Cadangan 2FA</b> dengan aman.
+- Kode Cadangan dapat digunakan untuk menonaktifkan 2FA di cloud jika akses ke aplikasi autentikator hilang (misalnya kehilangan ponsel atau penghapusan aplikasi autentikator secara tidak sengaja).
+- Disarankan untuk mengatur PIN tambahan di bawah <b>'Pengaturan'</b>, jika 2FA aktif tetapi tidak ada koneksi internet.
+- PIN lokal ini melindungi data lokal, karena jika tidak, data tersebut akan tidak terlindungi meskipun 2FA aktif.
+
+5. Opsi GDPR:
+- Area ini memungkinkan berbagai proses penghapusan sesuai dengan peraturan perlindungan data (GDPR).
+- Untuk **Penghapusan Cookie**, setiap cookie yang disimpan dapat dihapus secara individual atau semua sekaligus.
+- Tersedia opsi untuk penghapusan **Data Cloud**, **Data Lokal**, **Akun Lokal**, atau penghapusan lengkap **Akun Cloud dan Lokal**.
+
+5.1 Catatan Penting tentang Penghapusan Data:
+- Penghapusan data, baik lokal maupun di Cloud, bersifat <b>tidak dapat dibatalkan</b>.
+- Pemilik aplikasi tidak membuat **backup** data cloud pengguna.
+- Sangat disarankan untuk sesekali menggunakan **fungsi Ekspor** aplikasi untuk mencadangkan data cloud sendiri.
+- Penyedia hosting Firestorm.ch membuat backup data cloud sesuai persyaratan hukum Swiss.
+- <b>Perhatian:</b> Pemulihan data Cloud dari backup penyedia ini tidak mungkin.
+- Ini karena metode hash (Akun/Kata Sandi) dan ketidakandalan ID Debug, identitas pengguna tidak dapat diverifikasi dengan aman.
+
+Catatan
+Deskripsi rinci aplikasi dapat ditemukan di manual pengguna yang tertaut kami
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Body = $@"
+1. Conta (Gerenciamento de conta):
+- O formulário Conta está dividido em quatro áreas principais: Ações, Informações do usuário (Perfil), Autenticação de dois fatores (2FA) e Opções LGPD/GDPR.
+_content/Shared/img/video_Account.gif
+
+2. Ações:
+- Nesta área é possível fazer **Logout** (sair) do aplicativo.
+- Aqui também pode ser feita a **Troca de senha** da conta do usuário.
+
+3. Informações do usuário (Perfil):
+- Aqui você pode tirar a **Foto do avatar** com a câmera ou escolher de uma pasta.
+- Aqui é possível criar um **Nome de apelido (Alias)** único, obrigatório para a funcionalidade de compartilhamento de dados.
+
+4. Autenticação de dois fatores (2FA):
+- Esta seção serve para realizar a **configuração da autenticação de dois fatores** da conta.
+
+4.1 Nota importante sobre 2FA:
+- A ativação do 2FA traz risco de perda de dados na nuvem se as instruções não forem seguidas corretamente.
+- A medida de segurança mais importante é <b>guardar o Código de backup do 2FA</b> em local seguro.
+- O Código de backup pode ser usado para desativar o 2FA na nuvem caso você perca acesso ao aplicativo autenticador (ex.: perda do celular ou desinstalação acidental do app).
+- Recomenda-se definir também um PIN em <b>'Configurações'</b> caso o 2FA esteja ativo mas não haja conexão com a internet.
+- Esse PIN local protege os dados locais, pois sem ele ficariam desprotegidos mesmo com 2FA ativo.
+
+5. Opções LGPD/GDPR:
+- Esta área permite vários processos de exclusão conforme a legislação de proteção de dados (LGPD/GDPR).
+- Para **Excluir cookies**, cada cookie salvo pode ser apagado individualmente ou todos de uma vez.
+- Há opções para excluir **Dados na nuvem**, **Dados locais**, a **Conta local** ou a exclusão completa das **Contas na nuvem e locais**.
+
+5.1 Nota importante sobre exclusão de dados:
+- A exclusão de dados, tanto locais quanto na nuvem, é <b>irreversível</b>.
+- O dono do app **não faz backup** dos dados na nuvem do usuário.
+- É altamente recomendado usar de vez em quando a **função Exportar** do app para fazer backup dos próprios dados na nuvem.
+- O provedor de hospedagem Firestorm.ch faz backups dos dados na nuvem conforme exigências legais suíças.
+- <b>Atenção:</b> Não é possível restaurar dados na nuvem a partir desses backups do provedor.
+- Isso acontece porque, pelo método de hash (Conta/Senha) e pela falta de confiabilidade do ID de depuração, não é possível verificar a identidade do usuário com segurança.
+
+Nota
+Uma descrição detalhada do aplicativo está disponível em nosso manual do usuário vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Body = $@"
+1. Nalog (Upravljanje nalogom):
+- Formular Naloga je podeljen na četiri glavna područja: Akcije, Informacije o korisniku (Profil), Dvofaktorska autentifikacija (2FA) i GDPR opcije.
+_content/Shared/img/video_Account.gif
+
+2. Akcije:
+- U ovom području je moguće izvršiti **Odjavu** (Logout) iz aplikacije.
+- Ovde se takođe može izvršiti **Promena lozinke** za korisnički nalog.
+
+3. Informacije o korisniku (Profil):
+- Ovde se može snimiti **Slika avatara** korisnika putem kamere ili izabrati iz direktorijuma.
+- Ovde je moguće kreirati jedinstveni **Alias ime**, koji je obavezan za funkcionalnost deljenja podataka.
+
+4. Dvofaktorska autentifikacija (2FA):
+- Ovaj odeljak se koristi za izvršenje **podešavanja dvofaktorske autentifikacije** za nalog.
+
+4.1 Važna napomena o 2FA:
+- Aktiviranje 2FA nosi rizik gubitka cloud podataka ako se uputstva ne prate pravilno.
+- Najvažnija mera bezbednosti je <b>bezbedno čuvanje 2FA Backup koda</b>.
+- Backup kod se može koristiti za deaktivaciju 2FA na cloudu ako se izgubi pristup aplikaciji za autentifikaciju (npr. gubitak telefona ili slučajno brisanje aplikacije za autentifikaciju).
+- Preporučuje se dodatno postavljanje PIN-a pod <b>'Podešavanja'</b>, u slučaju da je 2FA aktivna ali nema internet konekcije.
+- Ovaj lokalni PIN štiti lokalne podatke, jer bi inače bili nezaštićeni uprkos aktivnoj 2FA.
+
+5. GDPR opcije:
+- Ovo područje omogućava različite procese brisanja u skladu sa propisima o zaštiti podataka (GDPR).
+- Za **Brisanje kolačića**, svaki pojedinačno sačuvani kolačić može se obrisati ili svi zajedno.
+- Dostupne su opcije za brisanje **Cloud podataka**, **Lokalnih podataka**, **Lokalnog naloga** ili potpuno brisanje **Cloud i Lokalnih naloga**.
+
+5.1 Važna napomena o brisanju podataka:
+- Brisanje podataka, kako lokalnih tako i u cloudu, je <b>nepovratno</b>.
+- Vlasnik aplikacije ne pravi **nikakav backup** korisničkih cloud podataka.
+- Toplo se preporučuje povremeno korišćenje **funkcije izvoza** aplikacije za backup sopstvenih cloud podataka.
+- Hosting provajder Firestorm.ch pravi backup-e cloud podataka u skladu sa švajcarskim zakonskim zahtevima.
+- <b>Pažnja:</b> Vraćanje cloud podataka iz ovih backup-a provajdera nije moguće.
+- To je zato što zbog metode heširanja (Nalog/Lozinka) i nepouzdanosti Debug ID-a, identitet korisnika ne može biti sigurno potvrđen.
+
+Napomena
+Detaljan opis aplikacije nalazi se u našem povezanom korisničkom priručniku
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Body = $@"
+1. Налог (Управљање налогом):
+- Формулар Налога је подељен на четири главна подручја: Акције, Информације о кориснику (Профил), Двофакторска аутентификација (2FA) и GDPR опције.
+_content/Shared/img/video_Account.gif
+
+2. Акције:
+- У овом подручју је могуће извршити **Одјаву** (Logout) из апликације.
+- Овде се такође може извршити **Промена лозинке** за кориснички налог.
+
+3. Информације о кориснику (Профил):
+- Овде се може снимити **Слика аватара** корисника путем камере или изабрати из директоријума.
+- Овде је могуће креирати јединствено **Алијас име**, које је обавезно за функционалност дељења података.
+
+4. Двофакторска аутентификација (2FA):
+- Овај одељак се користи за извршење **подешавања двофакторске аутентификације** за налог.
+
+4.1 Важна напоменa о 2FA:
+- Активирање 2FA носи ризик губитка cloud података ако се упутства не прате правилно.
+- Најважнија мера безбедности је <b>безбедно чување 2FA Backup кода</b>.
+- Backup код се може користити за деактивацију 2FA на cloudu ако се изгуби приступ апликацији за аутентификацију (нпр. губитак телефона или случајно брисање апликације за аутентификацију).
+- Препоручује се додатно постављање PIN-а под <b>'Подешавања'</b>, у случају да је 2FA активна али нема интернет конекције.
+- Овај локални PIN штити локалне податке, јер би иначе били незаштићени упркос активној 2FA.
+
+5. GDPR опције:
+- Ово подручје омогућава различите процесе брисања у складу са прописима о заштити података (GDPR).
+- За **Брисање колачића**, сваки појединачно сачувани колачић може се обрисати или сви заједно.
+- Доступне су опције за брисање **Cloud података**, **Локалних података**, **Локалног налога** или потпуно брисање **Cloud и Локалних налога**.
+
+5.1 Важна напоменa о брисању података:
+- Брисање података, како локалних тако и у cloudu, је <b>неповратно</b>.
+- Власник апликације не прави **никакав backup** корисничких cloud података.
+- Топло се препоручује повремено коришћење **функције извоза** апликације за backup сопствених cloud података.
+- Hosting провајдер Firestorm.ch прави backup-е cloud података у складу са швајцарским законским захтевима.
+- <b>Пажња:</b> Враћање cloud података из ових backup-а провајдера није могуће.
+- То је зато што због методе хеширања (Налог/Лозинка) и непоузданости Debug ID-а, идентитет корисника не може бити сигурно потврђен.
+
+Напомена
+Детаљан опис апликације налази се у нашем повезаном корисничком приручнику
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+        }
+    }
+
+}

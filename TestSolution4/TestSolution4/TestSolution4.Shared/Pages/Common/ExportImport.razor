@@ -1,0 +1,1187 @@
+﻿@using System.Text
+@using Microsoft.JSInterop
+@using p11.UI
+
+
+<!-- EXPORT / IMPORT TOGGLE (Radio Button Group using btn-check) -->
+<P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+    <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+        <legend class="float-none w-auto px-2">@_appState!.T("Action")</legend>
+
+        <P11ButtonRadio TValue="string"
+                        @bind-Value="SelectedAction"
+                        ButtonVariant="@ButtonVariant.Primary"
+                        CssClassGroup="w-100"
+                        ButtonSize="@Size.Medium">
+            <div class="d-flex w-100 gap-3">
+                <P11ButtonRadioOption TValue="string" Value="@("export")" Text="@_appState!.T("Export")" IconClass="bi bi-upload me-2" CssClass="flex-fill" />
+                <P11ButtonRadioOption TValue="string" Value="@("import")" Text="@_appState!.T("Import")" IconClass="bi bi-download me-2" CssClass="flex-fill" />
+            </div>
+        </P11ButtonRadio>
+
+    </fieldset>
+</P11HoverEffect>
+
+@switch (SelectedAction)
+{
+    case "export":
+        <!-- 1. EXPORT SECTION (Visible by default) -->
+        <div id="exportSection" class="" aria-live="polite">
+
+            <!-- Export Format Selection (CSV, JSON, XML) -->
+            <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+                <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+                    <legend class="float-none w-auto px-2">@_appState!.T("Export format")</legend>
+
+                    <P11ButtonRadio TValue="string"
+                                    @bind-Value="SelectedFormat"
+                                    ButtonVariant="@ButtonVariant.Primary"
+                                    CssClassGroup="w-100"
+                                    ButtonSize="@Size.Medium">
+                        <div class="d-flex w-100 gap-3">
+                            <P11ButtonRadioOption TValue="string" Value="@("csv")" Text="@_appState!.T("CSV")" IconClass="bi bi-filetype-csv me-2" CssClass="flex-fill" />
+                            <P11ButtonRadioOption TValue="string" Value="@("json")" Text="@_appState!.T("JSON")" IconClass="bi bi-filetype-json me-2" CssClass="flex-fill" />
+                            <P11ButtonRadioOption TValue="string" Value="@("xml")" Text="@_appState!.T("XML")" IconClass="bi bi-filetype-xml me-2" CssClass="flex-fill" />
+                        </div>
+                    </P11ButtonRadio>
+
+                </fieldset>
+            </P11HoverEffect>
+
+            <!-- CSV DELIMITER & TABLE SELECTION -->
+            <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+                <fieldset class="p-3 border rounded-3 mb-4 bg-light">
+                    <legend class="float-none w-auto px-2">@_appState!.T("Export details")</legend>
+
+                    @if (SelectedFormat.ToLower().Contains("csv"))
+                    {
+                        <P11Label class="form-label fw-semibold">@_appState!.T("CSV delimiter")</P11Label>
+                        <P11Radio TValue="string"
+                                  @bind-Value="SelectedSeparator"
+                                  Name="CSVdelimiterRadio"
+                                  CssClass="mb-3">
+                            <div class="d-flex flex-wrap gap-3">
+                                <P11RadioOption TValue="string" Value="@(";")" Text="@(_appState!.T("Semicolon") + "(;)")" />
+                                <P11RadioOption TValue="string" Value="@(",")" Text="@(_appState!.T("Comma") + "(,)")" />
+                                <P11RadioOption TValue="string" Value="@("\t")" Text="@(_appState!.T("Tabulator") + "(\t)")" />
+                            </div>
+                        </P11Radio>
+                    }
+
+                    <!-- Export Table Selection -->
+                    <div class="mb-3">
+                        @if (AvailableTables != null)
+                        {
+                            <label for="exportTable" class="form-label fw-semibold">@_appState!.T("Table(s) for export")</label>
+                            <P11Select TItem="TableModel" TValue="string"
+                                       @bind-Value="SelectedTable"
+                                       Items="AvailableTables"
+                                       ItemValueExpression="p => p.Id"
+                                       ItemTextExpression="p => p.Name"
+                                       PlaceholderText="@_appState!.T("-- Please select --")"
+                                       AriaLabel="@_appState!.T("Select table dropdown")"
+                                       CssClass="form-select-lg" />
+                        }
+                    </div>
+                </fieldset>
+            </P11HoverEffect>
+
+            <!-- Export Button -->
+            @* <div class="d-grid">
+                <P11Button IsDisabled="@(string.IsNullOrEmpty(SelectedTable))" OnClick="OnClickExport" Text="@_appState!.T("Export")" ButtonVariant="ButtonVariant.Success" />
+            </div> *@
+        </div>
+        break;
+
+    default:
+        <!-- 2. IMPORT SECTION (Hidden by default) -->
+        <div id="importSection" aria-live="polite">
+
+            <!-- Instructions and Info Button -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label for="importDataArea" class="form-label fw-semibold mb-0">
+                    @_appState!.T("Insert import data")
+                </label>
+            </div>
+
+            <!-- Import Description -->
+            <div class="alert alert-warning py-2 small mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                @_appState!.T("Please ensure that the data structure is correct (headers, tasks, separation, etc.). Further information can be found in the documentation.")
+            </div>
+
+            <!-- Textarea for Data Input -->
+            @* <textarea class="form-control" id="importDataArea" rows="12" placeholder="Fügen Sie hier Ihre exportierten Daten ein..."></textarea> *@
+            <P11Textarea TValue="string"
+                         Placeholder="@_appState!.T("Todo: Task1, Task2, Task3")"
+                         ShowDevelopmentErrors="false"
+                         Rows="6"
+                         @bind-Value="ImportData" />
+
+            <!-- Import Button -->
+            @* <div class="d-grid mt-4">
+                <P11Button IsDisabled="@(string.IsNullOrEmpty(ImportData))" OnClick="OnClickImport" Text="@_appState!.T("Import")" ButtonVariant="ButtonVariant.Success" />
+            </div> *@
+        </div>
+        break;
+}
+
+
+@if (_appState != null && !_appState!.IsPhone)
+{
+    <div class="d-flex w-100 gap-4 mt-4">
+        @switch (SelectedAction)
+        {
+            case "export":
+                <P11Button IsDisabled="@(string.IsNullOrEmpty(SelectedTable))" OnClick="OnClickExport" Text="@_appState!.T("Export")" ButtonVariant="ButtonVariant.Success" CssClass="flex-fill" />
+                break;
+
+            default:
+                <P11Button IsDisabled="@(string.IsNullOrEmpty(ImportData))" OnClick="OnClickImport" Text="@_appState!.T("Import")" ButtonVariant="ButtonVariant.Success" CssClass="flex-fill" />
+                break;
+        }
+        <P11Button Text="@_appState!.T("Close")" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" CssClass="flex-fill" />
+    </div>
+}
+
+
+@code {
+
+    [Parameter] public EventCallback<string> OnImport { get; set; }
+    [Parameter] public string CssClassModalContent { get; set; } = string.Empty;
+
+    [Parameter] public bool HideExportPanel { get; set; } = false;
+    [Parameter] public bool HideImportPanel { get; set; } = false;
+
+    [Parameter] public List<List<string>> DataContainer { get; set; } = new();
+
+    [Parameter] public EventCallback OnClickCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<Func<Task>> OnProvideSaveAction { get; set; }
+
+
+    [Inject]
+    private IJSRuntime? _jsRuntime { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    public class TableModel
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+    }
+
+    private bool isOpenFloatingPanelHelp = false;
+
+    private string SelectedAction = "export";
+    private string SelectedSeparator = ";";
+    private string SelectedFormat = "csv";
+    private string? SelectedTable;
+
+    private string ImportData = string.Empty;
+
+    private Dictionary<string, List<List<string>>> ParsedTables { get; set; } =
+        new Dictionary<string, List<List<string>>>();
+
+    public List<TableModel>? AvailableTables { get; set; }
+
+    private const string TableIdentifierPrefix = "[TABLE-NAME]:";
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Wir "registrieren" die HandleSave-Methode beim Parent (Modal)
+        if (OnProvideSaveAction.HasDelegate)
+        {
+            await OnProvideSaveAction.InvokeAsync(OnClickExportImport);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(10);
+
+        if (HideExportPanel)
+            SelectedAction = "import";
+
+        ParsedTables.Clear();
+
+        if(AvailableTables == null)
+            AvailableTables = new List<TableModel>();
+        AvailableTables.Clear(); 
+
+        string currentTableName = string.Empty;
+
+        if (DataContainer.Any())
+        {
+            foreach (var row in DataContainer)
+            {
+                if (row.Count == 0) continue;
+
+                string firstCell = row[0];
+
+                if (firstCell.StartsWith(TableIdentifierPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    currentTableName = firstCell.Substring(TableIdentifierPrefix.Length).Trim();
+                    AvailableTables.Add(new TableModel
+                    {
+                        Id = currentTableName,
+                        Name = currentTableName
+                    });
+                    ParsedTables[currentTableName] = new List<List<string>>();
+                }
+                else if (!string.IsNullOrEmpty(currentTableName))
+                {
+                    ParsedTables[currentTableName].Add(row);
+                }
+            }
+        }
+    }
+
+    private async Task OnClickExportImport()
+    {
+        switch (SelectedAction)
+        {
+            case "export":
+                await OnClickExport();
+                break;
+
+            default:
+                await OnClickImport();
+                break;
+        }
+    }
+
+    private async Task OnClickExport()
+    {
+        try
+        {
+            List<List<string>> dataToExport = GetExportData();
+
+            if (dataToExport.Count == 0)
+            {
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Info"),
+                    message: _appState.T(_appState.T("There is no data!"))
+                );
+                return;
+            }
+
+            // Plattform-spezifische Pfad-Logik
+            string pathNativ = await _platform!.DirectoryPicker() ?? "";
+            bool isNative = _appState!.IsNativeApp ?? false;
+            string filename = $"{SelectedTable}_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+            // Pfad-Kombination nur für WPF (Windows Client)
+            filename = (isNative && _platform.GetCurrPlatform() == BlazorCore.Services.Platform.PLATFORMS.WINDOWS_CLIENT 
+                        ? Path.Combine(pathNativ, filename) : filename);
+
+            using Stream stream = new MemoryStream();
+            string fileExtension = string.Empty;
+
+            if (SelectedFormat == "csv")
+            {
+                await GenerateCsvStream(dataToExport, SelectedSeparator, stream);
+                fileExtension = "csv";
+            }
+            else if (SelectedFormat == "json")
+            {
+                await GenerateJsonStream(dataToExport, stream);
+                fileExtension = "json";
+            }
+            else if (SelectedFormat == "xml")
+            {
+                await GenerateXmlStream(dataToExport, stream);
+                fileExtension = "xml";
+            }
+
+            filename += "." + fileExtension;
+
+            if (stream.Length > 0)
+            {
+                stream.Position = 0;
+                try
+                {
+                    // Zentraler Aufruf an den Plattform-Service
+                    var result = await _platform!.SaveFileNativeAsync(filename, stream, pathNativ);
+
+                    if (!result.out_value_bool)
+                    {
+                        await _messageBoxService.ShowOkAsync(
+                            title: _appState!.T("Error"),
+                            message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {result.out_err}"
+                        );
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Error"),
+                        message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+                    );
+                    return; 
+                }
+            }
+
+            await _toastService!.ShowSuccessAsync(_appState.T("The data has been successfully exported."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 3000);
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnClickImport()
+    {
+        try
+        {
+            if(string.IsNullOrEmpty(ImportData))
+            {
+                await _messageBoxService.ShowOkAsync(
+                   title: _appState!.T("Info"),
+                   message: _appState.T(_appState.T("There is no data!"))
+                );
+                return;
+            }
+            
+            if (OnImport.HasDelegate)
+            {
+                await OnImport.InvokeAsync(ImportData);
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    public List<List<string>> GetExportData()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(SelectedTable)) return new List<List<string>>();
+
+            if (ParsedTables.ContainsKey(SelectedTable))
+            {
+                return ParsedTables[SelectedTable];
+            }
+            return new List<List<string>>();
+        }
+        catch (Exception ex)
+        {
+            _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+            return new List<List<string>>();
+        }
+    }
+
+    // private async Task GenerateCsvStream(List<List<string>> data, string separator, Stream stream)
+    // {
+    //     try
+    //     {
+    //         using var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+    //         foreach (var row in data)
+    //         {
+    //             var escapedRow = row.Select(cell => EscapeCsvField(cell, separator));
+    //             await writer.WriteLineAsync(string.Join(separator, escapedRow));
+    //         }
+    //         await writer.FlushAsync();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+    private async Task GenerateCsvStream(List<List<string>> data, string separator, Stream stream)
+    {
+        try
+        {
+            // Änderung: UTF8Encoding(false) verhindert den Byte Order Mark (BOM),
+            // was den Base64-Matsch ("77u/...") in Capacitor behebt.
+            var encodingWithoutBom = new System.Text.UTF8Encoding(false);
+            using var writer = new StreamWriter(stream, encodingWithoutBom, leaveOpen: true);
+
+            foreach (var row in data)
+            {
+                var escapedRow = row.Select(cell => EscapeCsvField(cell, separator));
+                await writer.WriteLineAsync(string.Join(separator, escapedRow));
+            }
+            await writer.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    // private async Task GenerateJsonStream(List<List<string>> data, Stream stream)
+    // {
+    //     try
+    //     {
+    //         if (data == null || data.Count == 0) return;
+
+    //         var headers = data.First();
+    //         var rows = data.Skip(1);
+    //         var jsonList = new List<Dictionary<string, string>>();
+
+    //         foreach (var row in rows)
+    //         {
+    //             var obj = new Dictionary<string, string>();
+    //             for (int i = 0; i < headers.Count; i++)
+    //             {
+    //                 string key = headers[i];
+    //                 string value = i < row.Count ? row[i] : string.Empty;
+    //                 obj[key] = value;
+    //             }
+    //             jsonList.Add(obj);
+    //         }
+
+    //         var options = new System.Text.Json.JsonSerializerOptions(JsonContext.Default.ListDictionaryStringString.Options)
+    //         {
+    //             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    //         };
+    //         string jsonString = System.Text.Json.JsonSerializer.Serialize(jsonList, options);
+
+    //         using var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+    //         await writer.WriteAsync(jsonString);
+    //         await writer.FlushAsync();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+    private async Task GenerateJsonStream(List<List<string>> data, Stream stream)
+    {
+        try
+        {
+            if (data == null || data.Count == 0) return;
+
+            var headers = data.First();
+            var rows = data.Skip(1);
+            var jsonList = new List<Dictionary<string, string>>();
+
+            foreach (var row in rows)
+            {
+                var obj = new Dictionary<string, string>();
+                for (int i = 0; i < headers.Count; i++)
+                {
+                    string key = headers[i];
+                    string value = i < row.Count ? row[i] : string.Empty;
+                    obj[key] = value;
+                }
+                jsonList.Add(obj);
+            }
+
+            var options = new System.Text.Json.JsonSerializerOptions(BlazorCore.JsonContext.Default.ListDictionaryStringString.Options)
+            {
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            string jsonString = System.Text.Json.JsonSerializer.Serialize(jsonList, options);
+
+            // Änderung: UTF8Encoding(false) stellt sicher, dass kein BOM am Dateianfang steht.
+            var encodingWithoutBom = new System.Text.UTF8Encoding(false);
+            using var writer = new StreamWriter(stream, encodingWithoutBom, leaveOpen: true);
+            await writer.WriteAsync(jsonString);
+            await writer.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    // private async Task GenerateXmlStream(List<List<string>> data, Stream stream)
+    // {
+    //     try
+    //     {
+    //         if (data == null || data.Count == 0) return;
+
+    //         var headers = data.First();
+    //         var rows = data.Skip(1);
+
+    //         using var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+    //         using var xml = System.Xml.XmlWriter.Create(writer, new System.Xml.XmlWriterSettings
+    //         {
+    //             Indent = true,
+    //             Encoding = Encoding.UTF8,
+    //             Async = true
+    //         });
+
+    //         xml.WriteStartDocument();
+    //         xml.WriteStartElement(SelectedTable); 
+
+    //         foreach (var row in rows)
+    //         {
+    //             xml.WriteStartElement("Row");
+    //             for (int i = 0; i < headers.Count; i++)
+    //             {
+    //                 string columnName = System.Xml.XmlConvert.EncodeName(headers[i]);
+    //                 string value = i < row.Count ? row[i] : string.Empty;
+    //                 xml.WriteElementString(columnName, value);
+    //             }
+    //             xml.WriteEndElement(); 
+    //         }
+
+    //         xml.WriteEndElement(); 
+    //         xml.WriteEndDocument();
+    //         await xml.FlushAsync();
+    //         await writer.FlushAsync();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+    private async Task GenerateXmlStream(List<List<string>> data, Stream stream)
+    {
+        try
+        {
+            if (data == null || data.Count == 0) return;
+
+            var headers = data.First();
+            var rows = data.Skip(1);
+
+            // Änderung: UTF8Encoding(false) stellt sicher, dass kein BOM am Dateianfang steht.
+            var encodingWithoutBom = new System.Text.UTF8Encoding(false);
+            using var writer = new StreamWriter(stream, encodingWithoutBom, leaveOpen: true);
+            using var xml = System.Xml.XmlWriter.Create(writer, new System.Xml.XmlWriterSettings
+            {
+                Indent = true,
+                Encoding = encodingWithoutBom, // Muss mit dem StreamWriter übereinstimmen
+                Async = true
+            });
+
+            xml.WriteStartDocument();
+            xml.WriteStartElement(SelectedTable); 
+
+            foreach (var row in rows)
+            {
+                xml.WriteStartElement("Row");
+                for (int i = 0; i < headers.Count; i++)
+                {
+                    string columnName = System.Xml.XmlConvert.EncodeName(headers[i]);
+                    string value = i < row.Count ? row[i] : string.Empty;
+                    xml.WriteElementString(columnName, value);
+                }
+                xml.WriteEndElement(); 
+            }
+
+            xml.WriteEndElement(); 
+            xml.WriteEndDocument();
+            await xml.FlushAsync();
+            await writer.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private string EscapeCsvField(string cell, string separator)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(cell) && (cell.Contains(separator) || cell.Contains('\n') || cell.Contains('"')))
+            {
+                return "\"" + cell.Replace("\"", "\"\"") + "\"";
+            }
+            return cell ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+            return string.Empty;
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        if (OnClickCancel.HasDelegate)
+        {
+            await OnClickCancel.InvokeAsync();
+        }
+    }
+
+    // [Parameter] public EventCallback<string> OnImport { get; set; }
+    // [Parameter] public string CssClassModalContent { get; set; } = string.Empty;
+
+    // [Parameter] public bool HideExportPanel { get; set; } = false;
+    // [Parameter] public bool HideImportPanel { get; set; } = false;
+
+    // [Parameter] public List<List<string>> DataContainer { get; set; } = new();
+
+    // [Parameter] public EventCallback OnClickCancel { get; set; }
+
+
+    // [Inject]
+    // private IJSRuntime? _jsRuntime { get; set; }
+
+    // [Inject]
+    // private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    // [Inject]
+    // private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    // [Inject]
+    // private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    // [Inject]
+    // private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    // public class TableModel
+    // {
+    //     public string? Id { get; set; }
+    //     public string? Name { get; set; }
+    // }
+
+    // private bool isOpenFloatingPanelHelp = false;
+
+    // private string SelectedAction = "export";
+    // private string SelectedSeparator = ";";
+    // private string SelectedFormat = "csv";
+    // private string? SelectedTable;
+
+    // private string ImportData = string.Empty;
+
+    // // The result structure: Key = Table Name, Value = List of rows (Header + Data)
+    // private Dictionary<string, List<List<string>>> ParsedTables { get; set; } =
+    //     new Dictionary<string, List<List<string>>>();
+
+    // // Stores the models of the tables found in the DataContainer,
+    // // used for display in the export selection list (Name) and internal processing (Id).
+    // public List<TableModel>? AvailableTables { get; set; }
+
+    // // Define the magic string for identification
+    // private const string TableIdentifierPrefix = "[TABLE-NAME]:";
+
+
+    // protected override async Task OnParametersSetAsync()
+    // {
+    //     await Task.Delay(10);
+
+    //     // Prüfen, ob Export deaktiviert
+    //     if (HideExportPanel)
+    //         SelectedAction = "import";
+
+    //     // 1. Clear previous results
+    //     ParsedTables.Clear();
+
+    //     if(AvailableTables == null)
+    //         AvailableTables = new List<TableModel>();
+    //     AvailableTables.Clear(); // Clear the model list for display
+
+    //     string currentTableName = string.Empty;
+
+    //     if (DataContainer.Any())
+    //     {
+    //         foreach (var row in DataContainer)
+    //         {
+    //             // Ignore empty rows (used as visual separators or if a row was empty in the source)
+    //             if (row.Count == 0)
+    //             {
+    //                 continue;
+    //             }
+
+    //             string firstCell = row[0];
+
+    //             // 2. Check for the Table Name Marker
+    //             if (firstCell.StartsWith(TableIdentifierPrefix, StringComparison.OrdinalIgnoreCase))
+    //             {
+    //                 // Found a new table definition. Extract the name.
+    //                 currentTableName = firstCell.Substring(TableIdentifierPrefix.Length).Trim();
+
+    //                 // --- MODIFIED STEP: Add the name to the list of TableModels ---
+    //                 AvailableTables.Add(new TableModel
+    //                 {
+    //                     Id = currentTableName, // ID for internal binding
+    //                     Name = currentTableName // Name for display (can be translated later if needed)
+    //                 });
+
+    //                 // Initialize the new table block in the dictionary
+    //                 ParsedTables[currentTableName] = new List<List<string>>();
+    //             }
+    //             // 3. Add data/header rows to the currently active table
+    //             else if (!string.IsNullOrEmpty(currentTableName))
+    //             {
+    //                 // Add the row (which will be the header row first, then the data rows)
+    //                 ParsedTables[currentTableName].Add(row);
+    //             }
+    //             // 4. Handle data encountered before the first table marker (optional error handling)
+    //             else
+    //             {
+    //                 // Log warning: Data found before table marker. Ignoring row.
+    //                 //System.Console.WriteLine($"Warning: Ignoring row before first table marker: {firstCell}");
+    //             }
+    //         }
+    //     }
+    // }
+
+    // // /// <summary>
+    // // /// Handles the export action based on selected format and table.
+    // // /// </summary>
+    // // private async Task OnClickExport()
+    // // {
+    // //     try
+    // //     {
+    // //         List<List<string>> dataToExport = GetExportData();
+
+    // //         if (dataToExport.Count == 0)
+    // //         {
+    // //             await _messageBoxService.ShowOkAsync(
+    // //                 title: _appState!.T("Info"),
+    // //                 message: _appState.T(_appState.T("There is no data!"))
+    // //             );
+    // //             return;
+    // //         }
+
+    // //         string pathMaui = await _platform!.DirectoryPicker() ?? "";
+    // //         bool isNative = _appState!.IsNativeApp ?? false;
+    // //         string filename = $"{SelectedTable}_{DateTime.Now:yyyyMMdd_HHmmss}";
+    // //         filename = (isNative ? Path.Combine(pathMaui, filename) : filename);
+
+    // //         // Use IDisposable pattern for Stream
+    // //         using Stream stream = new MemoryStream();
+    // //         string mimeType = string.Empty;
+    // //         string fileExtension = string.Empty;
+
+    // //         // --- 1. Generate content into the Stream based on selected format ---
+    // //         if (SelectedFormat == "csv")
+    // //         {
+    // //             await GenerateCsvStream(dataToExport, SelectedSeparator, stream);
+    // //             mimeType = "text/csv";
+    // //             fileExtension = "csv";
+    // //         }
+    // //         else if (SelectedFormat == "json")
+    // //         {
+    // //             await GenerateJsonStream(dataToExport, stream);
+    // //             mimeType = "application/json";
+    // //             fileExtension = "json";
+    // //         }
+    // //         else if (SelectedFormat == "xml")
+    // //         {
+    // //             await GenerateXmlStream(dataToExport, stream);
+    // //             mimeType = "application/xml";
+    // //             fileExtension = "xml";
+    // //         }
+
+    // //         filename += "." + fileExtension;
+
+    // //         // --- 2. Trigger the file download via JavaScript using StreamReference ---
+    // //         if (stream.Length > 0)
+    // //         {
+    // //             // WICHTIG: Stream auf den Anfang zurücksetzen
+    // //             stream.Position = 0;
+
+    // //             if (_appState!.IsNativeApp ?? false) // MAUI
+    // //             {
+    // //                 // Der vollständige Pfad inkl. Verzeichnis und Dateiname
+    // //                 string fullPath = Path.Combine(pathMaui, filename);
+
+    // //                 try
+    // //                 {
+    // //                     // FileStream erstellen und den MemoryStream Inhalt hineinkopieren
+    // //                     // useAsync: true sorgt für optimale Performance
+    // //                     using (FileStream fileStream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
+    // //                     {
+    // //                         await stream.CopyToAsync(fileStream);
+    // //                     }
+    // //                 }
+    // //                 catch (Exception ex)
+    // //                 {
+    // //                     // Fehler beim Schreiben behandeln (z.B. keine Berechtigung)
+    // //                     //await _toastService!.ShowErrorAsync(_appState.T($"Error saving file: {ex.Message}"), _appState.T("Error"), position: ToastPosition.BottomEnd);
+    // //                     await _messageBoxService.ShowOkAsync(
+    // //                         title: _appState!.T("Error"),
+    // //                         message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    // //                     );
+    // //                 }
+    // //             }
+    // //             else // Web
+    // //             {
+    // //                 // DotNetStreamReference erstellen. Die Referenz kümmert sich um das Disposal des Streams
+    // //                 // NACHDEM die JS-Funktion ihn ausgelesen hat.
+    // //                 using var streamRef = new DotNetStreamReference(stream);
+
+    // //                 // JavaScript-Funktion aufrufen
+    // //                 await _jsRuntime!.InvokeVoidAsync("pE_Web.downloadFileFromStream", filename, streamRef);
+    // //             }
+
+    // //         }
+
+    // //         await _toastService!.ShowSuccessAsync(_appState.T("The data has been successfully exported."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 3000);
+
+    // //     }
+    // //     catch (Exception ex)
+    // //     {
+    // //         await _messageBoxService.ShowOkAsync(
+    // //             title: _appState!.T("Error"),
+    // //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    // //         );
+    // //     }
+    // // }
+    // /// <summary>
+    // /// Handles the export action based on selected format and table.
+    // /// </summary>
+    // private async Task OnClickExport()
+    // {
+    //     try
+    //     {
+    //         List<List<string>> dataToExport = GetExportData();
+
+    //         if (dataToExport.Count == 0)
+    //         {
+    //             await _messageBoxService.ShowOkAsync(
+    //                 title: _appState!.T("Info"),
+    //                 message: _appState.T(_appState.T("There is no data!"))
+    //             );
+    //             return;
+    //         }
+
+    //         string pathNativ = await _platform!.DirectoryPicker() ?? "";
+    //         bool isNative = _appState!.IsNativeApp ?? false;
+    //         string filename = $"{SelectedTable}_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+    //         // Bei Native (WPF) Pfad kombinieren, bei Capacitor/Web nur Filename behalten
+    //         filename = (isNative && _platform.GetCurrPlatform() == Services.Platform.PLATFORMS.WINDOWS_CLIENT ? Path.Combine(pathNativ, filename) : filename);
+
+    //         using Stream stream = new MemoryStream();
+    //         string mimeType = string.Empty;
+    //         string fileExtension = string.Empty;
+
+    //         if (SelectedFormat == "csv")
+    //         {
+    //             await GenerateCsvStream(dataToExport, SelectedSeparator, stream);
+    //             mimeType = "text/csv";
+    //             fileExtension = "csv";
+    //         }
+    //         else if (SelectedFormat == "json")
+    //         {
+    //             await GenerateJsonStream(dataToExport, stream);
+    //             mimeType = "application/json";
+    //             fileExtension = "json";
+    //         }
+    //         else if (SelectedFormat == "xml")
+    //         {
+    //             await GenerateXmlStream(dataToExport, stream);
+    //             mimeType = "application/xml";
+    //             fileExtension = "xml";
+    //         }
+
+    //         filename += "." + fileExtension;
+
+    //         if (stream.Length > 0)
+    //         {
+    //             stream.Position = 0;
+
+    //             try
+    //             {
+    //                 // Das Interface regelt jetzt ALLES plattformübergreifend:
+    //                 // WPF schreibt FileStream, Capacitor nutzt das Plugin, WASM macht den Web-Download.
+    //                 var result = await _platform!.SaveFileNativeAsync(filename, stream, pathNativ);
+
+    //                 if (!result.out_value_bool)
+    //                 {
+    //                     await _messageBoxService.ShowOkAsync(
+    //                         title: _appState!.T("Error"),
+    //                         message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {result.out_err}"
+    //                     );
+    //                     return;
+    //                 }
+    //             }
+    //             catch (Exception ex)
+    //             {
+    //                 await _messageBoxService.ShowOkAsync(
+    //                     title: _appState!.T("Error"),
+    //                     message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //                 );
+    //                 return; // Export abbrechen bei Fehler
+    //             }
+    //         }
+
+    //         await _toastService!.ShowSuccessAsync(_appState.T("The data has been successfully exported."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 3000);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+
+    // /// <summary>
+    // /// Handles the import action based on inserted user data.
+    // /// </summary>
+    // private async Task OnClickImport()
+    // {
+    //     try
+    //     {
+    //         if(string.IsNullOrEmpty(ImportData))
+    //         {
+    //             await _messageBoxService.ShowOkAsync(
+    //                title: _appState!.T("Info"),
+    //                message: _appState.T(_appState.T("There is no data!"))
+    //             );
+    //             return;
+    //         }
+    //         else
+    //         {
+    //             if (OnImport.HasDelegate)
+    //             {
+    //                 await OnImport.InvokeAsync(ImportData);
+    //             }
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+
+    // public List<List<string>> GetExportData()
+    // {
+    //     try
+    //     {
+    //         // Sicherheitscheck: Ist überhaupt eine Tabelle ausgewählt?
+    //         if (string.IsNullOrEmpty(SelectedTable))
+    //         {
+    //             // Oder eine Fehlermeldung anzeigen
+    //             //System.Console.WriteLine("ERROR: No table selected for export.");
+    //             return new List<List<string>>();
+    //         }
+
+    //         // Sicherheitscheck: Sind die Daten für diese ID im Container vorhanden?
+    //         if (ParsedTables.ContainsKey(SelectedTable))
+    //         {
+    //             // 1. Zugriff auf die komplette Liste (Header + Daten)
+    //             List<List<string>> dataBlock = ParsedTables[SelectedTable];
+
+    //             // 2. Jetzt können Sie diesen dataBlock direkt für den CSV-Export verwenden.
+    //             return dataBlock;
+    //         }
+    //         else
+    //         {
+    //             //System.Console.WriteLine($"ERROR: Data block for table '{SelectedTable}' not found.");
+    //             return new List<List<string>>();
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //         return new List<List<string>>();
+    //     }
+    // }
+
+    // /// <summary>
+    // /// Converts the List of Lists into a CSV stream using UTF-8 encoding.
+    // /// </summary>
+    // private async Task GenerateCsvStream(List<List<string>> data, string separator, Stream stream)
+    // {
+    //     try
+    //     {
+    //         // StreamWriter verwenden, um direkt in den Stream zu schreiben.
+    //         // leaveOpen: true ist wichtig, damit der StreamWriter den Stream nicht schließt,
+    //         // da der Stream außerhalb des Writers disposed werden muss.
+    //         using var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+
+    //         foreach (var row in data)
+    //         {
+    //             // Escape content (important for cells containing the separator itself, e.g. "a;b")
+    //             var escapedRow = row.Select(cell => EscapeCsvField(cell, separator));
+
+    //             await writer.WriteLineAsync(string.Join(separator, escapedRow));
+    //         }
+    //         await writer.FlushAsync(); // Wichtig: Puffer leeren
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+
+    // private async Task GenerateJsonStream(List<List<string>> data, Stream stream)
+    // {
+    //     try
+    //     {
+    //         if (data == null || data.Count == 0)
+    //             return;
+
+    //         var headers = data.First();
+    //         var rows = data.Skip(1);
+
+    //         var jsonList = new List<Dictionary<string, string>>();
+
+    //         foreach (var row in rows)
+    //         {
+    //             var obj = new Dictionary<string, string>();
+    //             for (int i = 0; i < headers.Count; i++)
+    //             {
+    //                 string key = headers[i];
+    //                 string value = i < row.Count ? row[i] : string.Empty;
+    //                 obj[key] = value;
+    //             }
+    //             jsonList.Add(obj);
+    //         }
+
+    //         var options = new System.Text.Json.JsonSerializerOptions(JsonContext.Default.ListDictionaryStringString.Options)
+    //         {
+    //             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    //         };
+    //         string jsonString = System.Text.Json.JsonSerializer.Serialize(jsonList, options);
+
+    //         using var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+    //         await writer.WriteAsync(jsonString);
+    //         await writer.FlushAsync();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+
+    // private async Task GenerateXmlStream(List<List<string>> data, Stream stream)
+    // {
+    //     try
+    //     {
+    //         if (data == null || data.Count == 0)
+    //             return;
+
+    //         var headers = data.First();
+    //         var rows = data.Skip(1);
+
+    //         using var writer = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true);
+    //         using var xml = System.Xml.XmlWriter.Create(writer, new System.Xml.XmlWriterSettings
+    //         {
+    //             Indent = true,
+    //             Encoding = Encoding.UTF8,
+    //             Async = true
+    //         });
+
+    //         xml.WriteStartDocument();
+    //         xml.WriteStartElement(SelectedTable); // Root = Tabellenname
+
+    //         foreach (var row in rows)
+    //         {
+    //             xml.WriteStartElement("Row");
+
+    //             for (int i = 0; i < headers.Count; i++)
+    //             {
+    //                 string columnName = System.Xml.XmlConvert.EncodeName(headers[i]);
+    //                 string value = i < row.Count ? row[i] : string.Empty;
+
+    //                 xml.WriteElementString(columnName, value);
+    //             }
+
+    //             xml.WriteEndElement(); // </Row>
+    //         }
+
+    //         xml.WriteEndElement(); // </TableName>
+    //         xml.WriteEndDocument();
+    //         await xml.FlushAsync();
+    //         await writer.FlushAsync();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //     }
+    // }
+
+
+    // /// <summary>
+    // /// Escapes a single field according to CSV rules (enclosing in quotes and escaping internal quotes).
+    // /// </summary>
+    // private string EscapeCsvField(string cell, string separator)
+    // {
+    //     try
+    //     {
+    //         // Simple escaping: if the cell contains the separator, newline, or a quote, enclose it in quotes.
+    //         if (!string.IsNullOrEmpty(cell) && (cell.Contains(separator) || cell.Contains('\n') || cell.Contains('"')))
+    //         {
+    //             // Double quotes within quoted fields must be escaped by another double quote (" becomes "")
+    //             return "\"" + cell.Replace("\"", "\"\"") + "\"";
+    //         }
+    //         return cell ?? string.Empty;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _messageBoxService.ShowOkAsync(
+    //             title: _appState!.T("Error"),
+    //             message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+    //         );
+    //         return string.Empty;
+    //     }
+    // }
+
+    // private async Task HandleCancel()
+    // {
+
+    //     if (OnClickCancel.HasDelegate)
+    //     {
+    //         await OnClickCancel.InvokeAsync();
+    //     }
+    // }
+
+}
+

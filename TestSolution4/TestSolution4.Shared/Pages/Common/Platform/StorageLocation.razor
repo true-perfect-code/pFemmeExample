@@ -1,0 +1,58 @@
+﻿@using BlazorCore.Services.AppState
+@inject IAppStateBase AppState
+@implements IDisposable
+
+<span id="internet-status-wrapper"
+      title="@GetStorageStatus()"
+      class="d-inline-flex align-items-center">
+
+    @switch (AppState.StorageLocation)
+    {
+        case STORAGE_LOCATION.CLOUD_LOCAL:
+            <i class="bi-cloud text-secondary fs-6"></i>
+            <i class="bi bi-phone text-secondary fs-6"></i>
+            <span class="ms-2 badge text-bg-secondary d-none d-lg-inline">@_appState.T("Cloud/Local")</span>
+            break;
+
+        case STORAGE_LOCATION.CLOUD:
+            <i class="bi-cloud text-secondary fs-6"></i>
+            <span class="ms-2 badge text-bg-secondary d-none d-lg-inline">@_appState.T("Cloud")</span>
+            break;
+
+        case STORAGE_LOCATION.LOCAL:
+            <i class="bi bi-phone text-secondary fs-6"></i>
+            <span class="ms-2 badge text-bg-secondary d-none d-lg-inline">@_appState.T("Local")</span>
+            break;
+
+        default:
+            break;
+    }
+</span>
+
+@code {
+    [Inject] private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        if (_appState.IsNativeApp ?? false)
+        {
+            // Nur in MAUI: mit AppState synchronisieren
+            AppState.OnChange += StateHasChanged;
+        }
+    }
+
+    private string GetStorageStatus()
+        => AppState.StorageLocation switch
+        {
+            STORAGE_LOCATION.CLOUD_LOCAL => _appState.T("Storage location: CLOUD/LOCAL"),
+            STORAGE_LOCATION.CLOUD => _appState.T("Storage location: CLOUD"),
+            STORAGE_LOCATION.LOCAL => _appState.T("Storage location: LOCAL"),
+            _ => _appState.T("Storage location: Unknown")
+        };
+
+    public void Dispose()
+    {
+        if (_appState.IsNativeApp ?? false)
+            AppState.OnChange -= StateHasChanged;
+    }
+}

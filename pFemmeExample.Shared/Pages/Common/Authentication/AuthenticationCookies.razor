@@ -1,0 +1,218 @@
+﻿@using p11.UI
+
+<div class="container mt-2">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th scope="col">@_appState!.T("Cookies")</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (cookies != null)
+            {
+                @foreach (var cookie in cookies)
+                {
+                    <tr>
+                        <td class="text-break">@cookie.Key : <b>@cookie.Value</b></td>
+                        <td class="text-end">
+                            <P11Button AriaLabel="@($"{_appState.T("Delete cookie")} {cookie.Key}")"
+                                        ButtonVariant="ButtonVariant.Danger"
+                                        OnClick="async() => await OnClick_DeleteCookie(cookie.Key)"
+                                        IsDisabled="@(cookie.Value == "******")"
+                                        IconClass="bi bi-trash" />
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Logout component (hidden, triggered programmatically) -->
+<pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationLogout @ref="_logoutComponent"
+                                                                IsButtonHidden="true"
+                                                                UseNativeFeatures="@(_appState.IsNativeApp ?? false)" />                        
+
+@code {
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    //[Parameter] public EventCallback<bool> OnChangeVisibleCookies { get; set; }
+    [Parameter] public EventCallback OnLogout { get; set; }
+    [Parameter] public bool OauthTokenEnableDeleteButton { get; set; } = false;
+    [Parameter] public EventCallback<Func<Task>> OnProvideDeleteAction { get; set; }
+
+
+    //private Platform.LocalStorageModel _localStorageModel = new();
+    private System.Reflection.PropertyInfo[]? _properties;
+    private Dictionary<string, string>? cookies;
+
+    private Authentication.AuthenticationLogout? _logoutComponent;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (cookies == null)
+            cookies = new();
+
+        // Wir "registrieren" die HandleSave/Cancel-Methode beim Parent (Modal)
+        if (OnProvideDeleteAction.HasDelegate)
+        {
+            await OnProvideDeleteAction.InvokeAsync(OnDeleteAllCookies);
+        }
+
+        await LoadCookies();
+
+    }
+
+    private async Task LoadCookies()
+    {
+        if (_appState?.Catalog.LocalStorage == null || _platformStorage == null) return;
+
+        _properties = typeof(BlazorCore.Services.GlobalState.LocalStorageModel)
+            .GetProperties(System.Reflection.BindingFlags.Public |
+                           System.Reflection.BindingFlags.Instance);
+
+        if (cookies != null)
+            cookies.Clear();
+
+        // Auth-Cookie hinzufügen
+        var cookievalueAuth = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.oauth_token);
+        if (cookievalueAuth != null && string.IsNullOrEmpty(cookievalueAuth.out_err) && !string.IsNullOrEmpty(cookievalueAuth.out_value_str))
+        {
+            cookies!.Add(_appState.Catalog.LocalStorage.oauth_token, OauthTokenEnableDeleteButton ? "*****" : "******");
+        }
+
+        // Speicherlokation hinzufügen
+        var cookievalueStorageLocation = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.storagelocation);
+        if (cookievalueStorageLocation != null && string.IsNullOrEmpty(cookievalueStorageLocation.out_err) && !string.IsNullOrEmpty(cookievalueStorageLocation.out_value_str))
+        {
+            cookies!.Add(_appState.Catalog.LocalStorage.storagelocation, cookievalueStorageLocation.out_value_str);
+        }
+
+        foreach (var field in _properties)
+        {
+            //var cookiename = field.GetValue(_appState.Catalog.LocalStorage);
+            var cookiename = field.GetValue(_appState.Catalog.LocalStorage)?.ToString();
+            if (!string.IsNullOrEmpty(cookiename))
+            {
+                var cookievalue = await _platformStorage.GetAsync(cookiename.ToString());
+                if (cookievalue != null && string.IsNullOrEmpty(cookievalue.out_err) && !string.IsNullOrEmpty(cookievalue.out_value_str))
+                {
+                    if (cookies != null && cookiename != null)
+                    {
+                        if (cookiename.ToString() == _appState.Catalog.LocalStorage.sqlitekey
+                            || cookiename.ToString() == _appState.Catalog.LocalStorage.oauth_token)
+                            cookies[cookiename] = "* * * * * *";
+                        else
+                            cookies[cookiename] = cookievalue.out_value_str;
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task OnClick_DeleteCookie(string cookie)
+    {
+        if (_appState?.Catalog.LocalStorage == null || _platformStorage == null) return;
+
+        var deleteAction = true;
+
+        if (cookie == _appState.Catalog.LocalStorage.storagelocation || cookie == _appState.Catalog.LocalStorage.oauth_token)
+        {
+            MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+                title: _appState!.T("Confirmation"),
+                message: _appState!.T("If you delete the cookie storage location, you will be automatically logged out. Would you like to continue with the deletion process?"),
+                yestext: @_appState!.T("Yes"),
+                notext: @_appState!.T("No")
+            );
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    break;
+
+                case MessageBoxResult.No:
+                case MessageBoxResult.None:
+                    deleteAction = false;
+                    break;
+            }
+        }
+
+        if (deleteAction)
+        {
+            if (cookies != null)
+            {
+                foreach (var cookieitem in cookies)
+                {
+                    if (cookieitem.Value != "******" && cookieitem.Key == cookie)
+                        await _platformStorage.RemoveAsync(cookieitem.Key);
+                }
+            }
+
+            if (_logoutComponent != null &&
+                (cookie == _appState.Catalog.LocalStorage.storagelocation
+                || cookie == _appState.Catalog.LocalStorage.oauth_token))
+            {
+                await Task.Delay(30);
+                await _logoutComponent.TriggerLogoutAsync();
+            }
+            else
+            {
+                await LoadCookies();
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task OnDeleteAllCookies()
+    {
+        if (_platformStorage == null) return;
+
+        //StateHasChanged();
+        MessageBoxResult result = await _messageBoxService.ShowYesNoAsync(
+            title: _appState!.T("Confirmation"),
+            message: _appState!.T("Do you want to delete all cookies?"),
+            yestext: @_appState!.T("Yes"),
+            notext: @_appState!.T("No")
+        );
+
+        switch (result)
+        {
+            case MessageBoxResult.Yes:
+                if(cookies != null)
+                {
+                    foreach (var cookie in cookies)
+                    {
+                        if(cookie.Value != "******")
+                            await _platformStorage.RemoveAsync(cookie.Key);
+                    }
+                }
+
+                if (_logoutComponent != null)
+                {
+                    await Task.Delay(30);
+                    await _logoutComponent.TriggerLogoutAsync();
+                }
+                break;
+            case MessageBoxResult.No:
+            case MessageBoxResult.None:
+                break;
+        }
+    }
+
+}

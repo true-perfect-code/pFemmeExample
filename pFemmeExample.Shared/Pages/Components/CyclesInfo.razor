@@ -1,0 +1,492 @@
+﻿@* 
+    Aufgrund von Zeitmangel und der Tatsache, dass einige Informationen bereits vorlagen, 
+    wurde beschlossen, diese Komponente zu deaktivieren. 
+*@
+
+
+@* @using pFemmeExample.Shared.Models
+@using System.Globalization
+
+<div class="container mt-4">
+
+    <!-- ROW 3: SYMPTOM FREQUENCY -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card tpc-card-secondary shadow-sm">
+                <div class="card-header">
+                    <i class="bi bi-bar-chart"></i> @_appState.T("Your Most Common Symptoms")
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>@_appState.T("Pain:")</strong></p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-danger" role="progressbar"
+                                     style="width: @painPercentage%;"
+                                     aria-valuenow="@painPercentage" aria-valuemin="0" aria-valuemax="100">
+                                    @painPercentage% @_appState.T("of days")
+                                </div>
+                            </div>
+
+                            <p><strong>@_appState.T("Cramps:")</strong></p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-warning" role="progressbar"
+                                     style="width: @crampsPercentage%;"
+                                     aria-valuenow="@crampsPercentage" aria-valuemin="0" aria-valuemax="100">
+                                    @crampsPercentage% @_appState.T("of days")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>@_appState.T("Fatigue:")</strong></p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-secondary" role="progressbar"
+                                     style="width: @fatiguePercentage%;"
+                                     aria-valuenow="@fatiguePercentage" aria-valuemin="0" aria-valuemax="100">
+                                    @fatiguePercentage% @_appState.T("of days")
+                                </div>
+                            </div>
+
+                            <p><strong>@_appState.T("Headache:")</strong></p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-info" role="progressbar"
+                                     style="width: @headachePercentage%;"
+                                     aria-valuenow="@headachePercentage" aria-valuemin="0" aria-valuemax="100">
+                                    @headachePercentage% @_appState.T("of days")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW 4: RECENT NOTES -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card tpc-card-secondary shadow-sm">
+                <div class="card-header">
+                    <i class="bi bi-journal-text"></i> @_appState.T("Recent Notes & Observations")
+                </div>
+                <div class="card-body">
+                    @if (recentNotes.Any())
+                    {
+                        <ul class="list-group">
+                            @foreach (var note in recentNotes)
+                            {
+                                <li class="list-group-item">
+                                    <strong>@note.RecordDate?.ToString("dd.MM.yyyy"):</strong>
+                                    @(string.IsNullOrEmpty(note.Details) ? _appState.T("No details") : note.Details)
+                                    @if (note.bleeding)
+                                    {
+                                        <span class="badge bg-danger ms-2">@_appState.T("Bleeding")</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted">@_appState.T("No notes available.")</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <!-- ROW 5: CYCLE HISTORY TABLE -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card tpc-card-secondary shadow-sm">
+                <div class="card-header">
+                    <i class="bi bi-table"></i> @_appState.T("Cycle History")
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>@_appState.T("Start Date")</th>
+                                <th>@_appState.T("End Date")</th>
+                                <th>@_appState.T("Duration")</th>
+                                <th class="d-none d-lg-table-cell">@_appState.T("Avg. Intensity")</th>
+                                <th class="d-none d-lg-table-cell">@_appState.T("Avg. Pain")</th>
+                                <th class="d-none d-lg-table-cell">@_appState.T("Avg. Cramps")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cycle in _cycleHistory.OrderByDescending(x => x.FirstDayCycle).Take(10))
+                            {
+                                <tr>
+                                    <td>@(cycle.LastDayCycle?.ToString("dd.MM.yyyy") ?? "?")</td>
+                                    <td>@cycle.Duration @_appState.T("days")</td>
+                                    <td class="d-none d-lg-table-cell">
+                                        <!-- @(Math.Round(cycle.AvgIntensity, 1)) -->
+                                    </td>
+                                    <td class="d-none d-lg-table-cell">
+                                        <!-- @(Math.Round(cycle.AvgPain, 1)) -->
+                                    </td>
+                                    <td class="d-none d-lg-table-cell">
+                                        <!-- @(Math.Round(cycle.AvgHeadache, 1)) -->
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.CyclesService? _cyclesService { get; set; }
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.CyclePhasesService _cyclePhasesService { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    private List<CyclesModel> allEntries = new();
+    private List<CycleSummaryModel> _cycleHistory = new();
+    private bool isLoading = true;
+
+    private int avgCycleLength = 28;
+    private int avgPeriodLength = 4;
+    private DateTime nextPeriodPrediction = DateTime.Today.AddDays(7);
+    private int daysUntilNextPeriod = 7;
+    private int totalTrackedDays = 0;
+    private int totalCycles = 0;
+    private int completedCycles = 0;
+
+    private int painPercentage = 0;
+    private int crampsPercentage = 0;
+    private int fatiguePercentage = 0;
+    private int headachePercentage = 0;
+
+    private List<CyclesModel> recentNotes = new();
+    private DayPrediction? todayPrediction;
+    private DayPrediction? tomorrowPrediction;
+
+    private List<BleedingPeriod> bleedingPeriods = new();
+
+    private class BleedingPeriod
+    {
+        public DateTime StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public List<CyclesModel> Entries { get; set; } = new();
+    }
+
+    private class DayPrediction
+    {
+        public string DayDescription { get; set; } = "";
+        public string DayAdvice { get; set; } = "";
+        public int CycleDay { get; set; }
+        public bool IsBleedingToday { get; set; }
+        public bool IsBleedingTomorrow { get; set; }
+        public int ExpectedPain { get; set; }
+        public int ExpectedCramps { get; set; }
+        public int ExpectedFatigue { get; set; }
+        public int ExpectedHeadache { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        CalculateDashboard();
+        isLoading = false;
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            // Cycle history
+            BlazorCore.Services.SqlClient.ReadModel<CycleSummaryModel?> result_cycleHistory = new();
+            result_cycleHistory = await _cyclePhasesService.LoadCycleHistory();
+            if (result_cycleHistory != null && result_cycleHistory.out_list != null)
+            {
+                if (!string.IsNullOrEmpty(result_cycleHistory.out_err))
+                {
+                    string? err = result_cycleHistory != null ? result_cycleHistory.out_err : string.Empty;
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState.T("Error"),
+                        message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                    );
+                }
+                else
+                {
+                    _cycleHistory = result_cycleHistory.out_list;                    
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState.T("Error"),
+                message: _appState.T("Failed to load data: ") + ex.Message
+            );
+        }
+    }
+
+    private void CalculateDashboard()
+    {
+        if (allEntries.Count == 0) return;
+
+        totalTrackedDays = allEntries.Count;
+
+        FindBleedingPeriods();
+
+        var cycleLengths = new List<int>();
+        var periodLengths = new List<int>();
+
+        for (int i = 0; i < bleedingPeriods.Count; i++)
+        {
+            var period = bleedingPeriods[i];
+            var bleedingDaysCount = period.Entries.Count(x => x.bleeding);
+            periodLengths.Add(bleedingDaysCount);
+
+            if (i > 0)
+            {
+                var daysBetween = (int)(period.StartDate - bleedingPeriods[i - 1].StartDate).TotalDays;
+                if (daysBetween >= 20 && daysBetween <= 45)
+                {
+                    cycleLengths.Add(daysBetween);
+                }
+            }
+        }
+
+        if (cycleLengths.Any())
+        {
+            avgCycleLength = (int)Math.Round(cycleLengths.Average());
+        }
+
+        if (periodLengths.Any())
+        {
+            avgPeriodLength = (int)Math.Round(periodLengths.Average());
+        }
+
+        var bleedingEntries = allEntries.Where(x => x.bleeding).ToList();
+        if (bleedingEntries.Any())
+        {
+            painPercentage = (int)Math.Round(bleedingEntries.Count(x => x.pain > 0) * 100.0 / bleedingEntries.Count);
+            crampsPercentage = (int)Math.Round(bleedingEntries.Count(x => x.cramps > 0) * 100.0 / bleedingEntries.Count);
+            fatiguePercentage = (int)Math.Round(bleedingEntries.Count(x => x.fatigue > 0) * 100.0 / bleedingEntries.Count);
+            headachePercentage = (int)Math.Round(bleedingEntries.Count(x => x.headache > 0) * 100.0 / bleedingEntries.Count);
+        }
+
+        recentNotes = allEntries
+            .Where(x => !string.IsNullOrEmpty(x.Details))
+            .OrderByDescending(x => x.RecordDate)
+            .Take(5)
+            .ToList();
+
+        if (bleedingPeriods.Any() && avgCycleLength >= 20 && avgCycleLength <= 45)
+        {
+            var lastPeriod = bleedingPeriods.Last();
+            nextPeriodPrediction = lastPeriod.StartDate.AddDays(avgCycleLength);
+            daysUntilNextPeriod = (int)(nextPeriodPrediction - DateTime.Today).TotalDays;
+            if (daysUntilNextPeriod < 0) daysUntilNextPeriod = 0;
+        }
+
+        CalculateTodayAndTomorrowPrediction();
+    }
+
+    private void FindBleedingPeriods()
+    {
+        bleedingPeriods.Clear();
+
+        var sortedEntries = allEntries.OrderBy(x => x.RecordDate).ToList();
+        BleedingPeriod? currentPeriod = null;
+
+        foreach (var entry in sortedEntries)
+        {
+            if (entry.bleeding)
+            {
+                if (currentPeriod == null)
+                {
+                    currentPeriod = new BleedingPeriod
+                    {
+                        StartDate = entry.RecordDate!.Value,
+                        Entries = new List<CyclesModel> { entry }
+                    };
+                }
+                else
+                {
+                    var lastEntryDate = currentPeriod.Entries.Last().RecordDate;
+                    if (lastEntryDate.HasValue && (entry.RecordDate!.Value - lastEntryDate.Value).TotalDays > 10)
+                    {
+                        bleedingPeriods.Add(currentPeriod);
+                        currentPeriod = new BleedingPeriod
+                        {
+                            StartDate = entry.RecordDate.Value,
+                            Entries = new List<CyclesModel> { entry }
+                        };
+                    }
+                    else
+                    {
+                        currentPeriod.Entries.Add(entry);
+                        if (entry.RecordDate!.Value < currentPeriod.StartDate)
+                            currentPeriod.StartDate = entry.RecordDate.Value;
+                    }
+                }
+            }
+            else if (currentPeriod != null)
+            {
+                currentPeriod.Entries.Add(entry);
+            }
+        }
+
+        if (currentPeriod != null && currentPeriod.Entries.Any(x => x.bleeding))
+        {
+            bleedingPeriods.Add(currentPeriod);
+        }
+    }
+
+    private void CalculateTodayAndTomorrowPrediction()
+    {
+        if (!bleedingPeriods.Any() || avgCycleLength < 20 || avgCycleLength > 45)
+        {
+            todayPrediction = null;
+            tomorrowPrediction = null;
+            return;
+        }
+
+        var lastPeriod = bleedingPeriods.Last();
+        var daysSincePeriodStart = (int)(DateTime.Today - lastPeriod.StartDate).TotalDays;
+        var cycleDay = (daysSincePeriodStart % avgCycleLength) + 1;
+
+        var isInBleeding = cycleDay <= avgPeriodLength;
+
+        var historicalPain = new List<int>();
+        var historicalCramps = new List<int>();
+        var historicalFatigue = new List<int>();
+        var historicalHeadache = new List<int>();
+
+        foreach (var period in bleedingPeriods.Take(bleedingPeriods.Count - 1)) 
+        {
+            var targetDate = period.StartDate.AddDays(cycleDay - 1);
+            var entryOnDay = period.Entries.FirstOrDefault(x => x.RecordDate?.Date == targetDate.Date);
+            if (entryOnDay != null)
+            {
+                historicalPain.Add(entryOnDay.pain);
+                historicalCramps.Add(entryOnDay.cramps);
+                historicalFatigue.Add(entryOnDay.fatigue);
+                historicalHeadache.Add(entryOnDay.headache);
+            }
+        }
+
+        todayPrediction = new DayPrediction
+        {
+            CycleDay = cycleDay,
+            IsBleedingToday = isInBleeding,
+            ExpectedPain = historicalPain.Any() ? (int)Math.Round(historicalPain.Average()) : (isInBleeding && cycleDay <= 3 ? 2 : 0),
+            ExpectedCramps = historicalCramps.Any() ? (int)Math.Round(historicalCramps.Average()) : (isInBleeding && cycleDay <= 3 ? 2 : 0),
+            ExpectedFatigue = historicalFatigue.Any() ? (int)Math.Round(historicalFatigue.Average()) : (isInBleeding && cycleDay <= 2 ? 1 : 0),
+            ExpectedHeadache = historicalHeadache.Any() ? (int)Math.Round(historicalHeadache.Average()) : 0
+        };
+
+        if (isInBleeding)
+        {
+            todayPrediction.DayDescription = $"{_appState.T("Menstrual phase")} - {_appState.T("Day")} {cycleDay} {_appState.T("of bleeding")}";
+            todayPrediction.DayAdvice = GetMenstrualAdvice(todayPrediction);
+        }
+        else if (cycleDay <= 14)
+        {
+            todayPrediction.DayDescription = _appState.T("Follicular phase - Energy rising");
+            todayPrediction.DayAdvice = _appState.T("Great time for exercise and new projects!");
+        }
+        else if (cycleDay <= 21)
+        {
+            todayPrediction.DayDescription = _appState.T("Ovulation phase - Peak energy");
+            todayPrediction.DayAdvice = _appState.T("You're at your most fertile. High energy and mood!");
+        }
+        else
+        {
+            todayPrediction.DayDescription = _appState.T("Luteal phase - Prepare for period");
+            todayPrediction.DayAdvice = GetLutealAdvice(todayPrediction);
+        }
+
+        var tomorrowCycleDay = cycleDay + 1;
+        if (tomorrowCycleDay > avgCycleLength) tomorrowCycleDay = 1;
+        var isBleedingTomorrow = tomorrowCycleDay <= avgPeriodLength;
+
+        tomorrowPrediction = new DayPrediction
+        {
+            CycleDay = tomorrowCycleDay,
+            IsBleedingTomorrow = isBleedingTomorrow,
+            ExpectedPain = todayPrediction.ExpectedPain,
+            ExpectedCramps = todayPrediction.ExpectedCramps,
+            ExpectedFatigue = todayPrediction.ExpectedFatigue,
+            ExpectedHeadache = todayPrediction.ExpectedHeadache
+        };
+
+        if (isBleedingTomorrow)
+        {
+            tomorrowPrediction.DayDescription = _appState.T("Menstrual phase continues");
+            tomorrowPrediction.DayAdvice = GetMenstrualAdvice(tomorrowPrediction);
+        }
+        else if (tomorrowCycleDay <= 14)
+        {
+            tomorrowPrediction.DayDescription = _appState.T("Follicular phase starting");
+            tomorrowPrediction.DayAdvice = _appState.T("Energy will start increasing tomorrow!");
+        }
+        else if (tomorrowCycleDay <= 21)
+        {
+            tomorrowPrediction.DayDescription = _appState.T("Approaching ovulation");
+            tomorrowPrediction.DayAdvice = _appState.T("Your fertile window is opening!");
+        }
+        else
+        {
+            tomorrowPrediction.DayDescription = _appState.T("Late luteal phase");
+            tomorrowPrediction.DayAdvice = GetLutealAdvice(tomorrowPrediction);
+        }
+    }
+
+    private string GetMenstrualAdvice(DayPrediction pred)
+    {
+        if (pred.ExpectedPain >= 2 || pred.ExpectedCramps >= 2)
+            return _appState.T("Rest today. Use heat packs, stay hydrated, and take pain relief if needed.");
+        else if (pred.ExpectedPain >= 1)
+            return _appState.T("Light cramps expected. Gentle stretching and warm tea may help.");
+        else
+            return _appState.T("Regular bleeding day. Stay comfortable with period products.");
+    }
+
+    private string GetLutealAdvice(DayPrediction pred)
+    {
+        if (pred.ExpectedFatigue >= 2)
+            return _appState.T("You may feel tired. Prioritize sleep and reduce stress.");
+        else if (pred.ExpectedHeadache >= 1)
+            return _appState.T("Headaches possible. Stay hydrated and limit caffeine.");
+        else
+            return _appState.T("PMS symptoms may appear. Be kind to yourself.");
+    }
+
+private string GetSeverityBadgeClass(int severity)
+{
+    return severity switch
+    {
+        0 => "badge-severity-none",
+        1 => "badge-severity-mild",
+        2 => "badge-severity-severe",
+        _ => "badge-severity-none"
+    };
+}
+
+private string GetSeverityText(int severity)
+{
+    return severity switch
+    {
+        0 => _appState.T("None"),
+        1 => _appState.T("Mild"),
+        2 => _appState.T("Severe"),
+        _ => _appState.T("None")
+    };
+}
+} *@

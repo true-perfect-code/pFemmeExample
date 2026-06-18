@@ -1,0 +1,253 @@
+﻿@* @using BlazorCore.DbApp.Models
+@using BlazorCore.Services.Platform
+@using Shared.Services
+
+<div class="d-flex flex-column gap-4">
+
+    <div class="d-flex flex-wrap gap-4">
+        <P11Checkbox @bind-Value="itemClone.IsChecked" Label="@_appState!.T("done")" CssClass="mt-2" />
+        <div class="flex-fill me-2">
+            <P11Input TValue="string" @bind-Value="itemClone.DisplayName" Label="@_appState!.T("Tasks")" UseFloatingLabel="true" />
+        </div>
+        @if(!_appState.IsPhone)
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @if (!string.IsNullOrEmpty(itemClone.imgJpegThumbnail))
+                {
+                    <img src="@($"data:{pE.Utility.Appl.DetectMimeFromBase64(itemClone.imgJpegThumbnail!)};base64,{itemClone.imgJpegThumbnail}")" class="img-thumbnail" style="max-height: 56px; cursor: pointer;" @onclick="async () => { await LoadImgJpeg(); itemClone.Int__isPreviewOpen = true; }" />
+                    
+                    <P11Button 
+                        OnClick="async() => { 
+                            itemClone.imgJpeg = string.Empty;
+                            itemClone.imgJpegThumbnail = string.Empty; 
+                            StateHasChanged();   
+                        }" 
+                        IconClass="bi bi-trash3" 
+                        AriaLabel="@_appState!.T("Delete")" 
+                        Size="Size.Large"
+                        style="@(string.IsNullOrEmpty(ButtonMinWidth) ? "" : $"min-width: {ButtonMinWidth}; max-height:  {ButtonMinWidth};")"
+                        Title="@_appState!.T("Delete image")" 
+                        ButtonVariant="ButtonVariant.Light" />
+                }
+                else
+                {
+                    <img class="img-thumbnail"  style="height: 56px; width: auto; object-fit: cover;" src="_content/BlazorCore/img/empty.jpg" alt="Empty image">
+                }
+            </div>
+
+            @if(itemClone.Int__isPreviewOpen)
+            {
+                 <P11ModalNative @bind-Visible="@itemClone.Int__isPreviewOpen" OnClose="() => {}"
+                                    Id="@_idGuid"
+                                    NativeDevice="@_appState!.NativeDeviceType"
+                                    ShowHeaderSeparator="true"
+                                    CloseButtonText="@_appState.T("Back")"
+                                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                                    AriaLabelledby="modalTitle1Task"
+                                    ShowDevelopmentErrors="true">
+                    <HeaderContent>
+                        <h5 id="modalTitle1Task" class="modal-title">@itemClone.DisplayName</h5>
+                    </HeaderContent>
+                    <BodyContent>
+                        <img src="@($"data:{pE.Utility.Appl.DetectMimeFromBase64(itemClone.imgJpeg!)};base64,{itemClone.imgJpeg}")" class="img-fluid" style="object-fit: contain;" />
+                    </BodyContent>
+                    <FooterContent />
+                </P11ModalNative>               
+            }
+
+        }
+        <TestSolution4.Shared.Pages.Common.Media.Media ButtonMinWidth="@ButtonMinWidth"
+                                Size="Size.Large"
+                                ImageQuality="78"
+                                ImageSize="400"
+                                ImageDisplayedMaxHeight="120"
+                                ShowInlinePreview=false
+                                CropToSquare="true"
+                                ButtonOrientation="ButtonOrientation.Horizontal"
+                                ImageDataUrl="@itemClone.imgJpeg"
+                                ThumbnailDataUrl="@itemClone.imgJpegThumbnail"
+                                ThumbnailSize="64"
+                                ImageDataUrlChanged="@( (newValue) => { 
+                                    itemClone.imgJpeg = newValue; 
+                                    StateHasChanged(); 
+                                })"
+                                ThumbnailDataUrlChanged="@((newValue) => { 
+                                    itemClone.imgJpegThumbnail = newValue; 
+                                    StateHasChanged(); 
+                                })" 
+                                OnDelete="async() => { 
+                                    itemClone.imgJpeg = string.Empty;
+                                    itemClone.imgJpegThumbnail = string.Empty; 
+                                    StateHasChanged();    
+                                }" />
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-2">
+        <P11Button 
+            Text="@_appState!.T("Save")" 
+            IsDisabled="@(string.IsNullOrEmpty(itemClone.DisplayName))"
+            OnClick="OnSave" 
+            IconClass="bi bi-save" 
+            AriaLabel="@_appState!.T("Save")" 
+            Title="@_appState!.T("Save")" />
+        <P11Button Text="@_appState!.T("Cancel")" OnClick="OnCancel" IconClass="bi bi-x" AriaLabel="@_appState!.T("Cancel")" Title="@_appState!.T("Cancel")" ButtonVariant="ButtonVariant.Secondary" />
+        @if (!itemClone.Int__IsSharingFrom && !IsNewItem)
+        {
+            <div class="ms-0 ms-sm-4">
+                <P11Button Text="@_appState!.T("Delete")" OnClick="OnDelete" IconClass="bi bi-trash3" AriaLabel="@_appState!.T("Delete")" Title="@_appState!.T("Delete")" ButtonVariant="ButtonVariant.Danger" />
+            </div>
+        }
+    </div>
+
+</div>
+
+
+@code {
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase _dam { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private TasksService? _tasksService { get; set; }
+
+
+    [Parameter]
+    public TasksModel item { get; set; } = new();
+
+    [Parameter]
+    public bool IsNewItem { get; set; } = false;
+
+    [Parameter]
+    public bool UseNativeFeatures { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<TasksModel> OnClickSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnClickCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<TasksModel> OnClickDelete { get; set; }
+
+
+    // Lokale Kopie des Item-Modells
+    private TasksModel itemClone = new();
+
+    // Spinner
+    private bool spinner = false;
+    // ButtonMinWidth
+    private string ButtonMinWidth = "48px";
+    // Nativ
+    //private bool _usePhoneFeatures = false;
+    private Guid _idGuid = Guid.NewGuid();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        _appState.OnLanguageHasChanged += HandleStateChange;
+
+        if (_platform != null)
+        {
+            var platform = _platform.GetCurrPlatform();
+
+            //await SetPlattformForModalNative();
+
+            // if(platform == PLATFORMS.ANDROID || platform == PLATFORMS.IOS)
+            //     _useNativeFeatures = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        _appState.OnLanguageHasChanged -= HandleStateChange;
+    }
+
+    // Methode, die aufgerufen wird, wenn die Parameter gesetzt sind
+    protected override void OnParametersSet()
+    {
+        itemClone = (TasksModel)item.Clone();
+        itemClone.Int__isPreviewOpen = false;
+    }
+
+    protected void HandleStateChange()
+    {
+        // InvokeAsync erzwingt den Wechsel auf den UI-Thread,
+        // bevor StateHasChanged ausgeführt wird.
+        //_appState.Log("[Blazor Home.razor] HandleStateChange");
+        InvokeAsync(StateHasChanged);
+
+        _appState!.Log($"[Blazor Home.razor] HandleStateChange, _appState.T(Add a new todo)", data: _appState.T("Add a new todo"));
+    }
+
+    private async Task OnSave()
+    {
+        if (OnClickSave.HasDelegate)
+        {
+            await OnClickSave.InvokeAsync(itemClone);
+        }
+    }
+
+    private async Task OnCancel()
+    {
+        if (OnClickCancel.HasDelegate)
+        {
+            await OnClickCancel.InvokeAsync();
+        }
+    }
+
+    private async Task OnDelete()
+    {
+        if (OnClickDelete.HasDelegate)
+        {
+            await OnClickDelete.InvokeAsync(itemClone);
+        }
+    }
+
+
+    #region LoadImage
+    private async Task LoadImgJpeg()
+    {
+        spinner = true;
+        await Task.Delay(50);
+        StateHasChanged();
+
+        try
+        {
+            BlazorCore.Services.SqlClient.ScalarModel result = await _tasksService!.LoadImgJpeg(item)!; // Abfrage ausführen
+            if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+            {
+                itemClone.imgJpeg = result.out_value_str;
+            }
+            else
+            {
+                if(string.IsNullOrEmpty(itemClone.imgJpeg))
+                {
+                    string err = result != null && result.out_err != null ? result.out_err : "_tasksService!.LoadImgJpeg";
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Error"),
+                        message: $"{_appState.T(pE.Utility.Appl.DefaultErrorText)} {err}"
+                    );
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(pE.Utility.Appl.DefaultErrorText)} {pE.Utility.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+
+        spinner = false;
+        StateHasChanged();
+    }
+    #endregion
+} *@

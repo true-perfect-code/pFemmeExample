@@ -1,0 +1,125 @@
+﻿@using Shared.Services.AppState
+@using BlazorCore.Services.AppState
+@inject IAppState _appState
+
+
+<!-- Body verwendet den Pergament-Hintergrund und dunklen Text -->
+<div class="text-light-text" style="min-height: 100vh;">
+    
+    <!-- Navbar (Nun hell und transparent, aber mit Tinten-Akzenten) -->
+
+    <main>
+        <!-- 1. STARTSEITE / Hero Section -->
+        <br />
+        <h1 class="p-4 text-center">Blazor-Cross-Host loaded successfully!</h1>
+        <br />
+        <div class="d-flex flex-column w-100 mt-1">
+            <P11Button Text="@_appState!.T("Login")" OnClick="() => _landing.IsVisibleLogin = true" ButtonVariant="ButtonVariant.Secondary" CssClass="w-100 mb-2" />
+            <P11Button Text="@_appState!.T("Cookies")" OnClick="() => _landing.IsOpenModalCookies = true" ButtonVariant="ButtonVariant.Secondary" CssClass="w-100 mb-2" />
+            <P11Button Text="@_appState!.T("About")" OnClick="() => _landing.IsOpenModalAbout = true" ButtonVariant="ButtonVariant.Secondary" CssClass="w-100" />
+        </div>
+
+        <Demo />
+
+        <!-- 2. FUNKTIONEN Section -->
+
+
+        <!-- 3. VORSCHAU Section -->
+
+
+        <!-- 4. FAQ Section -->
+
+        
+        <!-- 5. KONTAKT / Footer Section -->
+
+    </main>
+
+</div>
+
+@* L O G I N *@
+@if (_landing.IsVisibleLogin)
+{
+    <TestSolution4.Shared.Pages.Common.Authentication.AuthenticationLogin @bind-Visible="@_landing.IsVisibleLogin"
+                                                    OnClose="@(() => _landing.IsVisibleLogin = false)"
+                                                    IsOpenButtonHidden="true"
+                                                    CssClassModalContent="tpc-form-bg-03"
+                                                    CssClassButton="btn-lg px-4 me-sm-3 shadow-lg fw-bold"
+                                                    AccordionHeaderBackgroundVariant1="BackgroundVariant.White"
+                                                    AccordionHeaderBackgroundVariant2="BackgroundVariant.White"
+                                                    LoginText="@(_appState!.NativeDeviceType == NativeDevice.WEB ? _appState.T("Start in browser") : _appState.T("Start app"))" />
+}
+
+@* A B O U T *@
+@if (_landing.IsOpenModalAbout)
+{
+    <P11ModalNative @bind-Visible="@_landing.IsOpenModalAbout" OnClose="() => { }"
+                    Id="@_landing.IdAbout"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitleAbout"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+        <HeaderContent>
+            <h5 id="modalTitleAbout" class="modal-title">@_appState!.T("About")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            <TestSolution4.Shared.Pages.Common.About OnClose="@(() => _landing.IsOpenModalAbout = false)" CssClassModalContent="tpc-form-bg-01" />
+
+        </BodyContent>
+    </P11ModalNative>
+}
+
+@* D O N A T E *@
+@if (_landing.IsOpenModalDonate)
+{
+    <P11ModalNative @bind-Visible="@_landing.IsOpenModalDonate" OnClose="() => { }"
+                    Id="@_landing.IdDonate"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Donate"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+        <HeaderContent>
+            <h5 id="modalTitle1Donate" class="modal-title">@_appState!.T("Donate")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            <TestSolution4.Shared.Pages.Common.Donate OnClose="@(() => _landing.IsOpenModalDonate = false)" CssClassModalContent="tpc-form-bg-02" />
+
+        </BodyContent>
+    </P11ModalNative>
+}
+
+@* C O O K I E S *@
+@if (_landing.IsOpenModalCookies)
+{
+    <P11ModalNative @bind-Visible="@_landing.IsOpenModalCookies" OnClose="() => { }"
+                    Id="@_landing.IdCookies"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    ShowHeaderSeparator="true"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    AriaLabelledby="modalTitle1Cookies"
+                    CssClassContent="tpc-form-bg-01"
+                    Size="Size.Large"
+                    ShowDevelopmentErrors="true">
+        <HeaderContent>
+            <h5 id="modalTitle1Cookies" class="modal-title">@_appState!.T("Delete Cookies")</h5>
+        </HeaderContent>
+        <BodyContent>
+
+            <TestSolution4.Shared.Pages.Common.Authentication.AuthenticationCookies 
+                OauthTokenEnableDeleteButton="true" 
+                OnChangeVisibleCookies="(val) => _landing.IsOpenModalCookies = val" />
+
+        </BodyContent>
+    </P11ModalNative>
+}
+

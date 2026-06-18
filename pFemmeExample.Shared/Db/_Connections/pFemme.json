@@ -1,0 +1,9 @@
+{
+  "Server": "DESKTOP-G9OM6QR\\SQLEXPRESS",
+  "Database": "db_pfemme",
+  "User_ID": "dbuser_pfemme",
+  "Password": "CESkxxMfkUjD94MAap8D8sfVwIQTX1mXw1PYz88nF5fIsUfQV0FbxQ==",
+  "Integrated_Security": false,
+  "Pooling": true,
+  "TrustServerCertificate": true
+}

@@ -1,0 +1,194 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@using p11.UI
+
+
+<div class="p-2">
+    <p style="color: var(--tpc-text-color); opacity: 0.7; margin-bottom: 1.5rem;">
+        @_appState!.T("Support the further development of the app by making a voluntary donation via the chosen platform (e.g., €5 for the current year).")
+    </p>
+
+    <!-- Payment Platform Selection -->
+    <div class="mb-4">
+        <div class="p-3" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bi bi-credit-card-2-front-fill" style="color: var(--tpc-icon-secondary); font-size: 1.5rem; margin-right: 0.5rem;"></i>
+                <h5 class="mb-0 fw-bold" style="color: var(--tpc-text-color);">@_appState!.T("Select payment platform")</h5>
+            </div>
+            
+            <P11Radio TValue="string"
+                      @bind-Value="SelectedPaymentMethod"
+                      Name="payment_method"
+                      CssClassGroup="w-100">
+                <div class="d-flex w-100 gap-3">
+                    <P11RadioOption TValue="string" Value="@("paypal")" IconClass="bi bi-paypal" IconPosition="IconPosition.Start" Text="PayPal" CssClass="flex-fill" />
+                    <P11RadioOption TValue="string" Value="@("stripe")" IconClass="bi bi-stripe" IconPosition="IconPosition.Start" Text="STRIPE" CssClass="flex-fill" />
+                </div>
+            </P11Radio>
+        </div>
+    </div>
+
+    <!-- Donation Amount Selection -->
+    <div class="mb-4">
+        <div class="p-3" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bi bi-cash-stack" style="color: var(--tpc-icon-primary); font-size: 1.5rem; margin-right: 0.5rem;"></i>
+                <h5 class="mb-0 fw-bold" style="color: var(--tpc-text-color);">@_appState!.T("Select your donation amount")</h5>
+            </div>
+
+            <P11ButtonRadio TValue="string"
+                            @bind-Value="SelectedDonationAmount"
+                            ButtonVariant="@ButtonVariant.Primary"
+                            CssClassGroup="w-100"
+                            ButtonSize="@Size.Medium">
+                <div class="d-flex flex-wrap w-100 gap-3">
+                    <P11ButtonRadioOption TValue="string" Value="@("none")" Text="@_appState!.T("None")" CssClass="flex-fill" />
+                    <P11ButtonRadioOption TValue="string" Value="@("5")" Text="@_appState!.T("5€/$")" CssClass="flex-fill" />
+                    <P11ButtonRadioOption TValue="string" Value="@("10")" Text="@_appState!.T("10€/$")" CssClass="flex-fill" />
+                    <P11ButtonRadioOption TValue="string" Value="@("20")" Text="@_appState!.T("20€/$")" CssClass="flex-fill" />
+                </div>
+            </P11ButtonRadio>
+        </div>
+    </div>
+
+    <!-- Thank you message -->
+    <div class="mt-4 text-center">
+        <p class="mb-0" style="color: var(--tpc-text-color); font-weight: 500;">
+            @_appState!.T("Thank you so much for your support! — The team at") @_globalState!.ConfigGeneral.Company
+        </p>
+    </div>
+</div>
+
+
+<div class="d-flex w-100 gap-4 mt-4">
+    @if (_isWeb)
+    {
+        <div class="row justify-content-center w-100 m-0">
+            <a href="@GetDonationUrl()"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="col-12 col-md-8 btn btn-donate text-center @(SelectedDonationAmount == "none" ? "disabled" : "")"
+               style="background-color: var(--tpc-icon-primary);"
+               aria-disabled="@(SelectedDonationAmount == "none")">
+                @_appState!.T("Donate")
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row justify-content-center w-100 m-0">
+            <P11Button IsDisabled="@(SelectedDonationAmount == "none")" OnClick="OnClickDonate" Text="@_appState!.T("Donate")" ButtonVariant="ButtonVariant.None" CssClass="btn-donate col-12 col-md-8" />
+        </div>
+    }
+    
+</div>
+
+@code {
+    [Parameter] public bool Visible { get; set; } = false;
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public string CssClassModalContent { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+
+    private string SelectedPaymentMethod { get; set; } = "paypal";
+    private string SelectedDonationAmount { get; set; } = "none";
+    private bool _isWeb = false;
+
+
+    protected override void OnInitialized()
+    {
+        if (_platform != null)
+        {
+            var currPlatform = _platform.GetCurrPlatform();
+            if (currPlatform == BlazorCore.Services.Platform.PLATFORMS.WINDOWS_SERVER || currPlatform == BlazorCore.Services.Platform.PLATFORMS.WASM)
+            {
+                _isWeb = true;
+            }
+        }
+        
+    }
+
+    private async Task OnClickDonate()
+    {
+        try
+        {
+            if (SelectedDonationAmount != "none")
+            {
+
+            }
+            switch (SelectedPaymentMethod)
+            {
+                case "paypal":
+                    switch (SelectedDonationAmount)
+                    {
+                        case "5":
+                            await _platform!.AuthenticateAsync("https://www.paypal.com/ncp/payment/YOUR_LINK");
+                            break;
+                        case "10":
+                            await _platform!.AuthenticateAsync("https://www.paypal.com/ncp/payment/YOUR_LINK");
+                            break;
+                        case "20":
+                            await _platform!.AuthenticateAsync("https://www.paypal.com/ncp/payment/YOUR_LINK");
+                            break;
+                    }
+                    break;
+
+                case "stripe":
+                    switch (SelectedDonationAmount)
+                    {
+                        case "5":
+                            await _platform!.AuthenticateAsync("https://buy.stripe.com/YOUR_LINK");
+                            break;
+                        case "10":
+                            await _platform!.AuthenticateAsync("https://buy.stripe.com/YOUR_LINK");
+                            break;
+                        case "20":
+                            await _platform!.AuthenticateAsync("https://buy.stripe.com/YOUR_LINK");
+                            break;
+                    }
+                    break;
+            }
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
+    }
+
+    private string GetDonationUrl()
+    {
+        return (SelectedPaymentMethod, SelectedDonationAmount) switch
+        {
+            ("paypal", "5")  => "https://www.paypal.com/ncp/payment/YOUR_LINK",
+            ("paypal", "10") => "https://www.paypal.com/ncp/payment/YOUR_LINK",
+            ("paypal", "20") => "https://www.paypal.com/ncp/payment/YOUR_LINK",
+            ("stripe", "5") => "https://buy.stripe.com/YOUR_LINK",
+            ("stripe", "10") => "https://buy.stripe.com/YOUR_LINK",
+            ("stripe", "20") => "https://buy.stripe.com/YOUR_LINK",
+            _                => "#"
+        };
+    }
+
+    private async Task OnCloseModal()
+    {
+        Visible = false; // lokal
+        await VisibleChanged.InvokeAsync(Visible);
+
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+
+}

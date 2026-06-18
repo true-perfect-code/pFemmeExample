@@ -1,0 +1,265 @@
+﻿@* YearCalendar.razor - Bereinigte Version mit unabhängiger Strich-Anzeige und automatischem Scrollen *@
+@implements IDisposable
+@inject IJSRuntime JS
+@using System.Globalization
+
+
+@if (_appState != null && cycleEntries != null)
+{
+    <script>
+        function scrollToMonth(monthId) {
+            var element = document.getElementById(monthId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    </script>
+
+    <div class="my-3">
+        <!-- Jahresauswahl mit P11ButtonRadio -->
+        <div class="d-flex justify-content-center mb-4">
+            <P11ButtonRadio TValue="int"
+                            @bind-Value="selectedYear"
+                            ButtonVariant="@ButtonVariant.OutlineSecondary"
+                            ButtonSize="@Size.Medium">
+                <P11ButtonRadioOption TValue="int" Value="@(DateTime.Now.Year - 1)" Text="@((DateTime.Now.Year - 1).ToString())" />
+                <P11ButtonRadioOption TValue="int" Value="@(DateTime.Now.Year)" Text="@(DateTime.Now.Year.ToString())" />
+                <P11ButtonRadioOption TValue="int" Value="@(DateTime.Now.Year + 1)" Text="@((DateTime.Now.Year + 1).ToString())" />
+            </P11ButtonRadio>
+        </div>
+
+        <!-- Scrollbarer Container (Scrollbar ausgeblendet via Inline-Style) -->
+        <div class="overflow-auto" style="height: 70vh; scrollbar-width: none; -ms-overflow-style: none;">
+            <div class="container-fluid px-2">
+                <div class="row g-3">
+                    @foreach (var month in Enumerable.Range(1, 12))
+                    {
+                        var daysInMonth = DateTime.DaysInMonth(selectedYear, month);
+                        var firstDayOfMonth = new DateTime(selectedYear, month, 1);
+
+                        <!-- Berechnung des korrekten Offsets basierend auf StartOfWeek -->
+                        var startOfWeekDay = (DayOfWeek)(StartOfWeek % 7);
+                        var offset = ((int)firstDayOfMonth.DayOfWeek - (int)startOfWeekDay + 7) % 7;
+
+                        <div id="month-@month" class="col-12 col-sm-6 col-md-4 col-lg-3">
+                            <div class="card h-100 shadow-sm border-light">
+                                <div class="card-header text-center py-2 border-bottom-0 text-white" style="background: var(--tpc-btn-background-active)">
+                                    <span class="fw-semibold text-primary fs-5">
+                                        @if (_appState.Catalog.Months != null)
+                                        {
+                                            var monthname = _appState.Catalog.Months.Where(m => m.Key == month).Select(m => m.Value).FirstOrDefault();
+                                            @_appState.T(monthname ?? month.ToString())
+                                        }
+                                        else
+                                        {
+                                            @month.ToString()
+                                        }
+                                    </span>
+                                </div>
+                                <div class="card-body p-1 p-sm-2">
+
+                                    <!-- Wochentage-Header im flexiblem 7er-Grid mit reduzierter Min-Breite -->
+                                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;" class="mb-1 small text-secondary fw-bold">
+                                        @foreach (var dayName in weekDaysNames)
+                                        {
+                                            <div style="font-size: 0.75rem; min-width: 20px;">@_appState.T(dayName)</div>
+                                        }
+                                    </div>
+
+                                    <!-- Tage-Matrix im flexiblem 7er-Grid (Gaps verringert auf 2px für Modals) -->
+                                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; column-gap: 2px; text-align: center;">
+                                        <!-- Leere Zellen vor dem ersten Tag -->
+                                        @for (int i = 0; i < offset; i++)
+                                        {
+                                            <div style="min-width: 20px; min-height: 28px;"></div>
+                                        }
+
+                                        <!-- Die eigentlichen Tage -->
+                                        @for (int dayNumber = 1; dayNumber <= daysInMonth; dayNumber++)
+                                        {
+                                            var currentDay = new DateTime(selectedYear, month, dayNumber);
+                                            var cycleEntry = cycleEntries?.FirstOrDefault(c => c.RecordDate.HasValue && c.RecordDate.Value.Date == currentDay.Date);
+
+                                            <!-- Unabhängige Auswertung der Cloud-Daten -->
+                                            var hasBleeding = cycleEntry?.bleeding == true;
+                                            var hasOtherEntry = cycleEntry != null && (
+                                                                cycleEntry.intensity > 0 || cycleEntry.pain > 0 || cycleEntry.headache > 0 ||
+                                                                cycleEntry.fatigue > 0 || cycleEntry.nausea > 0 ||
+                                                                cycleEntry.cramps > 0 || !string.IsNullOrEmpty(cycleEntry.Details));
+
+                                            <!-- p-0 entfernt Innenabstände, w-100 sorgt für volle Ausnutzung der Grid-Zelle ohne Überlauf -->
+                                            <button type="button"
+                                                    class="btn btn-light btn-sm p-0 d-flex align-items-center justify-content-center position-relative fw-normal text-dark w-100"
+                                                    style="min-width: 20px; height: 32px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 0.8rem;"
+                                                    @onclick="async () => await OnClick_Day(currentDay)">
+
+                                                <span>@dayNumber</span>
+
+                                                <!-- Roter Strich OBEN (Blutung) -->
+                                                @if (hasBleeding)
+                                                {
+                                                    <span style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background-color: #dc3545; border-top-left-radius: 3px; border-top-right-radius: 3px;"></span>
+                                                }
+
+                                                <!-- Grüner Strich UNTEN (Weitere Symptome / Notizen) -->
+                                                @if (hasOtherEntry)
+                                                {
+                                                    <span style="position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background-color: #198754; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px;"></span>
+                                                }
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="w-100 d-flex align-items-center justify-content-center">
+        <i class="bi bi-exclamation-triangle-fill text-warning display-5 me-3" title="@_appState!.T("Warning")" />
+        <div class="text-start">
+            <span class="fw-bold d-block" style="color: var(--tpc-text-color);">@_appState!.T("Calculation suspended")</span>
+            <span class="small text-muted text-wrap">@_appState!.T("There is no data!")</span>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int StartOfWeek { get; set; } = 1;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.CyclesCalService? _cyclesCalService { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    private int selectedYear = DateTime.Now.Year;
+    private List<Models.CyclesModel>? cycleEntries { get; set; }
+
+
+    /// <summary>
+    /// Generates the list of short day names aligned to the StartOfWeek parameter.
+    /// </summary>
+    private List<string> weekDaysNames
+    {
+        get
+        {
+            var culture = CultureInfo.CurrentCulture;
+            var firstDay = (DayOfWeek)(StartOfWeek % 7);
+            var orderedNames = new List<string>();
+
+            for (int i = 0; i < 7; i++)
+            {
+                var day = (DayOfWeek)(((int)firstDay + i) % 7);
+                if(_appState.Catalog.WeekShortest != null)
+                    orderedNames.Add(_appState.Catalog.WeekShortest.Where(x => x.Key == (int)day).FirstOrDefault().Value ?? string.Empty);
+                else
+                    orderedNames.Add(culture.DateTimeFormat.GetShortestDayName(day));
+            }
+            return orderedNames;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _eventAggregatorProject.OnRefreshingCyclesCal += Load;
+
+        await Load();
+    }
+    public void Dispose()
+    {
+        _eventAggregatorProject.OnRefreshingCyclesCal -= Load;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Überprüfung, ob das gewählte Jahr dem aktuellen Kalenderjahr entspricht
+            if (selectedYear == DateTime.Now.Year)
+            {
+                var currentMonth = DateTime.Now.Month;
+                var targetId = $"month-{currentMonth}";
+
+                // Kleiner Timeout, damit der DOM-Baum im Modal stabil steht
+                await Task.Delay(150);
+
+                try
+                {
+                    await JS.InvokeVoidAsync("scrollToMonth", targetId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error executing scroll jump: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    private async Task Load()
+    {
+        // Daten laden
+        if (_cyclesCalService != null)
+        {
+            cycleEntries = new();
+
+            BlazorCore.Services.SqlClient.ReadModel<Models.CyclesModel?> result = await _cyclesCalService.Load();
+
+            if (result != null && string.IsNullOrEmpty(result.out_err) && result.out_list != null)
+            {
+                cycleEntries = result.out_list;
+            }
+            else
+            {
+                string? err = result != null ? result.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                );
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnClick_Day(DateTime date)
+    {
+        // Daten für den Tag auslesen
+        if (_cyclesCalService != null)
+        {
+            BlazorCore.Services.SqlClient.ReadModel<Models.CyclesModel?> result = await _cyclesCalService.LoadDay(date);
+
+            if (result != null && string.IsNullOrEmpty(result.out_err) && result.out_list != null)
+            {
+                Models.CyclesModel? cycleEntrie = result.out_list.FirstOrDefault();
+
+                if(cycleEntrie == null)
+                    cycleEntrie = new Models.CyclesModel() { RecordDate = date };
+
+                await _eventAggregatorProject.ChangeModalNativeAsync(Services.EventAggregatorProject.ModalNativeProjectType.Cycle, true, cycleEntrie);
+            }
+            else
+            {
+                string? err = result != null ? result.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                );
+            }
+        }
+    }
+
+
+}

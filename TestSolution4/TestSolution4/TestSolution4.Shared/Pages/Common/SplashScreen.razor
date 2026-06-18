@@ -1,0 +1,173 @@
+﻿@* SplashScreen.razor *@
+@inherits LayoutComponentBase
+
+<style>
+    /* Splash */
+    .tpc-splash-bg .card-body {
+        background-image: linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), url("@normalizedImg") !important;
+        background-position: center center !important;
+        background-repeat: no-repeat !important;
+        background-size: cover !important;
+    }
+
+    /* ACHTUNG: Background wird dann über app.css zurückgesetzt (auf die gleiche Farbe wie hier) */
+    /*          Dies weil app.css neu als Ressource geladen wird, SplashScreen aber früher angezeigt wird. */
+    .tpc-bg {
+        background-color: #e7e4df !important; 
+    }
+
+    /* ACHTUNG: Logo wird über app.css geladen, aber da wir app.css neu als Ressourceladen, */
+    /*          müssen wir Logo auch hier noch einmal im SplashScreen separat laden. */
+    .tpc-title {
+        font-family: Cinzel;
+        font-weight: 700;
+        color: #2C4880; /* Dunkelblau */
+    }
+
+    .tpc-logo {
+        position: relative;
+        display: inline-block;
+        padding: 2px 20px; /* Abstand um Logo herum */
+    }
+
+    .tpc-logo-text {
+        font-size: 12px;
+        font-family: Cinzel;
+        font-weight: 700;
+        color: #2C4880; /* Dunkelblau */
+        position: relative;
+        z-index: 3;
+    }
+
+    /* Die schräge Ellipse */
+    .tpc-logo::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        border: 1px solid #2C4880; /* Blauer Rand */
+        width: 80px;
+        height: 30px;
+        background: #f7f3e8; /* Helles Beige/Pergament */
+        border-radius: 50%;
+        transform: translate(-50%, -50%) rotate(-25deg);
+        z-index: 1;
+        opacity: 0.85;
+    }
+
+    /* Die schräge Linie */
+    .tpc-logo::after {
+        content: "";
+        position: absolute;
+        top: 55%;
+        left: -3px;
+        width: 100%;
+        height: 2px;
+        background: #2C4880; /* Dunkelblau */
+        transform: rotate(-28deg);
+        z-index: 2;
+    }
+</style>
+
+<div class="d-flex justify-content-center align-items-center vh-100 tpc-bg">
+    <div class="@($"{CssClassBackgroundImage} {cssClassModal}")" style="@($"width: {Width}px; height: {Height}px;")">
+
+        <!-- Content OHNE Hintergrundfarbe -->
+        <div class="card-body d-flex flex-column justify-content-between text-center p-5 position-relative" >
+
+            <!-- Oberer Teil: Logo mit transparentem Hintergrund -->
+            <div class="flex-grow-2 d-flex align-items-center justify-content-center">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle p-1"
+                     style="height: 124px; width: 124px;">
+
+                    @if (string.IsNullOrWhiteSpace(LogoText))
+                    {
+                        <img src="@ImgSrc"
+                             alt="@ImgAlt"
+                             class="img-fluid rounded-circle"
+                        style="object-fit: contain; aspect-ratio: 1/1;">
+                    }
+                    else
+                    {
+                        <div class="tpc-logo">
+                            <span class="tpc-logo-text">@LogoText</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Mittlerer Teil: App Name und Slogan mit Text-Hintergrund -->
+            <div class="flex-grow-1 d-flex flex-column justify-content-center">
+                <div class="bg-light rounded p-3 bg-transparent" >
+                    <h1 class="display-4 fw-bold mb-2 tpc-title">@_globalState!.ConfigGeneral.ApplicationName</h1>
+                    <p class="fs-5 fst-italic mb-0 tpc-title">@Text</p>
+                </div>
+            </div>
+
+            <!-- Unterer Teil: Firmenname mit leichtem Hintergrund -->
+            <div class="flex-grow-1 d-flex align-items-end justify-content-center">
+                <small class="fw-medium px-3 py-1 rounded">@_globalState!.ConfigGeneral.Company</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter]
+    public string CssClassBackgroundImage { get; set; } = string.Empty; // CSS Klasse in Shared/wwwroot/app.css definieren
+
+    [Parameter]
+    public string ImgSrc { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ImgAlt { get; set; } = "App logo";
+
+    [Parameter]
+    public string LogoText { get; set; } = string.Empty;
+
+    [Parameter]
+    public int Width { get; set; } = 500;
+
+    [Parameter]
+    public int Height { get; set; } = 500;
+
+    [Parameter]
+    public string ImagePath { get; set; } = "";
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IThemeService _themeService { get; set; } = default!;
+
+    private string cssClassModal = "card border-0 shadow-lg position-relative";
+
+    private string normalizedImg => NormalizeImageSource(ImgSrc);
+
+
+    private string NormalizeImageSource(string src)
+    {
+        if (string.IsNullOrWhiteSpace(src))
+            return "";
+
+        // Already absolute
+        if (src.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return src;
+
+        // Base64 — leave untouched
+        if (src.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            return src;
+
+        // MAUI/Blazor Hybrid requires embedded files under _content/<lib>/
+        if (src.StartsWith("/") && !src.StartsWith("/_content/"))
+            return $"/_content/pMunus.Shared{src}";
+
+        return src;
+    }
+}

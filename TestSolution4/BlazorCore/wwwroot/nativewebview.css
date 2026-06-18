@@ -1,0 +1,129 @@
+/*:root {
+            --ion-safe-area-top: env(safe-area-inset-top, 0px);
+            --ion-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+            --tpc-footer-fix: 0px;
+        }*/
+
+/* 1. GLOBALE BASIS - VIEWPORT FIXIERUNG */
+/* Hier liegt der Schlüssel: Wir fixieren html und body, damit sie sich niemals ausdehnen. */
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    /* KRITISCH: Verhindert die Layout-Expansion bei translateX */
+    overflow: hidden !important;
+    position: fixed;
+    inset: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-y;
+    /* NEU */
+    /*padding-top: 0px !important;*/
+    /*padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom);*/
+    box-sizing: border-box; /* WICHTIG: Damit das Padding nach INNEN geht */
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 2. DER SWIPE-CONTAINER (#app) */
+/* #app ist jetzt der einzige Bereich, der sich bewegen darf. */
+#app {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+    /* Da body fixiert ist, muss #app scrollbar sein (für den Inhalt) */
+    overflow-y: hidden;
+    /* NEU */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+}
+
+/* 3. INTERAKTION */
+input, textarea, [contenteditable="true"], .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+button, .btn, [role="button"] {
+    touch-action: manipulation;
+    cursor: pointer;
+}
+
+/* 4. SCROLLBEREICHE */
+/* Dein Haupt-Scrollbereich bleibt erhalten */
+main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    /*padding-top: env(safe-area-inset-top, 0px);*/
+    /*padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px));*/
+    /* NEU */
+    padding-top: 0px;
+    padding-bottom: 15px;
+}
+
+.scrollable,
+.overflow-auto,
+.overflow-y-auto {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+}
+
+/* 5. SYSTEM & SAFE AREAS */
+.status-bar-safe-area {
+    position: fixed;
+    top: 0;
+    height: env(safe-area-inset-top, 0px);
+    z-index: 10000;
+    pointer-events: none;
+}
+
+/* WICHTIG: Footer/Modale bleiben nun fixiert und wandern NICHT mit,
+        was den Layout-Glitch am rechten Rand verhindert. */
+footer, .footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    bottom: var(--tpc-footer-fix, 0px);
+    /* background-color: var(--footer-background);*/
+}
+
+/* BLAZOR ERROR UI */
+#blazor-error-ui {
+    background: #fff3cd;
+    color: #856404;
+    bottom: 0;
+    display: none;
+    position: fixed;
+    width: 100%;
+    z-index: 20000;
+    padding: 0.75rem 1.25rem;
+}
+
+    #blazor-error-ui.show {
+        display: block !important;
+    }
+
+/* ZUSATZ: Sicherstellen, dass Bootstrap Modale korrekt über allem liegen */
+.modal, .modal-backdrop {
+    /*position: fixed !important;*/
+    /* NEU */
+    top: 0 !important;
+    padding-top: 0 !important;
+}

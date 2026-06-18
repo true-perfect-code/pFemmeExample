@@ -1,0 +1,644 @@
+﻿@implements IDisposable
+@using BlazorCore.Services.Platform
+@using p11.UI.Services
+@using pFemmeExample.Shared.Models
+
+
+<style>
+    .chart-card {
+        min-width: 0;
+        min-height: 0;
+    }
+
+        .chart-card .row,
+        .chart-card [class*="col-"] {
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .chart-card canvas,
+        .chart-card svg {
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+
+    .chart-icon {
+        font-size: clamp(1rem, 2vw, 1.8rem);
+    }
+</style>
+
+<P11Button id="trendsButton" ButtonVariant="ButtonVariant.None"
+           AriaLabel="@_appState.T("Understanding Your Charts")"
+           CssClass="w-100 p-0 border-0 bg-transparent h-100"
+           OnClick="@(() => showModal = true)">
+
+    <div class="card border-0 shadow-sm pb-3 mb-3
+        tpc-card-secondary d-flex flex-column h-100
+        overflow-hidden chart-card"
+         style="cursor: pointer; transition: all 0.2s ease;">
+
+        <!-- Chart 1 - Bleeding -->
+        @if (_configChartBleeding != null)
+        {
+            <div class="row align-items-center g-2 flex-grow-1 min-w-0 min-h-0">
+
+                <div class="col-9 col-md-10 min-w-0 min-h-0">
+                    <P11Chart Config="_configChartBleeding"
+                              Height="100%"
+                              AriaLabel="@_appState!.T("Chart display")" />
+                </div>
+
+                <div class="col-3 col-md-2 text-center min-w-0">
+                    <i class="bi bi-droplet-fill chart-icon"
+                       style="color: var(--tpc-icon-secondary);"></i>
+                </div>
+
+            </div>
+        }
+        else
+        {
+            <div class="text-center w-100 my-4 flex-grow-1 d-flex align-items-center justify-content-center">
+                <div class="spinner-border"
+                     role="status"
+                     style="width: 2rem; height: 2rem; color: var(--tpc-icon-secondary);">
+                    <span class="visually-hidden">@_appState!.T("Loading...")</span>
+                </div>
+            </div>
+        }
+
+        <hr class="d-none d-lg-block flex-shrink-0"
+            style="border-color: var(--tpc-border-color); margin: 1rem 0;" />
+
+        <!-- Chart 2 - Pain -->
+        @if (_configChartPain != null)
+        {
+            <div class="row align-items-center g-2 flex-grow-1 min-w-0 min-h-0">
+
+                <div class="col-9 col-md-10 min-w-0 min-h-0">
+                    <P11Chart Config="_configChartPain"
+                              Height="100%"
+                              AriaLabel="@_appState!.T("Chart display")" />
+                </div>
+
+                <div class="col-3 col-md-2 text-center d-flex align-items-center justify-content-center position-relative min-w-0">
+                    <i class="bi bi-lightning chart-icon"
+                       style="color: var(--tpc-icon-tertiary);"></i>
+                </div>
+
+            </div>
+        }
+        else
+        {
+            <div class="text-center w-100 my-4 flex-grow-1 d-flex align-items-center justify-content-center">
+                <div class="spinner-border"
+                     role="status"
+                     style="width: 2rem; height: 2rem; color: var(--tpc-icon-tertiary);">
+                    <span class="visually-hidden">@_appState!.T("Loading...")</span>
+                </div>
+            </div>
+        }
+
+        <hr class="d-none d-lg-block flex-shrink-0"
+            style="border-color: var(--tpc-border-color); margin: 1rem 0;" />
+
+        <!-- Chart 3 - Cycle -->
+        @if (_configChartCycle != null)
+        {
+            <div class="row align-items-center g-2 flex-grow-1 min-w-0 min-h-0">
+
+                <div class="col-9 col-md-10 min-w-0 min-h-0">
+                    <P11Chart Config="_configChartCycle"
+                              Height="100%"
+                              AriaLabel="@_appState!.T("Chart display")" />
+                </div>
+
+                <div class="col-3 col-md-2 text-center d-flex align-items-center justify-content-center position-relative min-w-0">
+                    <i class="bi bi-calendar2-check chart-icon"
+                       style="color: var(--tpc-icon-primary);"></i>
+                </div>
+
+            </div>
+        }
+        else
+        {
+            <div class="text-center w-100 my-4 flex-grow-1 d-flex align-items-center justify-content-center">
+                <div class="spinner-border"
+                     role="status"
+                     style="width: 2rem; height: 2rem; color: var(--tpc-icon-primary);">
+                    <span class="visually-hidden">@_appState!.T("Loading...")</span>
+                </div>
+            </div>
+        }
+
+    </div>
+
+</P11Button>
+
+<P11ModalNative @bind-Visible="showModal" OnClose="() => { }"
+                Id="@ModalId"
+                NativeDevice="@_appState!.NativeDeviceType"
+                ShowHeaderSeparator="true"
+                CloseButtonText="@_appState.T("Back")"
+                CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                AriaLabelledby="modalTitle1Trends"
+                CssClassContent="tpc-form-bg-01"
+                Size="Size.Large"
+                ShowDevelopmentErrors="true">
+    <HeaderContent>
+        <h5 id="modalTitle1Trends" class="modal-title">@_appState.T("Understanding Your Charts")</h5>
+    </HeaderContent>
+    <BodyContent>
+        <div class="p-2">
+            <p style="color: var(--tpc-text-color); opacity: 0.7; font-size: 0.85rem; margin-bottom: 1.5rem;">
+                @_appState!.T("This modal helps you understand trend and tendency charts that are calculated based on your last recorded cycles.")
+            </p>
+
+            <div class="row g-4">
+                <!-- Box 1 - Bleeding tendency -->
+                <div class="col-12">
+                    <div class="p-3 h-100" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                        <h5 class="fw-bold mb-2" style="color: var(--tpc-text-color);">
+                            <i class="bi bi-droplet-fill me-2" style="color: var(--tpc-icon-secondary);"></i>
+                            @_appState!.T("Bleeding tendency")
+                        </h5>
+                        <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.7;">
+                            @_appState!.T("This graph shows the intensity and change in volume of your bleeding over time. It helps you visually see if your periods are getting lighter, heavier, or are stable and consistent from cycle to cycle.")
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Box 2 - Pain trend -->
+                <div class="col-12">
+                    <div class="p-3 h-100" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                        <h5 class="fw-bold mb-2" style="color: var(--tpc-text-color);">
+                            <i class="bi bi-lightning me-2" style="color: var(--tpc-icon-tertiary);"></i>
+                            @_appState!.T("Pain trend")
+                        </h5>
+                        <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.7;">
+                            @_appState!.T("It tracks the level and frequency of pain (cramps and other symptoms) you've recorded. With this graph, you can monitor whether the pain is decreasing or increasing, which is extremely useful for talking to the doctor.")
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Box 3 - Cycle length deviation -->
+                <div class="col-12">
+                    <div class="p-3 h-100" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                        <h5 class="fw-bold mb-2" style="color: var(--tpc-text-color);">
+                            <i class="bi bi-calendar2-check me-2" style="color: var(--tpc-icon-primary);"></i>
+                            @_appState!.T("Cycle length deviation")
+                        </h5>
+                        <p class="small mb-2" style="color: var(--tpc-text-color); opacity: 0.7;">
+                            @_appState!.T("The bars on the chart show the exact number of days each of your individual cycles lasts.")
+                        </p>
+                        <!-- Lighter box inside for the explanation -->
+                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background-color: #F5EFE8; border: 1px solid #A7C5BD; border-radius: 12px;">
+                            <div style="width: 20px; height: 3px; background-color: #A7C5BD; border-radius: 2px;"></div>
+                            <span class="small" style="color: var(--tpc-text-color); opacity: 0.8;">
+                                <strong>@_appState!.T("Green line:")</strong> @(_appState!.T("It represents a global average of 28 days, allowing you to immediately see how much your cycle deviates from the standard interval.").Replace("28", _medianCycleLength.ToString()))
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </BodyContent>
+
+</P11ModalNative>
+
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.TrendsService _trendsService { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    private bool showModal = false;
+    public readonly Guid ModalId = Guid.NewGuid();
+
+    // Chart 1
+    private P11ChartConfig? _configChartBleeding;
+    private List<ChartsModel> chartBleeding_list = new();
+    // Chart 2
+    private P11ChartConfig? _configChartPain;
+    private List<ChartsModel> chartPain_list = new();
+    // Chart 3
+    private P11ChartConfig? _configChartCycle;
+    private List<ChartsModel> chartCycle_list = new ();
+    private double _currentWindowWidth = 0;
+    private double _medianCycleLength = 28.0;
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Chart-Konfigurationen einmalig initialisieren
+            InitializeChartConfigurations();
+
+            if (_eventAggregator != null)
+                _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+
+            if (_eventAggregatorProject != null)
+            {
+                _eventAggregatorProject.OnFireAfterCycleData += LoadCharts;
+                _eventAggregatorProject.OnRefreshingData += LoadCharts;
+            }
+
+            _currentWindowWidth = await _platform.GetWindowWidth();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+    public void Dispose()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+
+        if (_eventAggregatorProject != null)
+        {
+            _eventAggregatorProject.OnFireAfterCycleData -= LoadCharts;
+            _eventAggregatorProject.OnRefreshingData -= LoadCharts;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCharts();
+        }
+    }
+
+    protected async Task LoadCharts()
+    {
+        try
+        {
+            // Median Cycle Length
+            BlazorCore.Services.SqlClient.ScalarModel result_MedianCycleLength = await _trendsService.LoadMedianCycleLength();
+            if (result_MedianCycleLength != null && !string.IsNullOrEmpty(result_MedianCycleLength.out_err))
+            {
+                string? err = result_MedianCycleLength != null ? result_MedianCycleLength.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                );
+            }
+            else
+            {
+                if (result_MedianCycleLength != null)
+                {
+                    if (result_MedianCycleLength.out_value_dbl > 0)
+                    {
+                        _medianCycleLength = Math.Round(result_MedianCycleLength.out_value_dbl, 1);
+                    }
+                    else
+                    {
+                        _medianCycleLength = result_MedianCycleLength != null && double.TryParse(result_MedianCycleLength.out_value_str, out double val) ? Math.Round(val, 1) : 28.0;
+                    }
+                }
+            }
+
+            // Chart 1
+            BlazorCore.Services.SqlClient.ReadModel<ChartsModel?> result_ChartBleeding = new();
+            result_ChartBleeding = await _trendsService.LoadChartBleeding();
+            if (result_ChartBleeding != null && !string.IsNullOrEmpty(result_ChartBleeding.out_err)) 
+            {
+                string? err = result_ChartBleeding != null ? result_ChartBleeding.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                );
+            }
+
+            // Chart 2
+            BlazorCore.Services.SqlClient.ReadModel<ChartsModel?> result_ChartPain = new();
+            result_ChartPain = await _trendsService.LoadChartPain();
+            if (result_ChartPain != null && !string.IsNullOrEmpty(result_ChartPain.out_err))
+            {
+                string? err = result_ChartPain != null ? result_ChartPain.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                );
+            }
+
+            // Chart 3
+            BlazorCore.Services.SqlClient.ReadModel<ChartsModel?> result_ChartCycle = new();
+            result_ChartCycle = await _trendsService.LoadChartCycle();
+            if (result_ChartCycle != null && !string.IsNullOrEmpty(result_ChartCycle.out_err))
+            {
+                string? err = result_ChartCycle != null ? result_ChartCycle.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                );
+            }
+
+            if(result_ChartBleeding != null && result_ChartPain != null && result_ChartCycle != null)
+                await GenerateCharts(result_ChartBleeding, result_ChartPain, result_ChartCycle);
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private void InitializeChartConfigurations()
+    {
+        // Chart 1 - Bleeding (nur Konfiguration, keine Daten)
+        _configChartBleeding = P11ChartService.CreateQuickBar(
+            "",
+            new List<string>(),
+            new List<double?>(),
+            "rgba(142, 107, 94, 0.3)"
+        );
+
+        if (_configChartBleeding.Data.Datasets.Count > 0)
+        {
+            var ds = _configChartBleeding.Data.Datasets[0];
+            ds.SetStyle(P11ChartProps.Dataset.BorderColor, "#8E6B5E");
+            ds.SetStyle(P11ChartProps.Dataset.BorderWidth, 0);
+            ds.SetStyle(P11ChartProps.Dataset.BorderRadius, 8);
+            ds.SetStyle(P11ChartProps.Dataset.BackgroundColor, "#8E6B5E");
+            ds.SetStyle(P11ChartProps.Dataset.PointHoverBackgroundColor, "#8E6B5E");
+            ds.SetStyle(P11ChartProps.Dataset.PointHoverBorderColor, "#8E6B5E");
+            ds.SetStyle(P11ChartProps.Dataset.Fill, true);
+            ds.SetStyle("borderSkipped", false);
+        }
+
+        _configChartBleeding.SetOption(P11ChartProps.General.Responsive, true);
+        _configChartBleeding.SetOption(P11ChartProps.General.MaintainAspectRatio, false);
+        _configChartBleeding.SetOption(P11ChartProps.Animation.Duration, 800);
+        _configChartBleeding.SetOption("scales.x.ticks.color", "#4A5B4A");
+        _configChartBleeding.SetOption("scales.x.ticks.font.size", 11);
+        _configChartBleeding.SetOption("scales.x.grid.display", false);
+        _configChartBleeding.SetOption("scales.x.grid.drawBorder", false);
+        _configChartBleeding.SetOption("scales.x.grid.drawTicks", false);
+        _configChartBleeding.SetOption("scales.x.border.display", false);
+        _configChartBleeding.SetOption("scales.y.ticks.color", "#4A5B4A");
+        _configChartBleeding.SetOption("scales.y.ticks.font.size", 11);
+        _configChartBleeding.SetOption("scales.y.grid.color", "rgba(74, 91, 74, 0.1)");
+        _configChartBleeding.SetOption("scales.y.grid.drawBorder", false);
+        _configChartBleeding.SetOption("scales.y.grid.drawTicks", false);
+        _configChartBleeding.SetOption("scales.y.border.display", false);
+        _configChartBleeding.SetOption("scales.y.beginAtZero", true);
+        _configChartBleeding.SetOption("plugins.legend.display", false);
+        _configChartBleeding.SetOption("plugins.tooltip.backgroundColor", "#4A5B4A");
+        _configChartBleeding.SetOption("plugins.tooltip.titleColor", "#FCFAF8");
+        _configChartBleeding.SetOption("plugins.tooltip.bodyColor", "#FCFAF8");
+        _configChartBleeding.SetOption("plugins.tooltip.borderColor", "#8E6B5E");
+        _configChartBleeding.SetOption("plugins.tooltip.borderWidth", 1);
+        _configChartBleeding.SetOption("plugins.tooltip.cornerRadius", 8);
+
+        // Chart 2 - Pain (nur Konfiguration, keine Daten)
+        _configChartPain = P11ChartService.CreateQuickBar(
+            "",
+            new List<string>(),
+            new List<double?>(),
+            "rgba(122, 93, 82, 0.3)"
+        );
+
+        if (_configChartPain.Data.Datasets.Count > 0)
+        {
+            var ds = _configChartPain.Data.Datasets[0];
+            ds.SetStyle(P11ChartProps.Dataset.BorderColor, "#7A5D52");
+            ds.SetStyle(P11ChartProps.Dataset.BorderWidth, 0);
+            ds.SetStyle(P11ChartProps.Dataset.BorderRadius, 8);
+            ds.SetStyle(P11ChartProps.Dataset.BackgroundColor, "#7A5D52");
+            ds.SetStyle(P11ChartProps.Dataset.PointHoverBackgroundColor, "#7A5D52");
+            ds.SetStyle(P11ChartProps.Dataset.PointHoverBorderColor, "#7A5D52");
+            ds.SetStyle(P11ChartProps.Dataset.Fill, true);
+            ds.SetStyle("borderSkipped", false);
+        }
+
+        _configChartPain.SetOption(P11ChartProps.General.Responsive, true);
+        _configChartPain.SetOption(P11ChartProps.General.MaintainAspectRatio, false);
+        _configChartPain.SetOption(P11ChartProps.Animation.Duration, 800);
+        _configChartPain.SetOption("scales.x.ticks.color", "#4A5B4A");
+        _configChartPain.SetOption("scales.x.ticks.font.size", 11);
+        _configChartPain.SetOption("scales.x.grid.display", false);
+        _configChartPain.SetOption("scales.x.grid.drawBorder", false);
+        _configChartPain.SetOption("scales.x.grid.drawTicks", false);
+        _configChartPain.SetOption("scales.x.border.display", false);
+        _configChartPain.SetOption("scales.y.ticks.color", "#4A5B4A");
+        _configChartPain.SetOption("scales.y.ticks.font.size", 11);
+        _configChartPain.SetOption("scales.y.grid.color", "rgba(74, 91, 74, 0.1)");
+        _configChartPain.SetOption("scales.y.grid.drawBorder", false);
+        _configChartPain.SetOption("scales.y.grid.drawTicks", false);
+        _configChartPain.SetOption("scales.y.border.display", false);
+        _configChartPain.SetOption("scales.y.beginAtZero", true);
+        _configChartPain.SetOption("plugins.legend.display", false);
+        _configChartPain.SetOption("plugins.tooltip.backgroundColor", "#4A5B4A");
+        _configChartPain.SetOption("plugins.tooltip.titleColor", "#FCFAF8");
+        _configChartPain.SetOption("plugins.tooltip.bodyColor", "#FCFAF8");
+        _configChartPain.SetOption("plugins.tooltip.borderColor", "#7A5D52");
+        _configChartPain.SetOption("plugins.tooltip.borderWidth", 1);
+        _configChartPain.SetOption("plugins.tooltip.cornerRadius", 8);
+
+        // Chart 3 - Cycle Length (nur Konfiguration, keine Daten)
+        _configChartCycle = P11ChartService.CreateQuickBar(
+            _appState!.T("Your cycles"),
+            new List<string>(),
+            new List<double?>(),
+            "rgba(90, 123, 110, 0.15)"
+        );
+
+        if (_configChartCycle.Data.Datasets.Count > 0)
+        {
+            var ds = _configChartCycle.Data.Datasets[0];
+            ds.SetStyle(P11ChartProps.Dataset.BorderColor, "#5A7B6E");
+            ds.SetStyle(P11ChartProps.Dataset.BorderWidth, 0);
+            ds.SetStyle(P11ChartProps.Dataset.BackgroundColor, "#5A7B6E");
+            ds.SetStyle(P11ChartProps.Dataset.PointHoverBackgroundColor, "#5A7B6E");
+            ds.SetStyle(P11ChartProps.Dataset.PointHoverBorderColor, "#5A7B6E");
+            ds.SetStyle(P11ChartProps.Dataset.Fill, true);
+        }
+
+        // Line Dataset für Chart 3
+        var lineDataset = new P11Dataset
+        {
+            Label = _appState!.T("The average interval between cycles is 28 days.").Replace("28", _medianCycleLength.ToString()),
+            Data = new List<double?>(),
+        };
+
+        lineDataset.SetStyle(P11ChartProps.Dataset.Type, P11ChartType.Line);
+        lineDataset.SetStyle(P11ChartProps.Dataset.BorderColor, "#A7C5BD");
+        lineDataset.SetStyle(P11ChartProps.Dataset.BorderWidth, 3);
+        lineDataset.SetStyle(P11ChartProps.Dataset.Fill, false);
+        lineDataset.SetStyle(P11ChartProps.Dataset.PointRadius, 0);
+
+        _configChartCycle.Data.Datasets.Add(lineDataset);
+
+        _configChartCycle.SetOption(P11ChartProps.General.Responsive, true);
+        _configChartCycle.SetOption(P11ChartProps.General.MaintainAspectRatio, false);
+        _configChartCycle.SetOption(P11ChartProps.Animation.Duration, 800);
+        _configChartCycle.SetOption("scales.x.ticks.color", "#4A5B4A");
+        _configChartCycle.SetOption("scales.x.ticks.font.size", 11);
+        _configChartCycle.SetOption("scales.x.grid.display", false);
+        _configChartCycle.SetOption("scales.x.grid.drawBorder", false);
+        _configChartCycle.SetOption("scales.x.grid.drawTicks", false);
+        _configChartCycle.SetOption("scales.x.border.display", false);
+        _configChartCycle.SetOption("scales.y.ticks.color", "#4A5B4A");
+        _configChartCycle.SetOption("scales.y.ticks.font.size", 11);
+        _configChartCycle.SetOption("scales.y.grid.color", "rgba(74, 91, 74, 0.1)");
+        _configChartCycle.SetOption("scales.y.grid.drawBorder", false);
+        _configChartCycle.SetOption("scales.y.grid.drawTicks", false);
+        _configChartCycle.SetOption("scales.y.border.display", false);
+        _configChartCycle.SetOption("scales.y.beginAtZero", true);
+        _configChartCycle.SetOption("plugins.legend.display", false);
+        _configChartCycle.SetOption("plugins.legend.position", "bottom");
+        _configChartCycle.SetOption("plugins.tooltip.backgroundColor", "#4A5B4A");
+        _configChartCycle.SetOption("plugins.tooltip.titleColor", "#FCFAF8");
+        _configChartCycle.SetOption("plugins.tooltip.bodyColor", "#FCFAF8");
+        _configChartCycle.SetOption("plugins.tooltip.borderColor", "#A7C5BD");
+        _configChartCycle.SetOption("plugins.tooltip.borderWidth", 1);
+    }
+
+    protected async Task GenerateCharts(BlazorCore.Services.SqlClient.ReadModel<ChartsModel?> result_ChartBleeding,
+                                    BlazorCore.Services.SqlClient.ReadModel<ChartsModel?> result_ChartPain,
+                                    BlazorCore.Services.SqlClient.ReadModel<ChartsModel?> result_ChartCycle)
+    {
+        try
+        {
+            int months = _currentWindowWidth >= 1400 ? 12
+                : _currentWindowWidth >= 1000 ? 8
+                : 6;
+
+            // Chart 1 - Bleeding (nur Daten aktualisieren)
+            if (result_ChartBleeding != null && result_ChartBleeding.out_list != null)
+            {
+                chartBleeding_list = result_ChartBleeding.out_list!;
+
+                var sorted = chartBleeding_list
+                    .Where(x => x != null && x.Int__Date >= DateTime.Today.AddMonths(-(int)(months / 2)))
+                    .OrderBy(x => x!.Int__Date)
+                    .ToList();
+
+                var labels = sorted
+                    .Select(x => x.Int__Date.ToString("dd.MM"))
+                    .ToList();
+
+                var data = sorted
+                    .Select(x => x.Int__Value)
+                    .ToList();
+
+                // Nur Labels und Daten aktualisieren
+                if (_configChartBleeding != null)
+                {
+                    _configChartBleeding.Data.Labels = labels;
+                    if (_configChartBleeding.Data.Datasets.Count > 0)
+                    {
+                        _configChartBleeding.Data.Datasets[0].Data = data.Cast<double?>().ToList();
+                    }
+                }
+            }
+
+            // Chart 2 - Pain (nur Daten aktualisieren)
+            if (result_ChartPain != null && result_ChartPain.out_list != null)
+            {
+                chartPain_list = result_ChartPain.out_list!;
+
+                var sorted = chartPain_list
+                    .Where(x => x != null && x.Int__Date >= DateTime.Today.AddMonths(-(int)(months / 2)))
+                    .OrderBy(x => x!.Int__Date)
+                    .ToList();
+
+                var labels = sorted
+                    .Select(x => x.Int__Date.ToString("dd.MM"))
+                    .ToList();
+
+                var data = sorted
+                    .Select(x => x.Int__Value)
+                    .ToList();
+
+                // Nur Labels und Daten aktualisieren
+                if (_configChartPain != null)
+                {
+                    _configChartPain.Data.Labels = labels;
+                    if (_configChartPain.Data.Datasets.Count > 0)
+                    {
+                        _configChartPain.Data.Datasets[0].Data = data.Cast<double?>().ToList();
+                    }
+                }
+            }
+
+            // Chart 3 - Cycle Length (nur Daten aktualisieren)
+            if (result_ChartCycle != null && result_ChartCycle.out_list != null)
+            {
+                chartCycle_list = result_ChartCycle.out_list!;
+
+                var sorted = chartCycle_list
+                    .Where(x => x != null && x.Int__Date >= DateTime.Today.AddMonths(-months))
+                    .OrderBy(x => x!.Int__Date)
+                    .ToList();
+
+                var labels = sorted
+                    .Select(x => x.Int__Date.ToString("dd.MM"))
+                    .ToList();
+
+                var data = sorted
+                    .Select(x => x.Int__Value)
+                    .ToList();
+
+                // Nur Labels und Daten aktualisieren
+                if (_configChartCycle != null)
+                {
+                    _configChartCycle.Data.Labels = labels;
+                    if (_configChartCycle.Data.Datasets.Count > 0)
+                    {
+                        _configChartCycle.Data.Datasets[0].Data = data.Cast<double?>().ToList();
+                    }
+
+                    // Line Dataset Daten aktualisieren (Dataset Index 1)
+                    if (_configChartCycle.Data.Datasets.Count > 1)
+                    {
+                        var averageLineData = new List<double?>();
+                        for (int i = 0; i < labels.Count; i++)
+                        {
+                            averageLineData.Add(_medianCycleLength);
+                        }
+                        _configChartCycle.Data.Datasets[1].Data = averageLineData;
+                    }
+                }
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+}

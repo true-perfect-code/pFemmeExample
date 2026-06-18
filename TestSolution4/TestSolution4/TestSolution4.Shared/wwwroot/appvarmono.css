@@ -1,0 +1,49 @@
+/* -------------------------------------------- */
+/* VARIABLES MONOCHROME THEME                   */
+/* -------------------------------------------- */
+:root {
+    /* true perfect code (tpc) - Monochrome Schwarz-Weiß Version */
+    --tpc-btn-color: #ffffff !important; /* Weiss */
+    --tpc-body: #f8f8f8 !important; /* Hellgrau statt Stein */
+    --tpc-parchment-bg: #ffffff !important; /* Reines Weiss statt Pergament */
+    --tpc-deep-ink-blue: #2a2a2a !important; /* Tiefes Anthrazit statt Blau */
+    --tpc-sepia-accent: #666666 !important; /* Mittelgrau statt Sepia */
+    --tpc-sepia-accent-rgb: 102, 102, 102 !important; /* Mittelgrau RGB */
+    --tpc-sepia-accent-hover: #555555 !important; /* Dunkleres Grau für Hover */
+    --tpc-sepia-accent-active: #444444 !important; /* Noch dunkler für Active */
+    --tpc-light-text: #333333 !important; /* Dunkelgrau für Text */
+    /* Bootstrap */
+    --bs-body-bg: var(--tpc-body) !important;
+    --btn-gradient: linear-gradient(135deg, #666666 0%, #888888 100%);
+    --btn-gradient-hover: linear-gradient(135deg, #555555 0%, #777777 100%);
+    --btn-shadow: 0 2px 8px rgba(102, 102, 102, 0.3);
+    --btn-hover-shadow: 0 4px 12px rgba(102, 102, 102, 0.4);
+}
+
+.tpc-landing-hero-bg {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-landing-gallery-bg {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-landing-contact-bg {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-form-bg-01 {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-form-bg-02 {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-form-bg-03 {
+    filter: grayscale(100%) !important;
+}
+
+.tpc-img {
+    filter: grayscale(100%) !important;
+}

@@ -1,0 +1,57 @@
+﻿@page "/imprint"
+@implements IDisposable
+@using p11.UI.Services
+
+
+<P11PageNative Id="@_pageId"
+               Title="@_appState.T("Imprint")"
+               NativeDevice="@_appState.NativeDeviceType"
+               ShowNativeHeader="@_showHeader"
+               CloseButtonText="@_appState.T("Back")">
+
+    <BodyContent>
+
+        <pFemmeExample.Shared.Pages.Common.ImprintCommon />
+
+    </BodyContent>
+</P11PageNative>
+
+@code{
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    protected NavigationManager? _navigationManager { get; set; }
+
+
+    [Inject]
+    protected IEventStateService? EventStateService { get; set; }
+
+
+    private Guid _pageId = Guid.NewGuid();
+
+    private bool _showHeader = true;
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to global back navigation
+        EventStateService!.OnGlobalBackNavigationRequested += HandleGlobalBack;
+    }
+
+    private async Task HandleGlobalBack()
+    {
+        //_debugLog = "Back event received! Navigating back...";
+        await InvokeAsync(StateHasChanged);
+
+        // Short delay for demo visibility
+        await Task.Delay(300);
+
+        _navigationManager!.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        // Prevent memory leaks
+        EventStateService!.OnGlobalBackNavigationRequested -= HandleGlobalBack;
+    }
+}

@@ -1,0 +1,127 @@
+﻿@using p11.UI
+
+
+@if (Visible && _appState?.Catalog.Languages != null)
+{
+    <div class="mt-3" />
+    <P11Select TItem="string" TValue="string"
+               @bind-Value="@Language"
+               name="language"
+               PlaceholderText="@(_appState!.T("Select language"))"
+               AriaLabel="@(_appState.T("Select language"))">
+        @foreach (var lang in _appState.Catalog.Languages)
+        {
+            <option value="@lang.Key">@lang.Value</option>
+        }
+    </P11Select>
+    <div class="mb-1" />
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+        <P11AccordionNative IsInitiallyOpen="@IsInitiallyOpen">
+            <Title>
+                <span>@_appState!.T("Terms")</span>
+            </Title>
+            <ChildContent>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <Terms IsHeaderHidden="true" />
+                </div>
+            </ChildContent>
+        </P11AccordionNative>
+    </P11HoverEffect>
+    <div class="mb-1" />
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+        <P11AccordionNative>
+            <Title>
+                <span>@_appState!.T("EULA")</span>
+            </Title>
+            <ChildContent>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <Eula IsHeaderHidden="true" />
+                </div>
+            </ChildContent>
+        </P11AccordionNative>
+    </P11HoverEffect>
+}
+
+@if (!IsAcceptButtonHidden)
+{
+    <div class="d-flex flex-column gap-2 mt-3">
+        <P11Button Text="@_appState!.T("Accept")" OnClick="HandleAccept" ButtonVariant="ButtonVariant.Primary" />
+        <P11Button Text="@_appState!.T("Cancel")" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" />
+    </div>
+}
+
+@code {
+    [Inject] 
+    BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject] 
+    BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    [Parameter] public bool Visible { get; set; } = true;
+    [Parameter] public bool IsAcceptButtonHidden { get; set; } = false;
+
+    [Parameter] public bool IsInitiallyOpen { get; set; } = false;
+
+
+    /// <summary>
+    /// Callback, über das das Ergebnis an die MessageBox zurückgegeben wird.
+    /// </summary>
+    [Parameter] public Action<bool>? OnResult { get; set; }
+
+
+    public string? Language { get; set; }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_appState != null && _globalState != null && _appState.Catalog.LocalStorage != null)
+        {
+            if (string.IsNullOrWhiteSpace(Language))
+            {
+                // Zuerst prüfen, ob AppState gesetzt ist
+                if (_appState.HasSelectedLanguage())
+                    Language = _appState.SelectedLanguage;
+                else
+                {
+                    // Dann Cookie/SecureStorage prüfen
+                    var language = await _platform!.GetAsync(_appState.Catalog.LocalStorage.language);
+                    if (language != null && string.IsNullOrEmpty(language.out_err) && !string.IsNullOrEmpty(language.out_value_str))
+                        Language = language.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                    else // ...ansonsten Standardsprache setzen
+                    {
+                        if (language != null && !string.IsNullOrEmpty(language.out_err))
+                        {
+                            await _messageBoxService!.ShowOkAsync(
+                                title: _appState?.T("Error") ?? "Error",
+                                message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {language.out_err}"
+                            );
+                        }
+
+                        Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                    }
+                }
+            }
+        }
+
+    }
+
+    private async Task HandleAccept()
+    {
+        await Task.Delay(10);
+        OnResult?.Invoke(true);
+    }
+
+    private async Task HandleCancel()
+    {
+        await Task.Delay(10);
+        OnResult?.Invoke(false);
+    }
+
+}

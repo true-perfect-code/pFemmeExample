@@ -1,0 +1,304 @@
+﻿@implements IDisposable
+@using System.Text.Json
+@using p11.UI
+@using BlazorCore.Services.AppState
+
+@if(_appState != null)
+{
+    <div class="@CssClassDropdownContent">
+        <div class="border-bottom border-2 mb-2">
+            @if (VisibleLanguage)
+            {
+                <Language />
+            }
+
+            @if (VisibleFontFamily)
+            {
+                <P11FontFamily @bind-Value="_appState.AccessibilityConfig.SelectedFontFamily"
+                               Fonts="@_appState.Catalog.Fonts"
+                               CssClass="mt-2"
+                               ShowSystemFonts="true"
+                               PlaceholderText="@_appState.T("Fontfamily")" />
+            }
+
+            @if (VisibleFontSize)
+            {
+                <P11FontSize @bind-Value="@_appState.AccessibilityConfig.SelectedFontSize"
+                             OffsetFontSize="0.05"
+                             Size="@ButtonSize"
+                             ButtonVariant="ButtonVariant.Light"
+                             TitleIncrease="@_appState.T("Increase")"
+                             TitleReduce="@_appState.T("Reduce")"
+                             TitleReset="@_appState.T("Reset")" />
+            }
+
+            @if (VisibleFontWeight)
+            {
+                <P11FontWeight @bind-Value="@_appState.AccessibilityConfig.SelectedFontWeight"
+                               Size="@ButtonSize"
+                               ButtonVariant="ButtonVariant.Light"
+                               TitleIncrease="@_appState.T("Increase")"
+                               TitleReduce="@_appState.T("Reduce")"
+                               TitleReset="@_appState.T("Reset")" />
+            }
+
+            @if (VisibleFontSpacing)
+            {
+                <P11FontSpacing @bind-Value="_appState.AccessibilityConfig.SelectedSpacingValue"
+                                Size="@ButtonSize"
+                                ButtonVariant="ButtonVariant.Light"
+                                TitleIncrease="@_appState.T("Increase")"
+                                TitleReduce="@_appState.T("Reduce")"
+                                TitleReset="@_appState.T("Reset")" />
+            }
+
+            @if (VisibleFontLineheight)
+            {
+                <P11FontLineheight @bind-Value="_appState.AccessibilityConfig.SelectedLineHeightValue"
+                                   Size="@ButtonSize"
+                                   ButtonVariant="ButtonVariant.Light"
+                                   TitleIncrease="@_appState.T("Increase")"
+                                   TitleReduce="@_appState.T("Reduce")"
+                                   TitleReset="@_appState.T("Reset")" />
+            }
+
+            @if (VisibleMonoMode)
+            {
+                <div class="border-top border-2 mt-2">
+                    <P11MonoMode @bind-ValueSwitch="_appState.AccessibilityConfig.IsActivatedMonochrome"
+                                 LabelSwitch="@_appState.T("Monomode")"
+                                 CssClassContainer="my-2"
+                                 @bind-ValuePrimary="@_appState.AccessibilityConfig.SelectedPrimaryColor"
+                                 @bind-ValueSecondary="@_appState.AccessibilityConfig.SelectedSecondaryColor"
+                                 CssCustomerDefault="@_appState.AccessibilityConfig.cssDefault"
+                                 CssCustomerMono="@_appState.AccessibilityConfig.cssMono"
+                                 ButtonOrientation="@ButtonOrientationMonoMode"
+                                 ClearCurrentCssTheme="@ClearCurrentCssThemeMonoMode"
+                                 HideColorsSelection="@HideColorsSelectionMonoMode"
+                                 UseCssDefault="@UseCssDefaultMonoMode"
+                                 GapSize="@GapSizeMonoMode" />
+                </div>
+            }
+        </div>
+
+        <P11Button Text="@_appState.T("Save")" OnClick="OnSaveAccessibility" Size="Size.Small" IsLoading="@isSaving" />
+    </div>
+}
+
+@code {
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformStorageBase _platformStorage { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+
+    [Parameter]
+    public EventCallback OnClickSave { get; set; }
+
+    [Parameter]
+    public int MinWidth { get; set; } = 200;
+
+    [Parameter]
+    public string CssClass { get; set; } = "mt-0";
+
+    [Parameter]
+    public string StylePanel { get; set; } = "margin-top: -10px;";
+
+    [Parameter]
+    public DropdownAlignment? Alignment { get; set; }
+
+    [Parameter]
+    public string ButtonIconClass { get; set; } = "bi bi-universal-access";
+
+    [Parameter]
+    public string ButtonText { get; set; } = string.Empty;
+
+    [Parameter]
+    public p11.UI.ButtonVariant ButtonVariantDropdown { get; set; } = p11.UI.ButtonVariant.None;
+
+    [Parameter]
+    public string CssClassDropdownContent { get; set; } = "d-flex flex-column gap-2";
+
+    [Parameter]
+    public bool VisibleLanguage { get; set; } = true;
+
+    [Parameter]
+    public bool VisibleFontFamily { get; set; } = true;
+
+    [Parameter]
+    public bool VisibleFontSize { get; set; } = true;
+
+    [Parameter]
+    public bool VisibleFontWeight { get; set; } = true;
+
+    [Parameter]
+    public bool VisibleFontSpacing { get; set; } = true;
+
+    [Parameter]
+    public bool VisibleFontLineheight { get; set; } = true;
+
+    [Parameter]
+    public bool VisibleMonoMode { get; set; } = true;
+
+    [Parameter]
+    public bool ClearCurrentCssThemeMonoMode { get; set; } = false;
+
+    [Parameter]
+    public bool HideColorsSelectionMonoMode { get; set; } = false;
+
+    [Parameter]
+    public bool UseCssDefaultMonoMode { get; set; } = false;
+
+    [Parameter]
+    public ButtonOrientation ButtonOrientationMonoMode { get; set; } = ButtonOrientation.Vertical;
+
+    [Parameter]
+    public int GapSizeMonoMode { get; set; } = 3;
+
+    [Parameter]
+    public p11.UI.Size ButtonSizeDropdown { get; set; } = p11.UI.Size.Medium;
+
+    [Parameter]
+    public p11.UI.Size ButtonSize { get; set; } = p11.UI.Size.Small;
+
+    [Parameter]
+    public bool VisibleOpenModal { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleOpenModalChanged { get; set; }
+
+    private Guid _idModal = Guid.NewGuid();
+    private bool isSaving = false;
+    private DropdownAlignment alignment = DropdownAlignment.BottomCenter;
+
+
+    protected override void OnInitialized()
+    {
+        if (_appState != null)
+            _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+    }
+    public void Dispose()
+    {
+        if (_appState != null)
+            _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Alignment != null)
+            alignment = Alignment ?? DropdownAlignment.BottomCenter;
+    }
+
+    private void HandleStateChange()
+    {
+        // InvokeAsync erzwingt den Wechsel auf den UI-Thread,
+        // bevor StateHasChanged ausgeführt wird.
+        //_appState.Log("[Blazor Home.razor] HandleStateChange", isDebugEnabled: true);
+
+        InvokeAsync(StateHasChanged);
+
+        _appState!.Log($"[Blazor Accessibility.razor] HandleStateChange, _appState.T(Save)", data: _appState.T("Save"));
+    }
+
+    private async Task OnClose()
+    {
+        VisibleOpenModal = false;
+
+        if (VisibleOpenModalChanged.HasDelegate)
+        {
+            await VisibleOpenModalChanged.InvokeAsync(false);
+        }
+    }
+
+    private async Task OnSaveAccessibility()
+    {
+        if (_appState?.Catalog.LocalStorage == null) return;
+
+        try
+        {
+            isSaving = true;
+            await Task.Delay(100); // Damit der Loading-State sichtbar ist
+            StateHasChanged();
+
+            // Sprache speichern
+            if (!string.IsNullOrWhiteSpace(_appState!.AccessibilityConfig.SelectedLanguage))
+            {
+                await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.language, _appState.AccessibilityConfig.SelectedLanguage);
+
+                if (_appState.AccessibilityConfig.SelectedLanguage == "AR")
+                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.ltrrtl, LTR_RTL.RTL.ToString());
+                else
+                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.ltrrtl, LTR_RTL.LTR.ToString());
+            }
+
+            // FontFamily
+            if (!string.IsNullOrWhiteSpace(_appState.AccessibilityConfig.SelectedFontFamily))
+                await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.fontfamily, _appState.AccessibilityConfig.SelectedFontFamily);
+
+            // FontSize
+            if (_appState.AccessibilityConfig.SelectedFontSize != null)
+            {
+                string json = JsonSerializer.Serialize(
+                    _appState.AccessibilityConfig.SelectedFontSize,
+                    BlazorCore.JsonContext.Default.FontSizeModel
+                );
+                await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.fontsize, json);
+            }
+
+            // FontWeight
+            if (_appState.AccessibilityConfig.SelectedFontWeight != null)
+            {
+                string json = JsonSerializer.Serialize(
+                    _appState.AccessibilityConfig.SelectedFontWeight,
+                    BlazorCore.JsonContext.Default.FontWeightModel
+                );
+                await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.fontweight, json);
+            }
+
+            // FontSpacing
+            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.fontspacing, _appState.AccessibilityConfig.SelectedSpacingValue.ToString());
+
+            // FontLineHeight
+            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.fontlineheight, _appState.AccessibilityConfig.SelectedLineHeightValue.ToString());
+
+            // Theme (Default oder Monochrome)
+            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.thememode, _appState.AccessibilityConfig.IsActivatedMonochrome ? BlazorCore.Services.Platform.THEMEMODE.MONOCHROME.ToString() : BlazorCore.Services.Platform.THEMEMODE.DEFAULT.ToString());
+
+
+            await _toastService!.ShowSuccessAsync(_appState.T("Data has been successfully saved."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 2000);
+
+            await OnClose();
+
+            isSaving = false;
+            StateHasChanged();
+
+            if (OnClickSave.HasDelegate)
+            {
+                await OnClickSave.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+}

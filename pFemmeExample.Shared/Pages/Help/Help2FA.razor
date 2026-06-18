@@ -1,0 +1,437 @@
+﻿@using p11.UI
+@using Microsoft.AspNetCore.Components.Web
+
+
+<pFemmeExample.Shared.Pages.Common.Help DocumentBody="@Body" Language="@Language" />
+
+@code {
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+    private string? Body = string.Empty;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var language = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (language != null && string.IsNullOrEmpty(language.out_err) && !string.IsNullOrEmpty(language.out_value_str))
+                    Language = language.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (language != null && !string.IsNullOrEmpty(language.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {language.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Body =$@"
+1. 2FA Setup Preparation and Process:
+- When clicking the 2FA setup option, a security prompt first appears to ensure that an authenticator app is ready. This help information can be accessed at this point.
+_content/Shared/img/video_2FAalert.gif
+
+2. Critical Security Warning:
+- <b>Attention:</b> Once started, the 2FA setup process cannot be interrupted!
+- The only way to complete or cancel the process is by correctly entering the OTP code or the Backup Code.
+
+3. Setup Procedure:
+- In the background, the app immediately generates an OTP code, which is saved to the database.
+- The setup form displays the <b>QR Code</b> for easy setup in the authenticator app.
+- Below the QR code, the <b>Code URL</b> is available to copy for manual entry.
+- The <b>Backup Code</b>, which is also displayed, must be **secured immediately** using the copy button.
+- This Backup Code enables the deactivation of the 2FA lock if access to the authenticator is lost (e.g., losing the phone or accidentally uninstalling the app).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Note
+A detailed description of the application can be found in our linked user manual
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            case "DE":
+                Body =$@"
+1. Vorbereitung und Ablauf der 2FA-Einrichtung:
+- Beim Anklicken der 2FA-Einrichtungsoption erscheint zunächst eine Sicherheitsabfrage, um sicherzustellen, dass eine Authentifizierungs-App bereit ist. Diese Hilfsinformation kann an dieser Stelle aufgerufen werden.
+_content/Shared/img/video_2FAalert.gif
+
+2. Wichtiger Sicherheitshinweis:
+- <b>Achtung:</b> Der einmal begonnene 2FA-Einrichtungsprozess kann nicht unterbrochen werden!
+- Der Prozess kann nur durch korrektes Eingeben des OTP-Codes oder des Backup-Codes abgeschlossen oder abgebrochen werden.
+
+3. Einrichtungsablauf:
+- Im Hintergrund erzeugt die App sofort einen OTP-Code, der in der Datenbank gespeichert wird.
+- Im Einrichtungsformular wird der <b>QR-Code</b> zur einfachen Einrichtung in der Authentifizierungs-App angezeigt.
+- Unter dem QR-Code steht der <b>Code-URL</b> zum Kopieren für die manuelle Eingabe zur Verfügung.
+- Der ebenfalls angezeigte <b>Backup-Code</b> muss **sofort** mit der Kopier-Schaltfläche gesichert werden.
+- Dieser Backup-Code ermöglicht die Deaktivierung der 2FA-Sperre, falls der Zugriff auf die Authentifizierungs-App verloren geht (z. B. Handy-Verlust oder versehentliches Deinstallieren der App).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Hinweis
+Eine detaillierte Beschreibung der Anwendung finden Sie in unserem verlinkten Benutzerhandbuch
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Body = $@"
+1. Préparation et processus de configuration 2FA :
+- En cliquant sur l'option de configuration 2FA, une invite de sécurité apparaît d'abord pour s'assurer qu'une application d'authentification est prête. Ces informations d'aide peuvent être consultées à ce stade.
+_content/Shared/img/video_2FAalert.gif
+
+2. Avertissement de sécurité critique :
+- <b>Attention :</b> Une fois commencé, le processus de configuration 2FA ne peut pas être interrompu !
+- La seule façon de terminer ou d'annuler le processus est d'entrer correctement le code OTP ou le Code de secours.
+
+3. Procédure de configuration :
+- En arrière-plan, l'application génère immédiatement un code OTP, qui est enregistré dans la base de données.
+- Le formulaire de configuration affiche le <b>QR Code</b> pour une configuration facile dans l'application d'authentification.
+- Sous le QR code, l'<b>URL du code</b> est disponible pour être copiée pour une saisie manuelle.
+- Le <b>Code de secours</b>, qui est également affiché, doit être **sécurisé immédiatement** à l'aide du bouton de copie.
+- Ce Code de secours permet la désactivation du verrou 2FA en cas de perte d'accès à l'application d'authentification (par ex. perte du téléphone ou désinstallation accidentelle de l'app).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Note
+Une description détaillée de l'application se trouve dans notre manuel utilisateur lié
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Body = $@"
+1. Preparazione e processo di configurazione 2FA:
+- Al cliccare sull'opzione di configurazione 2FA, appare prima un avviso di sicurezza per assicurarsi che un'app di autenticazione sia pronta. Queste informazioni di aiuto possono essere consultate in questo punto.
+_content/Shared/img/video_2FAalert.gif
+
+2. Avvertenza di sicurezza critica:
+- <b>Attenzione:</b> Una volta avviato, il processo di configurazione 2FA non può essere interrotto!
+- L'unico modo per completare o annullare il processo è inserire correttamente il codice OTP o il Codice di backup.
+
+3. Procedura di configurazione:
+- In background, l'app genera immediatamente un codice OTP, che viene salvato nel database.
+- Il modulo di configurazione mostra il <b>QR Code</b> per una facile configurazione nell'app di autenticazione.
+- Sotto il QR code, l'<b>URL del codice</b> è disponibile per essere copiata per l'inserimento manuale.
+- Il <b>Codice di backup</b>, che viene anch'esso visualizzato, deve essere **salvato immediatamente** utilizzando il pulsante di copia.
+- Questo Codice di backup consente la disattivazione del blocco 2FA in caso di perdita dell'accesso all'app di autenticazione (ad es. perdita del telefono o disinstallazione accidentale dell'app).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Nota
+Una descrizione dettagliata dell'applicazione si trova nel nostro manuale utente collegato
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Body = $@"
+1. إعداد وإجراء تفعيل التحقق بخطوتين (2FA):
+- عند النقر على خيار إعداد 2FA، يظهر أولاً تنبيه أمان للتأكد من أن تطبيق المصادقة جاهز. يمكن الوصول إلى معلومات المساعدة هذه في هذه المرحلة.
+_content/Shared/img/video_2FAalert.gif
+
+2. تحذير أمان حاسم:
+- <b>انتبه:</b> بمجرد البدء، لا يمكن مقاطعة عملية إعداد 2FA!
+- الطريقة الوحيدة لإكمال العملية أو إلغائها هي إدخال كود OTP أو كود النسخ الاحتياطي بشكل صحيح.
+
+3. إجراء الإعداد:
+- في الخلفية، يولد التطبيق فورًا كود OTP يتم حفظه في قاعدة البيانات.
+- يعرض نموذج الإعداد <b>رمز QR</b> لتسهيل الإعداد في تطبيق المصادقة.
+- تحت رمز QR، يتوفر <b>عنوان URL الكود</b> للنسخ للإدخال اليدوي.
+- <b>كود النسخ الاحتياطي</b> الذي يُعرض أيضًا يجب **تأمينه فورًا** باستخدام زر النسخ.
+- يتيح هذا الكود النسخ الاحتياطي إلغاء تفعيل قفل 2FA في حال فقدان الوصول إلى تطبيق المصادقة (مثل فقدان الهاتف أو إزالة التطبيق عن طريق الخطأ).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+ملاحظة
+وصف مفصل للتطبيق موجود في دليل المستخدم المرتبط لدينا
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Body = $@"
+1. 2FA 设置准备和流程：
+- 点击 2FA 设置选项时，首先会出现一个安全提示，以确保认证应用已准备好。此帮助信息可以在此时访问。
+_content/Shared/img/video_2FAalert.gif
+
+2. 重要安全警告：
+- <b>注意：</b> 一旦开始，2FA 设置过程无法中断！
+- 完成或取消过程的唯一方式是正确输入 OTP 代码或备份代码。
+
+3. 设置流程：
+- 在后台，应用会立即生成一个 OTP 代码，并保存到数据库中。
+- 设置表单显示 <b>二维码</b>，便于在认证应用中轻松设置。
+- 二维码下方提供 <b>代码 URL</b>，可复制用于手动输入。
+- 同时显示的 <b>备份代码</b> 必须使用复制按钮 **立即保存**。
+- 如果丢失对认证应用的访问权限（例如丢失手机或意外卸载应用），此备份代码可用于停用 2FA 锁定。
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+注意
+应用的详细说明可在我们链接的用户手册中找到
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Body = $@"
+1. 2FA सेटअप की तैयारी और प्रक्रिया:
+- 2FA सेटअप विकल्प पर क्लिक करने पर सबसे पहले एक सुरक्षा संकेत दिखाई देता है ताकि यह सुनिश्चित हो सके कि एक ऑथेंटिकेटर ऐप तैयार है। इस मदद की जानकारी को इसी समय एक्सेस किया जा सकता है।
+_content/Shared/img/video_2FAalert.gif
+
+2. महत्वपूर्ण सुरक्षा चेतावनी:
+- <b>ध्यान दें:</b> एक बार शुरू होने के बाद, 2FA सेटअप प्रक्रिया को बीच में रोका नहीं जा सकता!
+- प्रक्रिया को पूरा करने या रद्द करने का एकमात्र तरीका OTP कोड या बैकअप कोड को सही तरीके से दर्ज करना है।
+
+3. सेटअप प्रक्रिया:
+- बैकग्राउंड में ऐप तुरंत एक OTP कोड जनरेट करता है, जो डेटाबेस में सेव हो जाता है।
+- सेटअप फॉर्म में <b>QR कोड</b> दिखाया जाता है ताकि ऑथेंटिकेटर ऐप में आसानी से सेटअप किया जा सके।
+- QR कोड के नीचे <b>कोड URL</b> कॉपी करने के लिए उपलब्ध होता है, मैनुअल एंट्री के लिए।
+- साथ ही दिखाया गया <b>बैकअप कोड</b> कॉपी बटन का उपयोग करके **तुरंत सुरक्षित** करना जरूरी है।
+- यह बैकअप कोड 2FA लॉक को डीएक्टिवेट करने की सुविधा देता है यदि ऑथेंटिकेटर ऐप तक पहुंच खो जाती है (उदाहरण के लिए फोन खो जाना या गलती से ऐप अनइंस्टॉल हो जाना)।
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+नोट
+एप्लिकेशन का विस्तृत विवरण हमारे लिंक किए गए यूजर मैनुअल में मिल सकता है
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Body = $@"
+1. Preparación y proceso de configuración de 2FA:
+- Al hacer clic en la opción de configuración de 2FA, aparece primero un aviso de seguridad para asegurarse de que una aplicación de autenticación esté lista. Esta información de ayuda se puede acceder en este momento.
+_content/Shared/img/video_2FAalert.gif
+
+2. Advertencia de seguridad crítica:
+- <b>Atención:</b> ¡Una vez iniciado, el proceso de configuración de 2FA no se puede interrumpir!
+- La única forma de completar o cancelar el proceso es introduciendo correctamente el código OTP o el Código de respaldo.
+
+3. Procedimiento de configuración:
+- En segundo plano, la aplicación genera inmediatamente un código OTP, que se guarda en la base de datos.
+- El formulario de configuración muestra el <b>Código QR</b> para una configuración fácil en la aplicación de autenticación.
+- Debajo del código QR, el <b>URL del código</b> está disponible para copiarlo para la entrada manual.
+- El <b>Código de respaldo</b>, que también se muestra, debe **guardarse inmediatamente** utilizando el botón de copia.
+- Este Código de respaldo permite desactivar el bloqueo 2FA si se pierde el acceso a la aplicación de autenticación (por ejemplo, pérdida del teléfono o desinstalación accidental de la app).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Nota
+Una descripción detallada de la aplicación se encuentra en nuestro manual de usuario vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Body = $@"
+1. Persiapan dan Proses Pengaturan 2FA:
+- Saat mengklik opsi pengaturan 2FA, muncul dulu peringatan keamanan untuk memastikan bahwa aplikasi autentikator sudah siap. Informasi bantuan ini dapat diakses pada saat itu.
+_content/Shared/img/video_2FAalert.gif
+
+2. Peringatan Keamanan Kritis:
+- <b>Perhatian:</b> Setelah dimulai, proses pengaturan 2FA tidak dapat diinterupsi!
+- Satu-satunya cara untuk menyelesaikan atau membatalkan proses adalah dengan memasukkan kode OTP atau Kode Cadangan secara benar.
+
+3. Prosedur Pengaturan:
+- Di latar belakang, aplikasi segera menghasilkan kode OTP yang disimpan ke database.
+- Formulir pengaturan menampilkan <b>Kode QR</b> untuk pengaturan mudah di aplikasi autentikator.
+- Di bawah kode QR, <b>URL Kode</b> tersedia untuk disalin guna entri manual.
+- <b>Kode Cadangan</b> yang juga ditampilkan harus **segera diamankan** menggunakan tombol salin.
+- Kode Cadangan ini memungkinkan penonaktifan kunci 2FA jika akses ke aplikasi autentikator hilang (misalnya kehilangan ponsel atau menghapus aplikasi secara tidak sengaja).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Catatan
+Deskripsi rinci aplikasi dapat ditemukan di manual pengguna yang tertaut kami
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Body = $@"
+1. Preparação e processo de configuração 2FA:
+- Ao clicar na opção de configuração 2FA, aparece primeiro um aviso de segurança para garantir que um aplicativo de autenticação esteja pronto. Essas informações de ajuda podem ser acessadas neste momento.
+_content/Shared/img/video_2FAalert.gif
+
+2. Aviso de segurança crítico:
+- <b>Atenção:</b> Uma vez iniciado, o processo de configuração 2FA não pode ser interrompido!
+- A única forma de concluir ou cancelar o processo é inserindo corretamente o código OTP ou o Código de backup.
+
+3. Procedimento de configuração:
+- Em segundo plano, o aplicativo gera imediatamente um código OTP, que é salvo no banco de dados.
+- O formulário de configuração exibe o <b>Código QR</b> para uma configuração fácil no aplicativo de autenticação.
+- Abaixo do código QR, o <b>URL do código</b> está disponível para copiar para entrada manual.
+- O <b>Código de backup</b>, que também é exibido, deve ser **salvo imediatamente** utilizando o botão de cópia.
+- Esse Código de backup permite desativar o bloqueio 2FA caso você perca o acesso ao aplicativo de autenticação (ex.: perda do celular ou desinstalação acidental do app).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Nota
+Uma descrição detalhada do aplicativo está disponível em nosso manual do usuário vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Body = $@"
+1. Priprema i proces podešavanja 2FA:
+- Prilikom klika na opciju za podešavanje 2FA, prvo se pojavljuje sigurnosni upit kako bi se osiguralo da je aplikacija za autentifikaciju spremna. Ove informacije za pomoć mogu se pristupiti u tom trenutku.
+_content/Shared/img/video_2FAalert.gif
+
+2. Kritično sigurnosno upozorenje:
+- <b>Pažnja:</b> Jednom pokrenut, proces podešavanja 2FA ne može se prekinuti!
+- Jedini način da se proces završi ili otkaže jeste ispravno unošenje OTP koda ili Backup koda.
+
+3. Procedura podešavanja:
+- U pozadini, aplikacija odmah generiše OTP kod, koji se čuva u bazi podataka.
+- Formular za podešavanje prikazuje <b>QR Kod</b> za lako podešavanje u aplikaciji za autentifikaciju.
+- Ispod QR koda, <b>Code URL</b> je dostupan za kopiranje radi ručnog unosa.
+- <b>Backup Kod</b>, koji se takođe prikazuje, mora se **odmah osigurati** pomoću dugmeta za kopiranje.
+- Ovaj Backup Kod omogućava deaktivaciju 2FA brave ako se izgubi pristup aplikaciji za autentifikaciju (npr. gubitak telefona ili slučajno deinstaliranje aplikacije).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Napomena
+Detaljan opis aplikacije nalazi se u našem povezanom korisničkom priručniku
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Body = $@"
+1. Припрема и процес подешавања 2FA:
+- Приликом клика на опцију за подешавање 2FA, прво се појављује сигурносни упит како би се осигурало да је апликација за аутентификацију спремна. Ове информације за помоћ могу се приступити у том тренутку.
+_content/Shared/img/video_2FAalert.gif
+
+2. Критично сигурносно упозорење:
+- <b>Пажња:</b> Једном покренут, процес подешавања 2FA не може се прекинути!
+- Једини начин да се процес заврши или откаже јесте исправно уношење OTP кода или Backup кода.
+
+3. Процедура подешавања:
+- У позадини, апликација одмах генерише OTP код, који се чува у бази података.
+- Формулар за подешавање приказује <b>QR Код</b> за лако подешавање у апликацији за аутентификацију.
+- Испод QR кода, <b>Code URL</b> је доступан за копирање ради ручног уноса.
+- <b>Backup Код</b>, који се такође приказује, мора се **одмах осигурати** помоћу дугмета за копирање.
+- Овај Backup Код омогућава деактивацију 2FA браве ако се изгуби приступ апликацији за аутентификацију (нпр. губитак телефона или случајно деинсталирање апликације).
+_content/Shared/img/video_2FA.gif
+
+Google Authenticator
+https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2
+
+Microsoft Authenticator
+https://www.microsoft.com/en-us/security/mobile-authenticator-app
+
+Напомена
+Детаљан опис апликације налази се у нашем повезаном корисничком приручнику
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+        }
+    }
+
+}
+
+
+

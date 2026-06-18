@@ -1,0 +1,58 @@
+﻿<P11ModalNative @bind-Visible="_visible"
+                OnClose="() => _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.Cookies, false)"
+                Id="@_idCookies"
+                NativeDevice="@_appState!.NativeDeviceType"
+                ShowHeaderSeparator="true"
+                CloseButtonText="@_appState.T("Back")"
+                CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                AriaLabelledby="modalTitle1Cookies"
+                CssClassContent="tpc-form-bg-01"
+                Size="Size.Large"
+                ShowDevelopmentErrors="true">
+    <HeaderAction>
+        @switch (_appState!.NativeDeviceType)
+        {
+            case NativeDevice.IPHONE:
+                <button class="btn btn-link p-0 text-decoration-none fw-bold" style="color: #007aff; font-size: 1rem;" @onclick="_deleteCookies!">@_appState.T("Delete")</button>
+                break;
+
+            case NativeDevice.ANDROID:
+                <button class="btn btn-link text-dark p-1" @onclick="_deleteCookies!"><i class="bi bi-trash fs-4"></i></button>
+                break;
+        }
+    </HeaderAction>
+    <HeaderContent>
+        <h5 id="modalTitle1Cookies" class="modal-title">@_appState!.T("Cookies")</h5>
+    </HeaderContent>
+    <BodyContent>
+
+        <pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationCookies OauthTokenEnableDeleteButton="true" 
+                                                                         OnProvideDeleteAction="@(action => _deleteCookies = action)" />
+
+    </BodyContent>
+    <FooterContent>
+        <div class="d-flex justify-content-end gap-2 w-100">
+            @if (_appState.NativeDeviceType == NativeDevice.MAC)
+            {
+                <button class="btn btn-sm btn-primary rounded-2 px-3 shadow-sm" style="font-size: 0.85rem; min-width: 80px;" @onclick="_deleteCookies!">@_appState.T("Delete all cookies")</button>
+            }
+            else if (_appState!.NativeDeviceType == NativeDevice.WEB || _appState!.NativeDeviceType == NativeDevice.WINDOWS)
+            {
+                <button class="btn btn-primary px-4" @onclick="_deleteCookies!">@_appState.T("Delete all cookies")</button>
+            }
+        </div>
+    </FooterContent>
+</P11ModalNative>
+
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    private Guid _idCookies = Guid.NewGuid();
+    private bool _visible = true;
+    private Func<Task> _deleteCookies = null!;
+}

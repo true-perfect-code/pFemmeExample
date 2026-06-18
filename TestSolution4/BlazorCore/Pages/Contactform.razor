@@ -1,0 +1,137 @@
+﻿@using p11.UI
+
+<div class="col-lg-6 mb-4">
+    <h5 class="text-sepia fw-bold mb-3">@_appState.T("Send us a message")</h5>
+    <div class="p-4 bg-white rounded-3 shadow-lg border border-sepia-accent/50">
+        <div class="mb-3">
+            <P11Input TValue="string"
+                      @bind-Value="ContactForm.NameEmail"
+                      Label="@_appState.T("Name / E-Mail (optional)")"
+                      UseFloatingLabel="true" />
+        </div>
+        <div class="mb-3">
+            <P11Input TValue="string"
+                      @bind-Value="ContactForm.Title"
+                      Label="@_appState.T("Title")"
+                      UseFloatingLabel="true" />
+        </div>
+        <div class="mb-3">
+            <P11Textarea TValue="string"
+                         Label="@_appState.T("Message")"
+                         Description="@_appState.T("Enter your message here.")"
+                         @bind-Value="ContactForm.Message" />
+        </div>
+        <P11Button Text="@_appState.T("Send message")" OnClick="OnSend" IsLoading="@IsSaving" />
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase _dam { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter]
+    public EventCallback<string> OnClickSend { get; set; }
+
+    private ContactformModel ContactForm = new();
+    private bool IsSaving = false;
+
+
+    private async Task OnSend()
+    {
+        if (_globalState == null) return;
+
+        if (string.IsNullOrWhiteSpace(ContactForm.Title) || string.IsNullOrWhiteSpace(ContactForm.Message))
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Info"),
+                message: _appState.T("Title or message is empty, feedback cannot be sent!")
+            );
+            return;
+        }
+
+        if (ContactForm.NameEmail.Length > 1000 || ContactForm.Title.Length > 1000 || ContactForm.Message.Length > 1000)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Info"),
+                message: _appState.T("Messages may be no longer than 1000 characters!")
+            );
+            return;
+        }
+
+        IsSaving = true;
+        await Task.Delay(100); // UI-Update abwarten
+        StateHasChanged();
+
+        // Achtung =>   hier über Plattform gelöst, weil einmal '_dam.AnonymousQuery(db_para)' und einmal
+        //              '_dam.Save(db_para)' aufgerufen wird (je nach Plattform)
+        BlazorCore.Services.SqlClient.ScalarModel result = await _platform.Feedback(ContactForm);
+
+        IsSaving = false;
+        StateHasChanged();
+
+        if (result != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+        {
+            switch (result.out_value_str)
+            {
+                case "too_soon":
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Info"),
+                        message: _appState.T("To reduce spam, we only receive one message every 10 minutes.")
+                    );
+                    break;
+
+                case "record_exists_no_adding":
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Info"),
+                        message: _appState.T("We have already received the same message once before!")
+                    );
+                    ContactForm.Reset();
+                    break;
+
+                case "not_saved":
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Error"),
+                        message: $"{_appState.T(_globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!")} not_saved."
+                    );
+                    break;
+
+                case "saved":
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Info"),
+                        message: _appState.T("The data has been sent successfully. Thank you for your feedback.")
+                    );
+                    ContactForm.Reset();
+                    break;
+            }
+
+            if (OnClickSend.HasDelegate)
+            {
+                await OnClickSend.InvokeAsync(result.out_value_str);
+            }
+        }
+        else
+        {
+            string err = result != null && result.out_err != null ? result.out_err : "_platform.Feedback";
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!")} {err}"
+            );
+        }
+
+        StateHasChanged();
+    }
+
+}

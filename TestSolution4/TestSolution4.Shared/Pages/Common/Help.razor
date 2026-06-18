@@ -1,0 +1,235 @@
+﻿@using p11.UI
+@using Microsoft.AspNetCore.Components.Web
+@using BlazorCore.Services.Platform
+
+
+@if (Language != null)
+{
+    <div class="card h-100" role="region" aria-labelledby="terms-header" lang="@Language.ToLower()" tabindex="0">
+        <div class="card-body mt-0 h-100" style="overflow-y: auto;" aria-live="polite" role="article">
+
+            @if (BodyBlocks != null)
+            {
+                @for (int i = 0; i < BodyBlocks.Length; i++)
+                {
+                    var row = BodyBlocks[i];
+
+                    // Regel 1: Prüfen, ob Zeile leer
+                    if (string.IsNullOrEmpty(BodyBlocks[i]))
+                    {
+                        <br />
+                    }
+                    else
+                    {
+                        // Prüfen, ob GIF oder Link
+                        @if (BodyBlocks[i].StartsWith("_content/") || BodyBlocks[i].StartsWith("https://"))
+                        {
+                            string[] arrElements = row.Split(";", StringSplitOptions.RemoveEmptyEntries);
+                            string img = "";
+                            string link = "";
+                            // Iteriere über die Liste der Elemente und ordne sie zu
+                            foreach (string element in arrElements)
+                            {
+                                string trimmedElement = element.Trim();
+
+                                // Prüfe nur, ob es ein Bild ist
+                                if (trimmedElement.StartsWith("_content/") || trimmedElement.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // Oder ein anderer Bild-/Video-Marker
+                                    img = trimmedElement;
+                                }
+                                // Alles andere, das nicht leer ist, ist der Link
+                                else if (!string.IsNullOrEmpty(trimmedElement))
+                                {
+                                    link = trimmedElement;
+                                }
+                            }
+                            <div class="my-4">
+                                <h6 class="mb-3">@(img.Length > 0 && link.Length > 0 ? _appState.T("Add.-infos (Video, link):") : (img.Length > 0 ? _appState.T("Video:") : _appState.T("Link:")))</h6>
+
+                                <div class="d-flex align-items-center">
+
+                                    @if (!string.IsNullOrEmpty(img))
+                                    {
+                                        <img src="@img"
+                                             alt="@_appState.T("Video")"
+                                             class="me-4 rounded"
+                                             @onclick="async () => { 
+                                                imgUrl = img; 
+                                                _appState.HideModalNativeHeaderFooter(true);
+                                                isPreviewOpen = true; 
+                                             }"
+                                             style="width: 60px; height: 60px; cursor: pointer;">
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(link))
+                                    {
+                                        <a href="@link" target="_blank"
+                                           class="btn btn-outline-secondary d-flex align-items-center justify-content-center p-0"
+                                           style="width: 60px; height: 60px; font-size: 1.5rem;"
+                                           aria-label="@_appState.T("Link")">
+
+                                            <i class="bi bi-link-45deg"></i>
+
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                            <hr />
+                        }
+                        else
+                        {
+                            // Regel 2: Prüfen, ob Auflistung
+                            @if (i + 1 < BodyBlocks.Length)
+                            {
+                                @if (!string.IsNullOrEmpty(BodyBlocks[i]) && BodyBlocks[i].EndsWith(":") && BodyBlocks[i + 1].StartsWith("-"))
+                                {
+                                    <h5>@((MarkupString)BodyBlocks[i])</h5>
+                                    <ul>
+                                        @{
+                                            i++; // Nächste Zeile (erste Listenelement)
+                                            while (i < BodyBlocks[i].Length && BodyBlocks[i].StartsWith("-"))
+                                            {
+                                                <li>@((MarkupString)BodyBlocks[i].Substring(1).Trim())</li>
+                                                i++;
+                                            }
+                                            i--; // Korrektur für äußere Schleife
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p>@((MarkupString)BodyBlocks[i])</p>
+                                }
+                            }
+                            else
+                            {
+                                <p>@((MarkupString)BodyBlocks[i])</p>
+                            }
+                        }
+                    }
+                }
+            }
+        </div>
+    </div>
+}
+
+@* <P11Modal @bind-Visible="@isPreviewOpen"
+          AriaLabelledby="modalTitle1Help"
+          Size="Size.Large"
+          ShowDevelopmentErrors="true">
+    <HeaderContent>
+        <h5 id="modalTitle1Help" class="modal-title">Video</h5>
+    </HeaderContent>
+    <BodyContent>
+        <img src="@imgUrl" class="w-100 h-100" style="object-fit: cover;" />
+    </BodyContent>
+    <FooterContent />
+</P11Modal> *@
+
+@* <P11ModalNative @bind-Visible="@isPreviewOpen" OnClose="async () => { }"
+                Id="@IdPreview"
+                NativeDevice="@_nativeDevice"
+                ShowHeaderSeparator="true"
+                CloseButtonText="@_appState.T("Back")"
+                CloseButtonIconCss="@(_nativeDevice == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                AriaLabelledby="modalTitle1Help"
+                CssClassContent="tpc-form-bg-01"
+                Size="Size.Large"
+                ShowDevelopmentErrors="true">
+    <HeaderContent>
+        <h5 id="specific-position-panel-settings" class="modal-title">@(Title ?? @_appState.T("Help"))</h5>
+    </HeaderContent>
+    <BodyContent>
+
+        <img src="@imgUrl" class="w-100 h-100" style="object-fit: contain;" />
+
+    </BodyContent>
+</P11ModalNative>  *@
+
+<P11OverlayNative @bind-Visible="@isPreviewOpen" OnClose="() => _appState.HideModalNativeHeaderFooter(false)"
+                  NativeDevice="@_nativeDevice"
+                  Title="@(Title ?? @_appState.T("Help"))"
+                  CloseButtonText="@_appState.T("back")"
+                  CloseButtonIconCss="@_iconForDevice"
+                  ShowHeaderSeparator="false"
+                  CssClassContent="p-0">
+
+        <img src="@imgUrl" class="w-100 h-100" style="object-fit: contain;" />
+
+</P11OverlayNative>
+
+
+
+@code {
+    [Parameter]
+    public string? Language { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? DocumentBody { get; set; }
+
+
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+
+    //private string? Body = string.Empty;
+    private string[]? BodyBlocks { get; set; }
+
+    private bool isPreviewOpen = false;
+    private string imgUrl = string.Empty;
+    private NativeDevice _nativeDevice = NativeDevice.WEB;
+    private string _iconForDevice = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        // Split the text into separate blocks based on empty lines DocumentBody
+        if (!string.IsNullOrWhiteSpace(DocumentBody))
+            BodyBlocks = DocumentBody.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
+        //SetPlattformForModalNative();
+    }
+
+    // private void SetPlattformForModalNative()
+    // {
+    //     var currPlatform = _platform.GetCurrDevice();
+    //     var currPlatform = _platform.GetCurrPlatform();
+    //     switch (currPlatform)
+    //     {
+    //         case PLATFORMS.WINDOWS_CLIENT:
+    //             _nativeDevice = NativeDevice.WINDOWS;
+    //             break;
+
+    //         case PLATFORMS.WASM:
+    //             _nativeDevice = NativeDevice.WEB;
+    //             break;
+
+    //         case PLATFORMS.ANDROID:
+    //             _nativeDevice = NativeDevice.ANDROID;
+    //             _iconForDevice = "bi bi-arrow-left";
+    //             break;
+
+    //         case PLATFORMS.IOS:
+    //             _nativeDevice = NativeDevice.IPHONE;
+    //             _iconForDevice = "bi bi-chevron-left";
+    //             break;
+
+    //         case PLATFORMS.MAC_CLIENT:
+    //             _nativeDevice = NativeDevice.MAC;
+    //             break;
+    //     }
+    // }
+
+}
+

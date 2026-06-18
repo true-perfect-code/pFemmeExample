@@ -1,0 +1,166 @@
+﻿@using p11.UI
+@using BlazorCore.Services.Authentication
+@using BlazorCore.Services.Platform
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+
+<!-- Blazor Server Variante -->
+@if (!useNativeFeatures)
+{
+    <form id="LogoutForm" action="@ApiEndpoint" method="post" style="display:none;">
+        <input type="hidden" name="logout" value="true" />
+    </form>
+
+    <script>
+        window.pE_Web = window.pE_Web || {};
+
+        window.pE_Web.submitLogoutForm = function () {
+            const form = document.getElementById('LogoutForm');
+            if (form) {
+                // Sicherer Check für den Logger
+                if (typeof p11LibInternal !== 'undefined') {
+                    p11LibInternal.log("Auth", "Submitting LogoutForm.");
+                } else {
+                    console.log("[pE_Web] Submitting LogoutForm (p11LibInternal not found).");
+                }
+            
+                form.submit();
+            } else {
+                console.error("[pE_Web][Auth] ERROR: LogoutForm not found.");
+            }
+        };
+    </script>
+}
+
+<!-- Der Haupt-Button, der den Logout-Prozess startet -->
+@if (!IsButtonHidden)
+{
+    <P11Button Text="@Text"
+               OnClick="OnLogoutClicked"
+               ButtonVariant="ButtonVariant.Primary"
+               IsLoading="@IsLoading" 
+               CssClass="@CssClass" />
+}
+
+@code {
+    [Inject]
+    private NavigationManager? _navigationManager { get; set; }
+
+    [Inject]
+    private IAuthenticationBase? _authentication { get; set; }
+
+    [Inject]
+    private IJSRuntime? _jsRuntime { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+
+    [Parameter] public bool IsButtonHidden { get; set; }
+    [Parameter] public string Text { get; set; } = "Logout";
+    [Parameter] public bool UseNativeFeatures { get; set; }
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public EventCallback OnLogout { get; set; }
+    [Parameter] public List<string> CookiesToClear { get; set; } = new();
+    [Parameter] public string ApiEndpoint { get; set; } = "/api/logout";
+    [Parameter] public string NavigateTo { get; set; } = "/";
+    [Parameter] public string CssClass { get; set; } = "";
+
+    // Neuer Parameter für externen Logout-Trigger
+    [Parameter]
+    public EventCallback OnExternalLogoutTrigger { get; set; }
+
+    private bool _logoutStarted = false;
+    public bool useNativeFeatures = false;
+
+    protected override void OnInitialized()
+    {
+        // Wenn der Button versteckt ist, registrieren wir den externen Trigger
+        if (IsButtonHidden && OnExternalLogoutTrigger.HasDelegate)
+        {
+            OnExternalLogoutTrigger = EventCallback.Factory.Create(this, OnLogoutClicked);
+        }
+    }
+
+    // Methode, die aufgerufen wird, wenn die Parameter gesetzt sind
+    protected override void OnParametersSet()
+    {
+        useNativeFeatures = UseNativeFeatures;
+    }
+
+    private async Task OnLogoutClicked()
+    {
+        if(_platformStorage == null) return;
+
+        IsLoading = true;
+        StateHasChanged();
+        await Task.Delay(200); 
+
+        // Aufräumarbeiten, wie das Löschen von Cookies
+        if (CookiesToClear != null && CookiesToClear.Any())
+        {
+            foreach (var item in CookiesToClear)
+                await _platformStorage.RemoveAsync(item);
+        }
+
+        // Führe plattformspezifische Logout-Logik aus
+        if (UseNativeFeatures && _platform!= null && _authentication != null)
+        {
+            // MAUI-Blazor: Hier keine weitere Aktion nötig, da OnLogout den Logout-API-Aufruf handhabt.
+            if (OnLogout.HasDelegate)
+            {
+                await OnLogout.InvokeAsync();
+            }
+            else
+            {
+                await _authentication.Logout();
+                _navigationManager!.NavigateTo(NavigateTo, true);
+            }
+        }
+        else
+        {
+            // Blazor Server: Führe den Logout über das versteckte HTML-Formular aus
+            await _jsRuntime!.InvokeVoidAsync("pE_Web.submitLogoutForm");
+        }
+
+
+        _appState!.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.LOADING);
+        _eventAggregator!.RoutesStateHasChanged(); // Wegen der Anzeige vom Loading-Status auf Routes.razor
+
+
+        // App-Initialisierung zurücksetzen
+        _appState.UpdateIsAppInitialized(false);
+
+        IsLoading = false;
+        StateHasChanged();
+    }
+
+    public async Task TriggerLogoutAsync()
+    {
+        await OnLogoutClicked();
+    }
+
+    public void Dispose()
+    {
+        // Cleanup beim Verlassen der Komponente
+
+        if (_jsRuntime != null)
+        {
+            try
+            {
+                // Async ohne Wait - sauber und ohne Blockierung
+                _jsRuntime.InvokeVoidAsync("pE_Web.notifications.dispose");
+            }
+            catch { /* Ignoriere Fehler beim Cleanup */ }
+        }
+    }
+}

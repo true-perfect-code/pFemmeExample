@@ -1,0 +1,261 @@
+﻿@using p11.UI
+@using BlazorCore.Services.Platform
+
+<div class="container py-2">
+
+    <!-- App Info -->
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+        <div class="card shadow-sm mb-4">
+            @if(_appState != null)
+            {
+                <div class="card-body text-center">
+                    <h2 class="h5 card-title mb-2">@_globalState.ConfigGeneral.ApplicationName</h2>
+                    <p class="text-muted mb-2">@_globalState.ConfigGeneral.AppVersion</p>
+                    <p class="card-text">@(_appState!.T(_globalState.ConfigGeneral.ApplicationDescription))</p>
+                </div>
+            }
+
+            <P11AccordionNative>
+                <Title>
+                    <span>@_appState!.T("Version history")</span>
+                </Title>
+                <ChildContent>
+                    <div class="container">
+                        <div class="card shadow-sm">
+                            <div class="card-body p-0">
+
+                                <!-- Scrollbarer Bereich Versionsinfo -->
+                                <div class="small" style="max-height: 300px; overflow-y: auto;">
+                                    @if (_appState?.Data.VersionChangeLog != null)
+                                    {
+                                        <table class="table table-hover mb-0 align-middle">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th style="width: 25%;">@_appState!.T("Details")</th>
+                                                    <th>@_appState!.T("Changes")</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var entry in _appState.Data.VersionChangeLog)
+                                                {
+                                                    string badgeClass = (entry.Version == _globalState.ConfigGeneral.AppVersion
+                                                    ? "bg-success"
+                                                    : "bg-secondary");
+
+                                                    <tr>
+                                                        <td>
+                                                            @if (entry.Version != string.Empty)
+                                                            {
+                                                                <div>
+                                                                    <span class="badge @badgeClass rounded-pill">@entry.Version</span>
+                                                                </div>
+                                                            }
+                                                            <div class="text-muted small">@entry.Date</div>
+                                                        </td>
+                                                        <td>@entry.ChangeLog</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted text-end">
+                                @_appState!.T("Current version:") <strong>@_globalState.ConfigGeneral.AppVersion</strong>
+                            </div>
+                        </div>
+                    </div>
+                </ChildContent>
+            </P11AccordionNative>
+
+        </div>
+    </P11HoverEffect>
+
+    <!-- Entwickler/Firma Info -->
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+
+                <div class="row">
+                    <!-- LEFT COLUMN -->
+                    <div class="col-md-6 mb-4 mb-md-0">
+                        <h3 class="h6 card-title mb-3">@_appState!.T("Developed by")</h3>
+
+                        <div class="d-flex align-items-center mb-3">
+                            @* <div class="bg-success rounded-circle me-3" style="width: 40px; height: 40px;"></div> *@
+
+                            <div>
+                                <strong>True Perfect Code</strong>
+                                <p class="text-muted mb-0">@_appState!.T("Family business – father and sons")</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN -->
+                    <div class="col-md-6">
+                        <h3 class="h6 card-title mb-3">@_appState!.T("Contact")</h3>
+
+                        <div class="mb-2">
+                            <strong>E-Mail:</strong>
+                            <a href="@($"mailto:support@{_globalState.ConfigGeneral.Company}.ch")" class="text-decoration-none">
+                                @($"support@{_globalState.ConfigGeneral.Company}.ch")
+                            </a>
+                        </div>
+
+                        <div class="mb-2">
+                            <strong>Webseite:</strong>
+                            <a href="@($"https://{_globalState.ConfigGeneral.Company}.ch")" class="text-decoration-none" target="_blank">
+                                @($"{_globalState.ConfigGeneral.Company}.ch")"
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD FOOTER WITH IMAGES -->
+                <div class="card-footer border-0 text-center mt-2">
+                    <div class="row justify-content-center gap-5 mt-4">
+
+                        <div class="col-12 col-sm-4 col-md-3 col-lg-2 mb-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <img class="img-thumbnail rounded-circle mb-2"
+                                     src="_content/BlazorCore/img/daniel.jpeg"
+                                     alt="Daniel">
+                                <p class="mb-0 fw-bold">Daniel</p>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-4 col-md-3 col-lg-2 mb-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <img class="img-thumbnail rounded-circle mb-2"
+                                     src="_content/BlazorCore/img/justin.jpeg"
+                                     alt="Justin">
+                                <p class="mb-0 fw-bold">Justin</p>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-4 col-md-3 col-lg-2 mb-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <img class="img-thumbnail rounded-circle mb-2"
+                                     src="_content/BlazorCore/img/atila.jpeg"
+                                     alt="Atila">
+                                <p class="mb-0 fw-bold">Atila</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <p class="small text-muted my-3">
+                        @_appState!.T("© 2026 True Perfect Code. All rights reserved.")
+                    </p>
+                </div>
+            </div>
+
+            <!-- EULA / Privacy -->
+            <P11AccordionNative>
+                <Title>
+                    <span>@_appState!.T("EULA")</span>
+                </Title>
+                <ChildContent>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <Eula IsHeaderHidden="true" />
+                    </div>
+                </ChildContent>
+            </P11AccordionNative>
+            <P11AccordionNative>
+                <Title>
+                    <span>@_appState!.T("Privacy")</span>
+                </Title>
+                <ChildContent>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        @* <Privacy IsHeaderHidden="true" /> *@
+                        <TestSolution4.Shared.Pages.Common.PrivacyCommon IsHeaderHidden="true" />
+                    </div>
+                </ChildContent>
+            </P11AccordionNative>
+        </div>
+    </P11HoverEffect>
+
+</div>
+
+@if (_appState != null && !_appState!.IsPhone)
+{
+    <div class="d-flex w-100 mt-1">
+        <P11Button Text="@_appState!.T("Close")" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" CssClass="flex-fill" />
+    </div>
+}
+
+@code {
+    // [Parameter] public bool Visible { get; set; } = false;
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public string CssClassModalContent { get; set; } = string.Empty;
+    //[Parameter] public p11.UI.Size Size { get; set; } = p11.UI.Size.Medium;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //SetPlattformForModalNative();
+
+            StateHasChanged();
+        }
+    }
+
+
+    // private async Task OnCloseModal()
+    // {
+    //     Visible = false;
+    //     await VisibleChanged.InvokeAsync(Visible);
+    // }
+
+    private async Task HandleCancel()
+    {
+        if (VisibleChanged.HasDelegate)
+        {
+            await VisibleChanged.InvokeAsync(false);
+        }
+
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    // private void SetPlattformForModalNative()
+    // {
+    //     var currPlatform = _platform.GetCurrPlatform();
+    //     switch (currPlatform)
+    //     {
+    //         case PLATFORMS.WINDOWS_CLIENT:
+    //             _nativeDevice = NativeDevice.WINDOWS;
+    //             break;
+
+    //         case PLATFORMS.WASM:
+    //             _nativeDevice = NativeDevice.WEB;
+    //             break;
+
+    //         case PLATFORMS.ANDROID:
+    //             _nativeDevice = NativeDevice.ANDROID;
+    //             break;
+
+    //         case PLATFORMS.IOS:
+    //             _nativeDevice = NativeDevice.IPHONE;
+    //             break;
+
+    //         case PLATFORMS.MAC_CLIENT:
+    //             _nativeDevice = NativeDevice.MAC;
+    //             break;
+    //     }
+    // }
+}

@@ -1,0 +1,64 @@
+﻿@using p11.UI
+
+
+<div class="@CssClassInput">
+    <P11Input TValue="string"
+              @bind-Value="userInputString"
+              Label="@Label"
+              UseFloatingLabel="@UseFloatingLabel"
+              Description="@Description" />
+</div>
+
+<div class="@CssClassButtons" >
+    <P11Button Text="@TextOk" OnClick="HandleAccept" ButtonVariant="ButtonVariant.Primary" CssClass="flex-fill" />
+    <P11Button Text="@TextCancel" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" CssClass="flex-fill" />
+</div>
+
+@code {
+    [Inject]
+    BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public string TextOk { get; set; } = string.Empty;
+    [Parameter] public string TextCancel { get; set; } = string.Empty;
+    [Parameter] public bool UseFloatingLabel { get; set; } = true;
+    [Parameter] public string CssClassInput { get; set; } = "p-1";
+    [Parameter] public string CssClassButtons { get; set; } = "d-flex w-100 gap-4 mt-4";
+
+    /// <summary>
+    /// Callback, über das das Ergebnis an die MessageBox zurückgegeben wird.
+    /// </summary>
+    [Parameter] public Action<string>? OnResult { get; set; }
+
+    private string userInputString = string.Empty;
+
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label))
+            Label = _appState?.T("User input") ?? "User input";
+
+        if (string.IsNullOrWhiteSpace(Description))
+            Description = _appState?.T("Confirm entry with OK") ?? "Confirm entry with OK";
+
+        if (string.IsNullOrWhiteSpace(TextOk))
+            TextOk = _appState?.T("Ok") ?? "Ok";
+
+        if (string.IsNullOrWhiteSpace(TextCancel))
+            TextCancel = _appState?.T("Cancel") ?? "Cancel";
+    }
+
+    private async Task HandleAccept()
+    {
+        await Task.Delay(10);
+        OnResult?.Invoke(userInputString);
+    }
+
+    private async Task HandleCancel()
+    {
+        await Task.Delay(10);
+        OnResult?.Invoke(string.Empty);
+    }
+}
+

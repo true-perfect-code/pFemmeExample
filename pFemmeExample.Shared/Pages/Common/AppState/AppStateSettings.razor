@@ -1,0 +1,447 @@
+﻿@using System.Reflection
+@using System.Text.Json
+@using p11.UI
+@using p11.UI.Services
+@using BlazorCore.Models
+@using BlazorCore.Services.SqlClient
+@implements IDisposable
+
+@if (ShowTitle)
+{
+    <h1>@_appState!.T("Settings")</h1>
+}
+
+<div class="row">
+    <div class="col-12">
+        @if (_isLoading)
+        {
+            <p>@_appState!.T("Loading...")</p>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-1">
+                @foreach (var setting in SettingsClone)
+                {
+                    <div class="m-2">
+                        <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+                            <P11AccordionNative CssClassSummary="d-flex justify-content-between align-items-center p-3 cursor-pointer">
+                                <Title>
+                                    <span>@_appState!.T(setting.Label)</span>
+                                </Title>
+                                <ChildContent>
+                                    @switch (setting.ParaType)
+                                    {
+                                        case BlazorCore.Services.AppState.SETTINGS_TYPE.STRING_INPUT:
+                                            <P11Input Label="@_appState!.T(setting.Label)"
+                                                      @bind-Value="setting.ValStr"
+                                                      Description="@_appState.T(setting.Desc)"
+                                                      InputType="text" />
+                                            break;
+
+                                        case BlazorCore.Services.AppState.SETTINGS_TYPE.STRING_SELECT:
+                                            var valuegroups = setting.ValTempl.Split(';');
+                                            <P11Select TItem="string" TValue="string"
+                                                       Id="@("id" + setting.ParaName)"
+                                                       @bind-Value="setting.ValStr"
+                                                       PlaceholderText="@_appState!.T(setting.Label)"
+                                                       AriaLabel="@_appState.T(setting.Label)">
+                                                @foreach (var grp in valuegroups)
+                                                {
+                                                    string[] value = grp.Split(',');
+                                                    <option value="@(value[0])">@(value[1])</option>
+                                                }
+                                            </P11Select>
+                                            <div class="form-text">@_appState.T(setting.Desc)</div>
+                                            break;
+
+                                        case BlazorCore.Services.AppState.SETTINGS_TYPE.STRING_COLOR:
+                                            <P11ColorPicker Label="@_appState!.T(setting.Label)"
+                                                            Description="@_appState.T(setting.Desc)"
+                                                            @bind-Value="setting.ValStr" />
+                                            break;
+
+                                        case BlazorCore.Services.AppState.SETTINGS_TYPE.BOOL_SWITCH:
+                                            <P11Checkbox @bind-Value="setting.ValBool"
+                                                         Label="@_appState!.T(setting.Label)"
+                                                         IsSwitch=true
+                                                         Description="@_appState.T(setting.Desc)" />
+                                            break;
+
+                                        case BlazorCore.Services.AppState.SETTINGS_TYPE.BOOL_CHECKBOX:
+                                            <P11Checkbox @bind-Value="setting.ValBool"
+                                                         Label="@_appState!.T(setting.Label)"
+                                                         Description="@_appState.T(setting.Desc)" />
+                                            break;
+                                    }
+                                </ChildContent>
+                            </P11AccordionNative>
+                        </P11HoverEffect>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationLogout @ref="logoutComponent"
+                                                 IsButtonHidden="true"
+                                                 UseNativeFeatures="@(_appState!.IsNativeApp ?? false)" />
+
+@code {
+    [Inject]
+    private NavigationManager? _navigationManager { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppInitializer.IAppInitializerBase? _appInitializer { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject] 
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private IMessageBoxService? _messageBoxService { get; set; }
+
+
+    [Parameter]
+    public string SaveButtonUrl { get; set; } = "/";
+
+    [Parameter]
+    public EventCallback OnClickSave { get; set; }
+
+    [Parameter]
+    public EventCallback<Func<Task>> OnProvideSaveAction { get; set; }
+
+    [Parameter]
+    public string CancelButtonUrl { get; set; } = "/";
+
+    [Parameter]
+    public EventCallback OnClickCancel { get; set; }
+
+    [Parameter]
+    public bool AutoRedirect { get; set; } = true;
+
+    [Parameter]
+    public bool ShowTitle { get; set; } = false;
+
+
+    private bool _isLoading = true;
+    private bool _hasChanges = false;
+    List<BlazorCore.Services.AppState.SettingMetadataModel> SettingsClone = new();
+
+    private Authentication.AuthenticationLogout? logoutComponent;
+
+
+    protected override void OnParametersSet()
+    {
+        if (_appState != null && _appState.Data.UserParameter != null)
+        {
+            SettingsClone = _appState.SettingsMeta
+                .Select(s => (BlazorCore.Services.AppState.SettingMetadataModel)s.Clone())
+                .ToList();
+
+            // Speicherlokation setzen, weil sie über Cookie/SecureStorage verwaltet wird und nicht über die Datenbank
+            if (SettingsClone.Any(x => x.ParaName == _appState.Data.UserParameter.StorageMode))
+            {
+                SettingsClone.FirstOrDefault(x => x.ParaName == _appState.Data.UserParameter.StorageMode)!.ValStr = ((int)_appState.StorageLocation).ToString();
+                SettingsClone.FirstOrDefault(x => x.ParaName == _appState.Data.UserParameter.StorageMode)!.ResetChanged();
+            }
+        }
+
+        _isLoading = false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Abonnieren des Events
+        _appState!.OnChange += StateHasChanged;
+
+        // Wir "registrieren" die HandleSave-Methode beim Parent (Modal)
+        if (OnProvideSaveAction.HasDelegate)
+        {
+            await OnProvideSaveAction.InvokeAsync(HandleSave);
+        }
+    }
+
+    public void Dispose()
+    {
+        // Deabonnieren des Events
+        _appState!.OnChange -= StateHasChanged;
+    }
+
+    private async Task HandleSave()
+    {
+        await SaveData();
+
+        if (AutoRedirect)
+        {
+            _navigationManager!.NavigateTo(SaveButtonUrl, true);
+        }
+        else
+        {
+            if (OnClickSave.HasDelegate)
+            {
+                await OnClickSave.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        bool exit = true;
+        // Prüfen, ob Änderungen
+        if (SettingsClone.Any(AbandonedMutexException => AbandonedMutexException.Changed))
+        {
+            await Task.Delay(30);
+            StateHasChanged();
+            MessageBoxResult result = await _messageBoxService!.ShowYesNoAsync(
+                title: _appState!.T("Exit without saving"),
+                message: _appState!.T("Settings have been changed. Would you like to save them before exiting?"),
+                yestext: @_appState!.T("Yes"),
+                notext: @_appState!.T("No")
+            );
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    exit = false;
+                    break;
+                case MessageBoxResult.No:
+                    exit = true;
+                    break;
+                case MessageBoxResult.None:
+                    exit = false;
+                    break;
+            }
+        }
+
+        if (exit)
+        {
+            if (OnClickCancel.HasDelegate)
+            {
+                await OnClickCancel.InvokeAsync();
+            }
+        }
+        else
+        {
+            await SaveData();
+
+            if (AutoRedirect)
+            {
+                _navigationManager!.NavigateTo(CancelButtonUrl, true);
+            }
+            else
+            {
+                if (OnClickCancel.HasDelegate)
+                {
+                    await OnClickCancel.InvokeAsync();
+                }
+            }
+        }
+    }
+
+    private async Task SaveData()
+    {
+        try
+        {
+            if (_platformStorage == null || (_appState != null && _appState.Catalog.LocalStorage == null)) return;
+
+            if (_appState != null && _appState.Data.UserParameter != null && _appState.Catalog.LocalStorage.storagelocation != null)
+            {
+                // Prüfen, ob Storage-Location geändert wurde und den User benachrichtigen, dass beim speichern ein automatisches Logout durchgeführt wird!
+                if (SettingsClone.Any(x => x.Changed && x.ParaName == _appState.Data.UserParameter.StorageMode))
+                {
+                    await _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.SettingsToggle);
+                    await Task.Delay(50);
+                    StateHasChanged();
+
+                    MessageBoxResult result = await _messageBoxService!.ShowYesNoAsync(
+                        title: _appState.T("Info"),
+                        message: _appState.T("You have changed your storage location! If you save the new settings, you will be automatically logged out. Do you want to continue saving?"),
+                        yestext: @_appState!.T("Yes"),
+                        notext: @_appState!.T("No")
+                    );
+
+                    switch (result)
+                    {
+                        case MessageBoxResult.Yes:
+                            if (SettingsClone.Where(x => x.ParaName == _appState.Data.UserParameter.StorageMode).FirstOrDefault() != null)
+                            {
+                                var res = SettingsClone.Where(x => x.ParaName == _appState.Data.UserParameter.StorageMode).FirstOrDefault()!.ValStr;
+                                int.TryParse(res, out int intStorageMode);
+                                var selectedStorageMode = (BlazorCore.Services.AppState.STORAGE_LOCATION)intStorageMode;
+
+                                // AppState aktualisieren (ist an dieser Stelle wegen Logout nicht zwingend)
+                                _appState!.UpdateStorageLocation(selectedStorageMode);
+
+                                // Anschliessend Daten in Cookie/SecureStorage auf dem Gerät (Web-Browser, Desktop, Handy) speichern
+                                if ((_appState!.IsNativeApp.HasValue && _appState.IsNativeApp.Value)) // MAUI
+                                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)selectedStorageMode).ToString());
+                                else // Web
+                                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation, ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString());
+
+                                // Logout durchführen
+                                if (logoutComponent != null)
+                                    await logoutComponent.TriggerLogoutAsync();
+                            }
+                            return;
+                        case MessageBoxResult.No:
+                            return;
+                        case MessageBoxResult.None:
+                            return;
+                    }
+                }
+
+                // Parameter zum Speichern vorbereiten
+                List<AppParameterModel> SettingsSaveCloud = new();
+                List<AppParameterModel> SettingsSaveLocal = new();
+
+                foreach (var item in SettingsClone.Where(x => x.Changed))
+                {
+                    string parameterValue = string.Empty;
+
+                    // Parameterwert ermitteln je nach Parameter-Typ (string oder bool)
+                    if (item.ParaType == BlazorCore.Services.AppState.SETTINGS_TYPE.STRING_SELECT || item.ParaType == BlazorCore.Services.AppState.SETTINGS_TYPE.STRING_COLOR || item.ParaType == BlazorCore.Services.AppState.SETTINGS_TYPE.STRING_INPUT)
+                        parameterValue = item.ValStr;
+                    if (item.ParaType == BlazorCore.Services.AppState.SETTINGS_TYPE.BOOL_CHECKBOX || item.ParaType == BlazorCore.Services.AppState.SETTINGS_TYPE.BOOL_SWITCH)
+                        parameterValue = item.ValBool ? "1" : "0";
+
+                    if (_appState != null && !string.IsNullOrEmpty(_appState.UnixTS))
+                    {
+                        await Task.Delay(5); // Wegen '_appState.GenerateUniqueId()'
+                        string unixTS = _appState.GenerateUniqueId();
+
+                        // CLOUD (wird dann in Json übertragen)
+                        SettingsSaveCloud.Add(new()
+                        {
+                            UnixTS = unixTS,
+                            ParameterName = item.ParaName,
+                            ParameterValue = (item.ParaName == _appState.Data.UserParameter.StorageMode ?
+                                ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString() // In der Cloud-DB immer CLOUD speichern.
+                                : parameterValue),
+                            Scope = "set",
+                            AuthUsers_UnixTS = _appState.UnixTS,
+                            LastUpdateUnixTS = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds()
+                        });
+
+                        // LOCAL (wird dann in Json übertragen)
+                        SettingsSaveLocal.Add(new()
+                        {
+                            UnixTS = unixTS,
+                            ParameterName = item.ParaName,
+                            ParameterValue = parameterValue, // !!! bei STORAGE_LOCATION => vom benutzer eingestellten Wert übernehmen
+                            Scope = "set",
+                            AuthUsers_UnixTS = _appState.UnixTS,
+                            LastUpdateUnixTS = ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds()
+                        });
+                    }
+                }
+
+                // Prüfen, ob es Parameterliste zum Speichern gibt (nur geänderte Einträge kommen in die Liste)
+                if (SettingsSaveCloud.Count > 0 && SettingsSaveLocal.Count > 0)
+                {
+                    BlazorCore.Services.AppState.STORAGE_LOCATION selectedStorageMode = BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL;
+
+                    // Aktuellen Speichermodus (Benutzereinstellung) ermitteln
+                    if (SettingsSaveLocal.Any(x => x.ParameterName == _appState?.Data.UserParameter.StorageMode))
+                    {
+                        string res = SettingsSaveLocal.FirstOrDefault(x => x.ParameterName == _appState?.Data.UserParameter.StorageMode)?.ParameterValue ?? ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL).ToString();
+                        int.TryParse(res, out int intStorageMode);
+                        selectedStorageMode = (BlazorCore.Services.AppState.STORAGE_LOCATION)intStorageMode;
+
+                        // AppState aktualisieren (wegen Dam)
+                        _appState!.UpdateStorageLocation(selectedStorageMode);
+                    }
+                    else // Falls bei Settingsänderungen Speichermodus nicht geändert wurde, dann aus AppState holen
+                    {
+                        selectedStorageMode = _appState!.StorageLocation;
+                    }
+
+                    // Wenn benutzer Cloud/Cloud-Local ausgewählt hat, dann Daten auf Cloud speichern jedoch Storagemode ist standardmässig dann auf CLOUD gesetzt
+                    if (selectedStorageMode == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL || selectedStorageMode == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD)
+                    {
+                        string jsonDataCloud = JsonSerializer.Serialize(
+                            SettingsSaveCloud,
+                            BlazorCore.JsonContext.Default.ListAppParameterModel
+                        );
+
+                        Dictionary<string, string> db_para = new()
+                        {
+                            { "@Case_", "SaveJson>>AppParameter" },
+                            { "@Json", jsonDataCloud },
+                            { BlazorCore.Services.Dam.DB_CMD.NO_LOCAL, BlazorCore.Services.Dam.DB_CMD.NO_LOCAL.ToString() }
+                        };
+                        ScalarModel result = await _dam!.Save(db_para)!;
+                        if (result != null && string.IsNullOrEmpty(result.out_err) && result.out_value_str != null && (result.out_value_str.StartsWith("updated:-1:") || result.out_value_str.StartsWith("saved:-1:")))
+                        {
+                            await _toastService!.ShowSuccessAsync(_appState!.T("Data has been successfully saved to the cloud."), _appState!.T("Success"), position: ToastPosition.BottomEnd);
+                        }
+                        else
+                        {
+                            string err = (result != null && result.out_err != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "SaveJson>>AppParameter NO_LOCAL");
+                            await _messageBoxService!.ShowOkAsync(
+                                title: _appState!.T("Error"),
+                                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                            );
+                        }
+                    }
+
+                    // Wenn benutzer Local/Cloud-Local ausgewählt hat, dann Daten loakl speichern und gesetzten Storagemode übernehmen
+                    if (selectedStorageMode == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL || selectedStorageMode == BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL)
+                    {
+                        string jsonDataLocal = JsonSerializer.Serialize(
+                            SettingsSaveLocal,
+                            BlazorCore.JsonContext.Default.ListAppParameterModel
+                        );
+
+                        Dictionary<string, string> db_para = new()
+                        {
+                            { "@Case_", "SaveJson>>AppParameter" },
+                            { "@Json", jsonDataLocal },
+                            { BlazorCore.Services.Dam.DB_CMD.NO_CLOUD, BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString() }
+                        };
+                        ScalarModel result = await _dam!.Save(db_para)!;
+                        if (result != null && string.IsNullOrEmpty(result.out_err) && result.out_local != null && (result.out_local.StartsWith("updated:-1:") || result.out_local.StartsWith("saved:-1:")))
+                        {
+                            await _toastService!.ShowSuccessAsync(_appState!.T("Data has been successfully saved locally."), _appState!.T("Success"), position: ToastPosition.BottomEnd);
+                        }
+                        else
+                        {
+                            string err = (result != null && result.out_err != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "SaveJson>>AppParameter NO_CLOUD");
+                            await _messageBoxService!.ShowOkAsync(
+                                title: _appState!.T("Error"),
+                                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                            );
+                        }
+                    }
+                }
+            }
+
+            await Task.Delay(500);
+
+            await _appInitializer!.InitializeAfterSavingAsync();
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
+    }
+
+}

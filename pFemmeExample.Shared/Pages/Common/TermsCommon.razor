@@ -1,0 +1,583 @@
+﻿<TextToHtml Header="@Header" Body="@Body" IsHeaderHidden="@IsHeaderHidden" />
+
+@code {
+    [Parameter]
+    public bool IsHeaderHidden { get; set; } = false;
+
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+
+    private string? Header = string.Empty;
+    private string? Body = string.Empty;
+    private string[]? BodyBlocks { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var result = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+                    Language = result.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (result != null && !string.IsNullOrEmpty(result.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {result.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Header = "Usage Terms & Conditions";
+                Body = $@"
+1. General Provisions
+- These Terms of Use govern the use of the applications and services provided by True Perfect Code. By using the application, users agree to these terms.
+
+2. Use of the Application
+- The application is provided *as is* without any express or implied warranties.
+- Users are responsible for the security and confidentiality of their access credentials.
+- The application stores technically necessary data such as user preferences and authentication information.
+- Users are solely responsible for content or personal data they enter into the application. True Perfect Code does not process or monitor such content.
+- The processing of personal data is governed exclusively by our separate Privacy Policy, which forms an integral part of these Terms of Use.
+
+3. Limitation of Liability
+- True Perfect Code shall only be liable for damages caused by intent or gross negligence, as well as for damages resulting from injury to life, body, or health, to the extent required by law.
+- No liability is assumed – to the extent permitted by law – for indirect damages, data loss, loss of use, or lost profits.
+- The user acknowledges that the use of the application is at their own responsibility.
+
+4. Intellectual Property
+- All rights (including software, source code, designs, trademarks, logos, and content) remain the property of True Perfect Code.
+- Users receive a limited, non-exclusive, non-transferable license to use the application for its intended purpose.
+- Any reproduction, modification, publication, or distribution without prior written consent is prohibited.
+
+5. Termination of Services
+- Users may delete their accounts as well as local and cloud data at any time themselves.
+- True Perfect Code reserves the right to modify, suspend, or terminate the service at any time, to the extent permitted by law.
+- Termination may occur in particular in cases of: misuse of the application, violation of these Terms of Use, necessity due to legal requirements
+
+6. Changes to the Terms
+- True Perfect Code may update these Terms of Use at any time.
+- Users will be informed of changes in a timely manner.
+- Continued use of the application after the changes take effect constitutes acceptance of the updated terms.
+
+7. Applicable Law and Jurisdiction
+- These Terms of Use are governed by the laws of the Republic of Serbia.
+- For all disputes, the competent court in Belgrade, Serbia, shall have exclusive jurisdiction.
+
+8. Severability Clause
+- If any provision of these Terms of Use is or becomes invalid, the validity of the remaining provisions shall remain unaffected. In place of the invalid provision, a legally compliant provision shall apply that most closely approximates the economic purpose.
+";
+                break;
+
+            case "DE":
+                Header = "Allgemeine Geschäftsbedingungen";
+                Body = $@"
+Allgemeine Geschäftsbedingungen
+
+1. Allgemeine Bestimmungen
+- Diese Nutzungsbedingungen regeln die Nutzung der von True Perfect Code bereitgestellten Anwendungen und Dienstleistungen. Durch die Nutzung der Anwendung erklären sich Nutzer mit diesen Bedingungen einverstanden.
+
+2. Nutzung der Anwendung
+- Die Anwendung wird *wie gesehen* (*as is*) ohne ausdrückliche oder stillschweigende Garantien bereitgestellt.
+- Nutzer sind für die Sicherheit und Vertraulichkeit ihrer Zugangsdaten verantwortlich.
+- Die Anwendung speichert technisch notwendige Daten wie Nutzerpräferenzen und Authentifizierungsinformationen.
+- Nutzer sind allein verantwortlich für Inhalte oder personenbezogene Daten, die sie in die Anwendung eingeben. True Perfect Code verarbeitet oder überwacht solche Inhalte nicht.
+- Die Verarbeitung personenbezogener Daten richtet sich ausschließlich nach unserer separaten Datenschutzerklärung, die Bestandteil dieser Nutzungsbedingungen ist.
+
+3. Haftungsbeschränkung
+- True Perfect Code haftet nur für Schäden, die durch Vorsatz oder grobe Fahrlässigkeit verursacht werden, sowie für Schäden aus Verletzung von Leben, Körper oder Gesundheit, soweit gesetzlich verpflichtend.
+- Für indirekte Schäden, Datenverlust, Nutzungsausfall oder entgangenen Gewinn wird – soweit gesetzlich zulässig – keine Haftung übernommen.
+- Der Nutzer erkennt an, dass die Nutzung der Anwendung in eigener Verantwortung erfolgt.
+
+4. Geistiges Eigentum
+- Alle Rechte (einschließlich Software, Quellcode, Designs, Marken, Logos und Inhalte) verbleiben im Eigentum von True Perfect Code.
+- Nutzer erhalten eine eingeschränkte, nicht exklusive, nicht übertragbare Lizenz zur Nutzung der Anwendung im Rahmen ihres vorgesehenen Zwecks.
+- Jede Vervielfältigung, Bearbeitung, Veröffentlichung oder Weitergabe ohne vorherige schriftliche Zustimmung ist untersagt.
+
+5. Beendigung der Dienstleistungen
+- Nutzer können ihre Konten sowie lokale und Cloud-Daten jederzeit selbst löschen.
+- True Perfect Code behält sich das Recht vor, den Dienst jederzeit zu ändern, auszusetzen oder zu beenden, soweit gesetzlich zulässig.
+- Eine Beendigung kann insbesondere erfolgen bei: missbrauch der Anwendung, verstoß gegen diese Nutzungsbedingungen, erforderlichkeit aufgrund gesetzlicher Vorgaben
+
+6. Änderungen der Bedingungen
+- True Perfect Code kann diese Nutzungsbedingungen jederzeit aktualisieren.
+- Nutzer werden rechtzeitig über Änderungen informiert.
+- Die fortgesetzte Nutzung der Anwendung nach Inkrafttreten der Änderungen gilt als Zustimmung zu den aktualisierten Bedingungen.
+
+7. Anwendbares Recht und Gerichtsstand
+- Diese Nutzungsbedingungen unterliegen dem Recht der Republik Serbien.
+- Für alle Streitigkeiten ist ausschließlich das sachlich zuständige Gericht in Belgrad, Serbien, zuständig.
+
+8. Salvatorische Klausel
+- Sollte eine Bestimmung dieser Nutzungsbedingungen unwirksam sein oder werden, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt. Anstelle der unwirksamen Regelung gilt eine rechtskonforme Regel, die dem wirtschaftlichen Zweck am nächsten kommt.
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Header = "Conditions Générales d'Utilisation";
+                Body = $@"
+1. Dispositions générales
+- Les présentes Conditions d'Utilisation régissent l'utilisation des applications et services fournis par True Perfect Code. En utilisant l'application, les utilisateurs acceptent ces conditions.
+
+2. Utilisation de l'application
+- L'application est fournie *telle quelle* (*as is*) sans garanties expresses ou implicites.
+- Les utilisateurs sont responsables de la sécurité et de la confidentialité de leurs données d'accès.
+- L'application stocke des données techniquement nécessaires telles que les préférences utilisateur et les informations d'authentification.
+- Les utilisateurs sont seuls responsables des contenus ou données personnelles qu'ils saisissent dans l'application. True Perfect Code ne traite ni ne surveille ces contenus.
+- Le traitement des données personnelles est régi exclusivement par notre Politique de confidentialité séparée, qui fait partie intégrante des présentes Conditions d'Utilisation.
+
+3. Limitation de responsabilité
+- True Perfect Code n'est responsable que des dommages causés par intention ou négligence grave, ainsi que des dommages résultant d'une atteinte à la vie, à l'intégrité physique ou à la santé, dans la mesure requise par la loi.
+- Aucune responsabilité n'est assumée – dans la mesure permise par la loi – pour les dommages indirects, la perte de données, l'indisponibilité ou le manque à gagner.
+- L'utilisateur reconnaît que l'utilisation de l'application se fait à ses propres risques.
+
+4. Propriété intellectuelle
+- Tous les droits (y compris logiciels, code source, designs, marques, logos et contenus) restent la propriété de True Perfect Code.
+- Les utilisateurs reçoivent une licence limitée, non exclusive et non transférable pour utiliser l'application dans le cadre de son objectif prévu.
+- Toute reproduction, modification, publication ou diffusion sans autorisation écrite préalable est interdite.
+
+5. Résiliation des services
+- Les utilisateurs peuvent supprimer leurs comptes ainsi que les données locales et cloud à tout moment eux-mêmes.
+- True Perfect Code se réserve le droit de modifier, suspendre ou résilier le service à tout moment, dans la mesure permise par la loi.
+- Une résiliation peut notamment intervenir en cas de : utilisation abusive de l'application, violation des présentes Conditions d'Utilisation, nécessité due à des exigences légales
+
+6. Modifications des conditions
+- True Perfect Code peut mettre à jour les présentes Conditions d'Utilisation à tout moment.
+- Les utilisateurs seront informés des modifications en temps utile.
+- L'utilisation continue de l'application après l'entrée en vigueur des modifications vaut acceptation des conditions mises à jour.
+
+7. Droit applicable et juridiction compétente
+- Les présentes Conditions d'Utilisation sont soumises au droit de la République de Serbie.
+- Pour tous les litiges, le tribunal compétent de Belgrade, Serbie, a compétence exclusive.
+
+8. Clause de sauvegarde
+- Si une disposition des présentes Conditions d'Utilisation est ou devient invalide, la validité des autres dispositions n'en est pas affectée. À la place de la disposition invalide s'applique une disposition conforme à la loi qui se rapproche le plus de l'objectif économique visé.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Header = "Termini e Condizioni d'Uso";
+                Body = $@"
+1. Disposizioni generali
+- Le presenti Condizioni d'Uso regolano l'utilizzo delle applicazioni e dei servizi forniti da True Perfect Code. Utilizzando l'applicazione, gli utenti accettano queste condizioni.
+
+2. Utilizzo dell'applicazione
+- L'applicazione viene fornita *così com'è* (*as is*) senza garanzie espresse o implicite.
+- Gli utenti sono responsabili della sicurezza e della riservatezza delle proprie credenziali di accesso.
+- L'applicazione memorizza dati tecnicamente necessari come preferenze utente e informazioni di autenticazione.
+- Gli utenti sono gli unici responsabili dei contenuti o dei dati personali che inseriscono nell'applicazione. True Perfect Code non elabora né monitora tali contenuti.
+- Il trattamento dei dati personali è regolato esclusivamente dalla nostra Informativa sulla privacy separata, che costituisce parte integrante delle presenti Condizioni d'Uso.
+
+3. Limitazione di responsabilità
+- True Perfect Code risponde solo dei danni causati da dolo o colpa grave, nonché dei danni derivanti da lesioni alla vita, all'integrità fisica o alla salute, nella misura richiesta dalla legge.
+- Non si assume alcuna responsabilità – nella misura consentita dalla legge – per danni indiretti, perdita di dati, interruzione d'uso o mancato guadagno.
+- L'utente riconosce che l'utilizzo dell'applicazione avviene a proprio rischio.
+
+4. Proprietà intellettuale
+- Tutti i diritti (inclusi software, codice sorgente, design, marchi, loghi e contenuti) restano di proprietà di True Perfect Code.
+- Gli utenti ricevono una licenza limitata, non esclusiva e non trasferibile per utilizzare l'applicazione nell'ambito del suo scopo previsto.
+- Qualsiasi riproduzione, modifica, pubblicazione o diffusione senza previo consenso scritto è vietata.
+
+5. Cessazione dei servizi
+- Gli utenti possono eliminare i propri account nonché i dati locali e cloud in qualsiasi momento da soli.
+- True Perfect Code si riserva il diritto di modificare, sospendere o interrompere il servizio in qualsiasi momento, nella misura consentita dalla legge.
+- La cessazione può avvenire in particolare in caso di: abuso dell'applicazione, violazione delle presenti Condizioni d'Uso, necessità dovuta a prescrizioni legali
+
+6. Modifiche delle condizioni
+- True Perfect Code può aggiornare le presenti Condizioni d'Uso in qualsiasi momento.
+- Gli utenti verranno informati tempestivamente delle modifiche.
+- L'uso continuato dell'applicazione dopo l'entrata in vigore delle modifiche vale come accettazione delle condizioni aggiornate.
+
+7. Legge applicabile e foro competente
+- Le presenti Condizioni d'Uso sono soggette al diritto della Repubblica di Serbia.
+- Per tutte le controversie è competente in via esclusiva il tribunale materialmente competente di Belgrado, Serbia.
+
+8. Clausola salvatoria
+- Qualora una disposizione delle presenti Condizioni d'Uso sia o diventi invalida, la validità delle restanti disposizioni rimane impregiudicata. Al posto della disposizione invalida si applica una disposizione conforme alla legge che si avvicina maggiormente allo scopo economico perseguito.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Header = "شروط وأحكام الاستخدام";
+                Body = $@"
+1. الأحكام العامة
+- تنظم شروط الاستخدام هذه استخدام التطبيقات والخدمات التي يقدمها True Perfect Code. باستخدام التطبيق، يوافق المستخدمون على هذه الشروط.
+
+2. استخدام التطبيق
+- يتم توفير التطبيق *كما هو* (*as is*) دون ضمانات صريحة أو ضمنية.
+- يتحمل المستخدمون مسؤولية أمان وسرية بيانات الوصول الخاصة بهم.
+- يخزن التطبيق بيانات ضرورية تقنيًا مثل تفضيلات المستخدم ومعلومات المصادقة.
+- يتحمل المستخدمون وحدهم مسؤولية المحتويات أو البيانات الشخصية التي يدخلونها في التطبيق. لا يعالج True Perfect Code أو يراقب مثل هذه المحتويات.
+- يخضع معالجة البيانات الشخصية حصريًا لسياسة الخصوصية المنفصلة لدينا، والتي تشكل جزءًا لا يتجزأ من شروط الاستخدام هذه.
+
+3. تحديد المسؤولية
+- لا يتحمل True Perfect Code المسؤولية إلا عن الأضرار الناتجة عن القصد أو الإهمال الجسيم، وعن الأضرار الناتجة عن الإضرار بالحياة أو الجسم أو الصحة، في الحدود المطلوبة قانونيًا.
+- لا تُتحمل أي مسؤولية – في الحدود المسموح بها قانونيًا – عن الأضرار غير المباشرة أو فقدان البيانات أو انقطاع الاستخدام أو الربح الفائت.
+- يقر المستخدم بأن استخدام التطبيق يتم على مسؤوليته الخاصة.
+
+4. الملكية الفكرية
+- تبقى جميع الحقوق (بما في ذلك البرمجيات والكود المصدري والتصاميم والعلامات التجارية والشعارات والمحتويات) ملكًا لـ True Perfect Code.
+- يحصل المستخدمون على ترخيص محدود وغير حصري وغير قابل للنقل لاستخدام التطبيق في إطار غرضه المقصود.
+- يُحظر أي تكاثر أو تعديل أو نشر أو توزيع بدون موافقة كتابية مسبقة.
+
+5. إنهاء الخدمات
+- يمكن للمستخدمين حذف حساباتهم وبياناتهم المحلية والسحابية في أي وقت بأنفسهم.
+- يحتفظ True Perfect Code بالحق في تعديل أو تعليق أو إنهاء الخدمة في أي وقت، في الحدود المسموح بها قانونيًا.
+- يمكن أن يتم الإنهاء خاصة في حالات: سوء استخدام التطبيق، انتهاك شروط الاستخدام هذه، الضرورة بسبب متطلبات قانونية
+
+6. تعديلات الشروط
+- يمكن لـ True Perfect Code تحديث شروط الاستخدام هذه في أي وقت.
+- سيتم إبلاغ المستخدمين بالتعديلات في الوقت المناسب.
+- يُعتبر الاستخدام المستمر للتطبيق بعد دخول التعديلات حيز التنفيذ موافقة على الشروط المحدثة.
+
+7. القانون المعمول به ومكان الاختصاص القضائي
+- تخضع شروط الاستخدام هذه لقانون جمهورية صربيا.
+- يكون المحكمة المختصة ماديًا في بلغراد، صربيا، مختصة حصريًا بجميع النزاعات.
+
+8. شرط الانفصالية
+- إذا كان أي بند من بنود شروط الاستخدام هذه غير صالح أو أصبح كذلك، فإن صلاحية البنود المتبقية تبقى غير متأثرة. يُطبق بدلاً من البند غير الصالح بند يتوافق مع القانون ويقترب أكثر من الغرض الاقتصادي المقصود.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Header = "使用条款与条件";
+                Body = $@"
+1. 一般规定
+- 本使用条款规定了 True Perfect Code 提供的应用程序和服务的使用。通过使用应用程序，用户同意这些条款。
+
+2. 应用程序的使用
+- 应用程序按*现状*（*as is*）提供，不附带任何明示或暗示的保证。
+- 用户负责其访问凭证的安全性和保密性。
+- 应用程序存储技术上必要的数据，如用户偏好设置和认证信息。
+- 用户对自己在应用程序中输入的内容或个人数据负全责。True Perfect Code 不处理或监控此类内容。
+- 个人数据的处理仅受我们单独的隐私政策约束，该政策构成本使用条款的组成部分。
+
+3. 责任限制
+- True Perfect Code 仅对因故意或重大过失造成的损害，以及对生命、身体或健康的损害承担责任（在法律要求范围内）。
+- 在法律允许的范围内，不对间接损害、数据丢失、使用中断或利润损失承担责任。
+- 用户承认使用应用程序的风险由自己承担。
+
+4. 知识产权
+- 所有权利（包括软件、源代码、设计、商标、标志和内容）仍归 True Perfect Code 所有。
+- 用户获得有限的、非排他性的、不可转让的许可，仅在预定目的范围内使用应用程序。
+- 未经事先书面同意，禁止任何复制、修改、发布或传播。
+
+5. 服务终止
+- 用户可随时自行删除其账户以及本地和云数据。
+- True Perfect Code 保留在法律允许范围内随时修改、暂停或终止服务的权利。
+- 终止尤其可在以下情况下发生：滥用应用程序、违反本使用条款、因法律要求而必要
+
+6. 条款修改
+- True Perfect Code 可随时更新本使用条款。
+- 将及时告知用户修改内容。
+- 修改生效后继续使用应用程序即视为接受更新后的条款。
+
+7. 适用法律和管辖权
+- 本使用条款适用塞尔维亚共和国法律。
+- 所有争议由塞尔维亚贝尔格莱德有管辖权的法院专属管辖。
+
+8. 可分性条款
+- 如果本使用条款的任何规定无效或变得无效，其余规定的有效性不受影响。无效规定将被最接近原经济目的的合法规定取代。
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Header = "उपयोग की शर्तें और नियम";
+                Body = $@"
+1. सामान्य प्रावधान
+- ये उपयोग की शर्तें True Perfect Code द्वारा प्रदान की गई एप्लिकेशन और सेवाओं के उपयोग को नियंत्रित करती हैं। एप्लिकेशन का उपयोग करके उपयोगकर्ता इन शर्तों से सहमत होते हैं।
+
+2. एप्लिकेशन का उपयोग
+- एप्लिकेशन *जैसा है* (*as is*) प्रदान किया जाता है, बिना किसी स्पष्ट या निहित गारंटी के।
+- उपयोगकर्ता अपनी एक्सेस क्रेडेंशियल्स की सुरक्षा और गोपनीयता के लिए जिम्मेदार हैं।
+- एप्लिकेशन तकनीकी रूप से आवश्यक डेटा जैसे उपयोगकर्ता प्राथमिकताएं और प्रमाणीकरण जानकारी संग्रहीत करता है।
+- उपयोगकर्ता स्वयं उन सामग्री या व्यक्तिगत डेटा के लिए पूरी तरह जिम्मेदार हैं जो वे एप्लिकेशन में दर्ज करते हैं। True Perfect Code ऐसे सामग्री को संसाधित या मॉनिटर नहीं करता।
+- व्यक्तिगत डेटा का प्रसंस्करण पूरी तरह से हमारी अलग गोपनीयता नीति द्वारा नियंत्रित होता है, जो इन उपयोग की शर्तों का अभिन्न हिस्सा है।
+
+3. दायित्व की सीमा
+- True Perfect Code केवल जानबूझकर या घोर लापरवाही से हुए नुकसान के लिए, तथा जीवन, शरीर या स्वास्थ्य को चोट पहुंचाने से हुए नुकसान के लिए उत्तरदायी है (कानून द्वारा आवश्यक सीमा तक)।
+- कानून द्वारा अनुमत सीमा तक अप्रत्यक्ष नुकसान, डेटा हानि, उपयोग में रुकावट या लाभ हानि के लिए कोई दायित्व नहीं लिया जाता।
+- उपयोगकर्ता स्वीकार करता है कि एप्लिकेशन का उपयोग उसकी अपनी जिम्मेदारी पर होता है।
+
+4. बौद्धिक संपदा
+- सभी अधिकार (सॉफ्टवेयर, स्रोत कोड, डिज़ाइन, ट्रेडमार्क, लोगो और सामग्री सहित) True Perfect Code की संपत्ति बने रहते हैं।
+- उपयोगकर्ताओं को एप्लिकेशन को उसके इच्छित उद्देश्य के अनुसार उपयोग करने के लिए सीमित, गैर-अनन्य और गैर-हस्तांतरणीय लाइसेंस प्राप्त होता है।
+- पूर्व लिखित सहमति के बिना कोई प्रतिलिपि बनाना, संशोधन, प्रकाशन या वितरण निषिद्ध है।
+
+5. सेवाओं की समाप्ति
+- उपयोगकर्ता किसी भी समय स्वयं अपने खाते तथा स्थानीय और क्लाउड डेटा हटा सकते हैं।
+- True Perfect Code कानून द्वारा अनुमत सीमा तक किसी भी समय सेवा में संशोधन, निलंबन या समाप्ति करने का अधिकार सुरक्षित रखता है।
+- समाप्ति विशेष रूप से निम्नलिखित मामलों में हो सकती है: एप्लिकेशन का दुरुपयोग, इन उपयोग की शर्तों का उल्लंघन, कानूनी आवश्यकताओं के कारण आवश्यकता
+
+6. शर्तों में बदलाव
+- True Perfect Code किसी भी समय इन उपयोग की शर्तों को अपडेट कर सकता है।
+- उपयोगकर्ताओं को बदलावों के बारे में समय पर सूचित किया जाएगा।
+- बदलाव प्रभावी होने के बाद एप्लिकेशन का निरंतर उपयोग अपडेटेड शर्तों की स्वीकृति माना जाएगा।
+
+7. लागू कानून और क्षेत्राधिकार
+- ये उपयोग की शर्तें सर्बिया गणराज्य के कानून के अधीन हैं।
+- सभी विवादों के लिए सर्बिया के बेलग्रेड में सक्षम न्यायालय का विशेष क्षेत्राधिकार है।
+
+8. अलग करने योग्य खंड
+- यदि इन उपयोग की शर्तों का कोई प्रावधान अमान्य है या हो जाता है, तो शेष प्रावधानों की वैधता अप्रभावित रहती है। अमान्य प्रावधान के स्थान पर सबसे निकटतम आर्थिक उद्देश्य वाली कानूनी प्रावधान लागू होगी।
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Header = "Términos y Condiciones de Uso";
+                Body = $@"
+1. Disposiciones generales
+- Los presentes Términos de Uso regulan el uso de las aplicaciones y servicios proporcionados por True Perfect Code. Al utilizar la aplicación, los usuarios aceptan estos términos.
+
+2. Uso de la aplicación
+- La aplicación se proporciona *tal como está* (*as is*) sin garantías expresas o implícitas.
+- Los usuarios son responsables de la seguridad y confidencialidad de sus credenciales de acceso.
+- La aplicación almacena datos técnicamente necesarios como preferencias de usuario e información de autenticación.
+- Los usuarios son los únicos responsables de los contenidos o datos personales que introduzcan en la aplicación. True Perfect Code no procesa ni monitorea dichos contenidos.
+- El tratamiento de datos personales se rige exclusivamente por nuestra Política de Privacidad separada, que forma parte integrante de los presentes Términos de Uso.
+
+3. Limitación de responsabilidad
+- True Perfect Code solo será responsable de los daños causados por dolo o negligencia grave, así como de los daños derivados de lesiones a la vida, integridad física o salud, en la medida requerida por la ley.
+- No se asume responsabilidad – en la medida permitida por la ley – por daños indirectos, pérdida de datos, interrupción de uso o lucro cesante.
+- El usuario reconoce que el uso de la aplicación se realiza bajo su propia responsabilidad.
+
+4. Propiedad intelectual
+- Todos los derechos (incluidos software, código fuente, diseños, marcas, logotipos y contenidos) permanecen en propiedad de True Perfect Code.
+- Los usuarios reciben una licencia limitada, no exclusiva y no transferible para utilizar la aplicación en el marco de su propósito previsto.
+- Queda prohibida cualquier reproducción, modificación, publicación o distribución sin consentimiento escrito previo.
+
+5. Terminación de los servicios
+- Los usuarios pueden eliminar sus cuentas así como los datos locales y en la nube en cualquier momento por sí mismos.
+- True Perfect Code se reserva el derecho de modificar, suspender o terminar el servicio en cualquier momento, en la medida permitida por la ley.
+- La terminación podrá producirse en particular en casos de: uso indebido de la aplicación, incumplimiento de los presentes Términos de Uso, necesidad por requisitos legales
+
+6. Modificaciones de los términos
+- True Perfect Code podrá actualizar los presentes Términos de Uso en cualquier momento.
+- Los usuarios serán informados de los cambios con la debida antelación.
+- El uso continuado de la aplicación tras la entrada en vigor de las modificaciones se considerará como aceptación de los términos actualizados.
+
+7. Ley aplicable y jurisdicción
+- Los presentes Términos de Uso se rigen por el derecho de la República de Serbia.
+- Para todas las controversias, será competente en exclusiva el tribunal materialmente competente de Belgrado, Serbia.
+
+8. Cláusula de separabilidad
+- Si alguna disposición de los presentes Términos de Uso fuera o deviniera inválida, la validez de las restantes disposiciones no se verá afectada. En lugar de la disposición inválida se aplicará una disposición conforme a la ley que se aproxime lo más posible al propósito económico perseguido.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Header = "Syarat dan Ketentuan Penggunaan";
+                Body = $@"
+1. Ketentuan Umum
+- Syarat Penggunaan ini mengatur penggunaan aplikasi dan layanan yang disediakan oleh True Perfect Code. Dengan menggunakan aplikasi, pengguna menyetujui syarat-syarat ini.
+
+2. Penggunaan Aplikasi
+- Aplikasi disediakan *sebagaimana adanya* (*as is*) tanpa jaminan ekspres atau implisit.
+- Pengguna bertanggung jawab atas keamanan dan kerahasiaan data akses mereka.
+- Aplikasi menyimpan data yang diperlukan secara teknis seperti preferensi pengguna dan informasi autentikasi.
+- Pengguna sepenuhnya bertanggung jawab atas konten atau data pribadi yang mereka masukkan ke dalam aplikasi. True Perfect Code tidak memproses atau memantau konten tersebut.
+- Pemrosesan data pribadi diatur secara eksklusif oleh Kebijakan Privasi terpisah kami, yang merupakan bagian integral dari Syarat Penggunaan ini.
+
+3. Pembatasan Tanggung Jawab
+- True Perfect Code hanya bertanggung jawab atas kerugian yang disebabkan oleh kesengajaan atau kelalaian berat, serta kerugian akibat cedera jiwa, tubuh atau kesehatan, sejauh diwajibkan oleh undang-undang.
+- Tidak ada tanggung jawab – sejauh diizinkan oleh undang-undang – atas kerugian tidak langsung, kehilangan data, gangguan penggunaan atau kehilangan keuntungan.
+- Pengguna mengakui bahwa penggunaan aplikasi dilakukan atas tanggung jawab sendiri.
+
+4. Kekayaan Intelektual
+- Semua hak (termasuk perangkat lunak, kode sumber, desain, merek dagang, logo dan konten) tetap menjadi milik True Perfect Code.
+- Pengguna menerima lisensi terbatas, tidak eksklusif dan tidak dapat dipindahtangankan untuk menggunakan aplikasi dalam rangka tujuan yang dimaksudkan.
+- Setiap penggandaan, pengubahan, publikasi atau distribusi tanpa persetujuan tertulis sebelumnya dilarang.
+
+5. Pengakhiran Layanan
+- Pengguna dapat menghapus akun mereka serta data lokal dan cloud kapan saja sendiri.
+- True Perfect Code berhak untuk mengubah, menangguhkan atau mengakhiri layanan kapan saja, sejauh diizinkan oleh undang-undang.
+- Pengakhiran dapat terjadi terutama dalam kasus: penyalahgunaan aplikasi, pelanggaran Syarat Penggunaan ini, kebutuhan karena persyaratan hukum
+
+6. Perubahan Syarat
+- True Perfect Code dapat memperbarui Syarat Penggunaan ini kapan saja.
+- Pengguna akan diberitahu tentang perubahan secara tepat waktu.
+- Penggunaan aplikasi yang berkelanjutan setelah perubahan berlaku dianggap sebagai penerimaan syarat yang diperbarui.
+
+7. Hukum yang Berlaku dan Yurisdiksi
+- Syarat Penggunaan ini tunduk pada hukum Republik Serbia.
+- Untuk semua sengketa, pengadilan yang berwenang secara materiil di Beograd, Serbia, memiliki yurisdiksi eksklusif.
+
+8. Klausul Pemisahan
+- Jika suatu ketentuan dalam Syarat Penggunaan ini tidak sah atau menjadi tidak sah, keabsahan ketentuan lainnya tidak terpengaruh. Sebagai pengganti ketentuan yang tidak sah berlaku ketentuan yang sesuai hukum yang paling mendekati tujuan ekonomi yang dimaksudkan.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Header = "Termos e Condições de Uso";
+                Body = $@"
+1. Disposições Gerais
+- Os presentes Termos de Uso regulam o uso dos aplicativos e serviços fornecidos pela True Perfect Code. Ao usar o aplicativo, os usuários aceitam estes termos.
+
+2. Uso do Aplicativo
+- O aplicativo é fornecido *tal como está* (*as is*) sem garantias expressas ou implícitas.
+- Os usuários são responsáveis pela segurança e confidencialidade das suas credenciais de acesso.
+- O aplicativo armazena dados tecnicamente necessários, como preferências do usuário e informações de autenticação.
+- Os usuários são os únicos responsáveis pelos conteúdos ou dados pessoais que inserem no aplicativo. A True Perfect Code não processa nem monitora esses conteúdos.
+- O tratamento de dados pessoais é regulado exclusivamente pela nossa Política de Privacidade separada, que faz parte integrante dos presentes Termos de Uso.
+
+3. Limitação de Responsabilidade
+- A True Perfect Code só é responsável por danos causados por dolo ou negligência grave, bem como por danos resultantes de lesões à vida, ao corpo ou à saúde, na medida exigida por lei.
+- Não é assumida responsabilidade – na medida permitida por lei – por danos indiretos, perda de dados, interrupção de uso ou lucros cessantes.
+- O usuário reconhece que o uso do aplicativo é feito por sua própria responsabilidade.
+
+4. Propriedade Intelectual
+- Todos os direitos (incluindo software, código-fonte, designs, marcas, logotipos e conteúdos) permanecem propriedade da True Perfect Code.
+- Os usuários recebem uma licença limitada, não exclusiva e não transferível para usar o aplicativo no âmbito do seu propósito previsto.
+- Qualquer reprodução, modificação, publicação ou distribuição sem consentimento escrito prévio é proibida.
+
+5. Término dos Serviços
+- Os usuários podem excluir as suas contas, bem como os dados locais e na nuvem, a qualquer momento por si mesmos.
+- A True Perfect Code reserva-se o direito de modificar, suspender ou encerrar o serviço a qualquer momento, na medida permitida por lei.
+- O término pode ocorrer, em particular, em casos de: uso indevido do aplicativo, violação dos presentes Termos de Uso, necessidade decorrente de requisitos legais
+
+6. Alterações dos Termos
+- A True Perfect Code pode atualizar os presentes Termos de Uso a qualquer momento.
+- Os usuários serão informados das alterações tempestivamente.
+- O uso continuado do aplicativo após a entrada em vigor das alterações constitui aceitação dos termos atualizados.
+
+7. Lei Aplicável e Foro Competente
+- Os presentes Termos de Uso estão sujeitos à lei da República da Sérvia.
+- Para todos os litígios, é exclusivamente competente o tribunal materialmente competente de Belgrado, Sérvia.
+
+8. Cláusula de Divisibilidade
+- Caso alguma disposição dos presentes Termos de Uso seja ou se torne inválida, a validade das restantes disposições não é afetada. Em substituição da disposição inválida aplica-se uma disposição legal que mais se aproxime do propósito econômico pretendido.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Header = "Opšti uslovi korišćenja";
+                Body = $@"
+1. Opšte odredbe
+- Ovi Uslovi korišćenja regulišu upotrebu aplikacija i usluga koje pruža True Perfect Code. Korišćenjem aplikacije, korisnici prihvataju ove uslove.
+
+2. Korišćenje aplikacije
+- Aplikacija se pruža *kao što je* (*as is*) bez izričitih ili prećutnih garancija.
+- Korisnici su odgovorni za bezbednost i poverljivost svojih pristupnih podataka.
+- Aplikacija čuva tehnički neophodne podatke kao što su korisničke preference i informacije o autentifikaciji.
+- Korisnici su isključivo odgovorni za sadržaje ili lične podatke koje unose u aplikaciju. True Perfect Code ne obrađuje niti nadgleda takve sadržaje.
+- Obrada ličnih podataka regulisana je isključivo našom posebnom Politikom privatnosti, koja čini sastavni deo ovih Uslova korišćenja.
+
+3. Ograničenje odgovornosti
+- True Perfect Code odgovara samo za štete prouzrokovane namerno ili grubim nemarom, kao i za štete nastale povredom života, tela ili zdravlja, u meri u kojoj je to zakonski obavezno.
+- Ne preuzima se odgovornost – u meri dozvoljenoj zakonom – za indirektne štete, gubitak podataka, prekid korišćenja ili izgubljenu dobit.
+- Korisnik priznaje da korišćenje aplikacije vrši na sopstvenu odgovornost.
+
+4. Intelektualna svojina
+- Sva prava (uključujući softver, izvorni kod, dizajne, žigove, logoe i sadržaje) ostaju vlasništvo True Perfect Code-a.
+- Korisnici dobijaju ograničenu, neekskluzivnu i neprenosivu licencu za korišćenje aplikacije u okviru njenog predviđenog namene.
+- Svako umnožavanje, izmenjivanje, objavljivanje ili distribuiranje bez prethodne pismene saglasnosti je zabranjeno.
+
+5. Prestanak pružanja usluga
+- Korisnici mogu sami obrisati svoje naloge kao i lokalne i cloud podatke u bilo kom trenutku.
+- True Perfect Code zadržava pravo da izmeni, obustavi ili prekine uslugu u bilo kom trenutku, u meri dozvoljenoj zakonom.
+- Prestanak može nastupiti naročito u slučajevima: zloupotrebe aplikacije, kršenja ovih Uslova korišćenja, neophodnosti zbog zakonskih zahteva
+
+6. Izmene uslova
+- True Perfect Code može ažurirati ove Uslove korišćenja u bilo kom trenutku.
+- Korisnici će biti blagovremeno obavešteni o izmenama.
+- Nastavak korišćenja aplikacije nakon stupanja izmena na snagu smatra se prihvatanjem ažuriranih uslova.
+
+7. Primenjivo pravo i nadležnost
+- Ovi Uslovi korišćenja podležu pravu Republike Srbije.
+- Za sve sporove isključivo je nadležan stvarno nadležni sud u Beogradu, Srbija.
+
+8. Klauzula o odvojivosti
+- Ako neka odredba ovih Uslova korišćenja bude ili postane nevažeća, važenje ostalih odredbi ostaje nepromenjeno. Umesto nevažeće odredbe primenjuje se zakonski usklađena odredba koja se najviše približava ekonomskoj svrsi.
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Header = "Општи услови коришћења";
+                Body = $@"
+1. Опште одредбе
+- Ови Услови коришћења регулишу употребу апликација и услуга које пружа True Perfect Code. Коришћењем апликације, корисници прихватају ове услове.
+
+2. Коришћење апликације
+- Апликација се пружа *као што је* (*as is*) без изричитих или прећутних гаранција.
+- Корисници су одговорни за безбедност и поверљивост својих приступних података.
+- Апликација чува технички неопходне податке као што су корисничке преференце и информације о аутентификацији.
+- Корисници су искључиво одговорни за садржаје или личне податке које уносе у апликацију. True Perfect Code не обрађује нити надгледа такве садржаје.
+- Обрада личних података регулисана је искључиво нашом посебном Политиком приватности, која чини саставни део ових Услова коришћења.
+
+3. Ограничење одговорности
+- True Perfect Code одговара само за штете проузроковане намерно или грубим немаром, као и за штете настале повредом живота, тела или здравља, у мери у којој је то законски обавезно.
+- Не преузима се одговорност – у мери дозвољеној законом – за индиректне штете, губитак података, прекид коришћења или изгубљену добит.
+- Корисник признаје да коришћење апликације врши на сопствену одговорност.
+
+4. Интелектуална својина
+- Сва права (укључујући софтвер, изворни код, дизајне, жигове, логое и садржаје) остају власништво True Perfect Code-а.
+- Корисници добијају ограничену, неексклузивну и непреносиву лиценцу за коришћење апликације у оквиру њеног предвиђеног намене.
+- Свако умножавање, измењивање, објављивање или дистрибуирање без претходне писмене сагласности је забрањено.
+
+5. Престанак пружања услуга
+- Корисници могу сами обрисати своје налоге као и локалне и cloud податке у било ком тренутку.
+- True Perfect Code задржава право да измени, обустави или прекине услугу у било ком тренутку, у мери дозвољеној законом.
+- Престанак може наступити нарочито у случајевима: злоупотребе апликације, кршења ових Услова коришћења, неопходности због законских захтева
+
+6. Измене услова
+- True Perfect Code може ажурирати ове Услове коришћења у било ком тренутку.
+- Корисници ће бити благовремено обавештени о изменама.
+- Наставак коришћења апликације након ступања измена на снагу сматра се прихватањем ажурираних услова.
+
+7. Применљиво право и надлежност
+- Ови Услови коришћења подлежу праву Републике Србије.
+- За све спорове искључиво је надлежан стварно надлежни суд у Београду, Србија.
+
+8. Клаузула о одвојивости
+- Ако нека одредба ових Услова коришћења буде или постане неважећа, важење осталих одредби остаје непромењено. Уместо неважеће одредбе примењује се законски усклађена одредба која се највише приближава економској сврси.
+";
+                break;
+
+        }
+
+    }
+
+}
+

@@ -1,0 +1,418 @@
+﻿@implements IDisposable
+@using pFemmeExample.Shared.Models
+
+
+@if(_appState != null && data != null)
+{
+    <div class="d-flex flex-wrap gap-3 gap-md-4 my-3">
+        <!-- Erste Karte -->
+        <div class="flex-grow-1" style="min-width: 250px; flex-basis: 0;">
+            <P11HoverEffect HoverEffectVariant="HoverEffectVariant.PressDown">
+                <P11Button id="phaseButton" ButtonVariant="ButtonVariant.None"
+                           AriaLabel="@_appState.T("Cycle Phase")"
+                           CssClass="w-100 p-0 border-0 bg-transparent"
+                           OnClick="@(() => showModal1 = true)">
+                    <div class="card border-0 shadow-sm h-100 tpc-card-secondary" style="cursor: pointer; transition: all 0.2s ease;">
+                        <div class="d-flex w-100 align-items-center justify-content-between py-2 py-sm-2 px-2 px-sm-3 flex-nowrap">
+
+                            @if (IsCalculatedDataInvalid)
+                            {
+                                <div class="w-100 d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-exclamation-triangle-fill text-warning display-6 display-sm-3 display-md-1 me-1 me-sm-2" title="@_appState!.T("Overdue")"></i>
+                                    <div class="text-start">
+                                        <span class="fw-bold d-block" style="color: var(--tpc-text-color);">@_appState!.T("Calculation suspended")</span>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="w-50 d-flex align-items-center pe-1 pe-sm-2 flex-nowrap">
+                                    <i class="bi bi-flower1 text-secondary display-6 display-sm-3 display-md-1 me-1 me-sm-2"></i>
+
+                                    <div class="d-flex align-items-baseline flex-nowrap">
+                                        <P11Label Text="@(data.fertile_phase > 0 ? data.fertile_phase.ToString() : "-")"
+                                                  LabelTypography="LabelTypography.Display_3"
+                                                  Weight="Weight.Normal"
+                                                  LabelVariant="LabelVariant.Muted"
+                                                  CssClass="lh-1 d-inline-block mb-0 display-6 display-sm-4 display-md-3" />
+
+                                        @if (data.fertile_phase > 0)
+                                        {
+                                            <P11Label Text="@_appState!.T("Days")"
+                                                      AriaLabel="@(_appState!.T("Fertile Phase") + " " + _appState!.T("Days") + " " + data.fertile_phase.ToString())"
+                                                      LabelTypography="LabelTypography.Small"
+                                                      LabelVariant="LabelVariant.Muted"
+                                                      CssClass="small ms-1 d-inline-block mb-0" />
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="border-start align-self-stretch my-1 border-ink" style="opacity: 0.5;"></div>
+
+                                <div class="w-50 d-flex align-items-center ps-1 ps-sm-2 flex-nowrap">
+                                    <i class="bi bi-record-circle-fill text-secondary display-6 display-sm-3 display-md-1 me-1 me-sm-2"></i>
+
+                                    <div class="d-flex align-items-baseline flex-nowrap">
+                                        <P11Label Text="@(data.infertile_phase > 0 ? data.infertile_phase.ToString() : "-")"
+                                                  LabelTypography="LabelTypography.Display_3"
+                                                  Weight="Weight.Normal"
+                                                  LabelVariant="LabelVariant.Muted"
+                                                  CssClass="lh-1 d-inline-block mb-0 display-6 display-sm-4 display-md-3" />
+
+                                        @if (data.infertile_phase > 0)
+                                        {
+                                            <P11Label Text="@_appState!.T("Days")"
+                                                      AriaLabel="@(_appState!.T("Infertile Phase") + " " + _appState!.T("Days") + " " + data.infertile_phase.ToString())"
+                                                      LabelTypography="LabelTypography.Small"
+                                                      LabelVariant="LabelVariant.Muted"
+                                                      CssClass="small ms-1 d-inline-block mb-0" />
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                        </div>
+                    </div>
+                </P11Button>
+            </P11HoverEffect>
+        </div>
+
+        <!-- Zweite Karte -->
+        <div class="flex-grow-1" style="min-width: 250px; flex-basis: 0;">
+            <P11HoverEffect HoverEffectVariant="HoverEffectVariant.PressDown">
+                <P11Button id="durationButton" ButtonVariant="ButtonVariant.None"
+                           AriaLabel="@_appState.T("Period Duration")"
+                           CssClass="w-100 p-0 border-0 bg-transparent"
+                           OnClick="@(() => showModal2 = true)">
+                    <div class="card border-0 shadow-sm h-100 tpc-card-secondary" style="cursor: pointer; transition: all 0.2s ease;">
+                        <div class="d-flex w-100 align-items-center justify-content-between py-2 py-sm-2 px-2 px-sm-3 flex-nowrap">
+
+                            <!-- Aktuelle Zyklusphase -->
+                            <div class="w-50 d-flex align-items-center pe-1 pe-sm-2 flex-nowrap">
+                                <i class="bi bi-hourglass-split text-secondary display-6 display-sm-3 display-md-1 mb-0 me-1 me-sm-2"></i>
+
+                                <div class="d-flex align-items-baseline flex-nowrap">
+                                    <P11Label Text="@_appState!.T("Duration Ø")"
+                                              LabelTypography="LabelTypography.Lead"
+                                              LabelVariant="LabelVariant.Muted"
+                                              CssClass="small text-secondary fw-bold mb-0 text-nowrap" />
+                                </div>
+                            </div>
+
+                            <div class="border-start align-self-stretch my-1 border-ink" style="opacity: 0.5;"></div>
+
+                            <!-- Durchschnittliche Dauer der Perioden -->
+                            <div class="w-50 d-flex align-items-center ps-1 ps-sm-2 flex-nowrap">
+                                <div class="d-flex align-items-baseline flex-nowrap">
+                                    <P11Label Text="@((data.avgDurationMin > 0 ? data.avgDurationMin.ToString() : "-") + " / " + (data.avgDurationMax > 0 ? data.avgDurationMax.ToString() : "-"))"
+                                              LabelTypography="LabelTypography.Display_3"
+                                              Weight="Weight.Normal"
+                                              LabelVariant="LabelVariant.Muted"
+                                              CssClass="lh-1 d-inline-block mb-0 display-6 display-sm-4 display-md-3" />
+
+                                    <P11Label Text="@(data.avgDurationMin > 0 || data.avgDurationMax > 0 ? _appState!.T("Days") : "")"
+                                              LabelTypography="LabelTypography.Small"
+                                              LabelVariant="LabelVariant.Muted"
+                                              CssClass="small ms-1 d-inline-block mb-0" />
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </P11Button>
+            </P11HoverEffect>
+        </div>
+    </div>
+
+    <!-- Erste Modal -->
+    <P11ModalNative @bind-Visible="showModal1"
+                    Id="@ModalId1"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    Size="Size.Large"
+                    Title="@_appState.T("Current Cycle Phase")"
+                    ShowHeaderSeparator="true"
+                    CloseOnOutsideClick="false"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    OnClose="() => showModal1 = false">
+
+        <BodyContent>
+
+            @if (IsCalculatedDataInvalid)
+            {
+                <div class="p-4 text-center mx-auto" style="max-width: 500px; background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                    <i class="bi bi-exclamation-triangle text-warning display-4 mb-3 d-block"></i>
+                    <h5 class="fw-bold mb-3" style="color: var(--tpc-text-color);">@_appState!.T("Calculation Suspended")</h5>
+                    <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.8; line-height: 1.5;">
+                        @_appState!.T("The current cycle is significantly overdue. Future fertility windows cannot be accurately calculated until the next period onset is recorded.")
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="row g-4">
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 h-100" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-flower1 text-secondary" style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
+                                <h5 class="mb-0 fw-bold text-secondary">@_appState!.T("Fertile Phase")</h5>
+                            </div>
+                            <div class="d-flex align-items-baseline mb-2">
+                                <P11Label Text="@data.fertile_phase.ToString()"
+                                          LabelTypography="LabelTypography.Display_3"
+                                          Weight="Weight.Normal"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="lh-1 d-inline-block mb-0 display-6 display-sm-4 display-md-3" />
+
+                                <P11Label Text="@_appState!.T("Days remaining")"
+                                          LabelTypography="LabelTypography.Small"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="small ms-1 d-inline-block mb-0" />
+                            </div>
+                            <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.7;">
+                                @_appState!.T("This period represents the days in the cycle when the probability of conception is the highest. It includes the day of ovulation as well as several days before and after it.")
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 h-100" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-record-circle-fill text-secondary" style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
+                                <h5 class="mb-0 fw-bold text-secondary">@_appState!.T("Infertile Phase")</h5>
+                            </div>
+                            <div class="d-flex align-items-baseline mb-2">
+                                <P11Label Text="@data.infertile_phase.ToString()"
+                                          LabelTypography="LabelTypography.Display_3"
+                                          Weight="Weight.Normal"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="lh-1 d-inline-block mb-0 display-6 display-sm-4 display-md-3" />
+
+                                <P11Label Text="@_appState!.T("Days remaining")"
+                                          LabelTypography="LabelTypography.Small"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="small ms-1 d-inline-block mb-0" />
+                            </div>
+                            <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.7;">
+                                @_appState!.T("Days in the cycle when the probability of conception is minimal. This data helps you better understand your body's natural rhythm.")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </BodyContent>
+    </P11ModalNative>
+
+    <!-- Zweite Modal -->
+    <P11ModalNative @bind-Visible="showModal2"
+                    Id="@ModalId2"
+                    NativeDevice="@_appState!.NativeDeviceType"
+                    Size="Size.Large"
+                    Title="@_appState.T("Period Duration")"
+                    ShowHeaderSeparator="true"
+                    CloseOnOutsideClick="false"
+                    CloseButtonText="@_appState.T("Back")"
+                    CloseButtonIconCss="@(_appState!.NativeDeviceType == NativeDevice.IPHONE ? "bi bi-chevron-left" : null)"
+                    OnClose="() => showModal2 = false">
+
+        <BodyContent>
+            <div class="p-2">
+                <p style="color: var(--tpc-text-color); opacity: 0.7; margin-bottom: 1.5rem;">
+                    @_appState!.T("Bleeding length analysis based on your data history. This helps you track the regularity and health of your cycle.")
+                </p>
+
+                <div class="row g-4">
+                    <!-- Min Duration -->
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 h-100" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-hourglass-start text-secondary" style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
+                                <h5 class="mb-0 fw-bold text-secondary">@_appState!.T("Shortest Duration")</h5>
+                            </div>
+                            <div class="d-flex align-items-baseline mb-2">
+                                <P11Label Text="@($"{data.avgDurationMin}")"
+                                          LabelTypography="LabelTypography.Display_3"
+                                          Weight="Weight.Normal"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="lh-1 d-inline-block mb-0 display-6 display-sm-4 display-md-3" />
+
+                                <P11Label Text="@_appState!.T("Days")"
+                                          LabelTypography="LabelTypography.Small"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="small ms-1 d-inline-block mb-0" />
+                            </div>
+                            <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.7;">
+                                @_appState!.T("The minimum number of days your bleeding lasted during the cycles recorded in the last 12 months.")
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Max Duration -->
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 h-100" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-hourglass-end text-secondary" style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
+                                <h5 class="mb-0 fw-bold text-secondary">@_appState!.T("Longest Duration")</h5>
+                            </div>
+                            <div class="d-flex align-items-baseline mb-2">
+                                <P11Label Text="@($"{data.avgDurationMax.ToString()}")"
+                                          LabelTypography="LabelTypography.Display_3"
+                                          Weight="Weight.Normal"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="lh-1 d-inline-block mb-0 display-6 display-sm-4 display-md-3" />
+
+                                <P11Label Text="@_appState!.T("Days")"
+                                          LabelTypography="LabelTypography.Small"
+                                          LabelVariant="LabelVariant.Muted"
+                                          CssClass="small ms-1 d-inline-block mb-0" />
+                            </div>
+                            <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.7;">
+                                @_appState!.T("The longest number of days your bleeding lasted during the last 12 months of recorded cycles.")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Napomena iz dokumentacije -->
+                <div class="mt-4 p-3" style="background-color: var(--tpc-background); border: 1px solid var(--tpc-border-color); border-radius: var(--tpc-btn-border-radius);">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-info-circle" style="color: var(--tpc-icon-tertiary); font-size: 1.2rem; margin-top: 0;"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1" style="color: var(--tpc-text-color);">@_appState!.T("About data")</h6>
+                            <p class="small mb-0" style="color: var(--tpc-text-color); opacity: 0.7;">
+                                @_appState!.T("This card shows the minimum and maximum number of days your bleeding lasted during the last 6 recorded cycles (periods). This data helps track the regularity and health of your cycle.")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </BodyContent>
+    </P11ModalNative>
+}
+else
+{
+    <div class="w-100 d-flex align-items-center justify-content-center">
+        <i class="bi bi-exclamation-triangle-fill text-warning display-5 me-3" title="@_appState!.T("Warning")" />
+        <div class="text-start">
+            <span class="fw-bold d-block" style="color: var(--tpc-text-color);">@_appState!.T("Calculation suspended")</span>
+            <span class="small text-muted text-wrap">@_appState!.T("There is no data!")</span>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+    [Inject]
+    private pFemmeExample.Shared.Services.Components.LogicService _logicService { get; set; } = default!;
+
+
+    private CyclePhasesModel data = new();
+
+    public bool showModal1 = false;
+    private bool showModal2 = false;
+    public readonly Guid ModalId1 = Guid.NewGuid();
+    public readonly Guid ModalId2 = Guid.NewGuid();
+    private readonly DateTime _today = DateTime.Now.Date; // Testing -> DateTime.Now.Date.AddDays(11);
+
+    /// <summary>
+    /// Validates if the current overdue duration conflicts with biologically plausible projection states.
+    /// </summary>
+    private bool IsCalculatedDataInvalid
+    {
+        get
+        {
+            if (data == null || !data.LastCycleStartDay.HasValue)
+                return false;
+
+            // Calculate exact overdue days based on the REAL database anchor
+            int overdueDays = (_today - data.LastCycleStartDay.Value.Date).Days - (int)Math.Ceiling(data.MedianCycleLength);
+
+            // If the user is overdue AND the projection engine attempts to start the next virtual fertile phase
+            return overdueDays > 0 && data.fertile_phase > 0;
+        }
+    }
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (_eventAggregator != null)
+                _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+
+            if (_eventAggregatorProject != null)
+            {
+                _eventAggregatorProject.OnFireAfterCycleData += LoadPhase;
+                _eventAggregatorProject.OnRefreshingData += LoadPhase;
+            }
+
+            await LoadPhase();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+    public void Dispose()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+
+        if (_eventAggregatorProject != null)
+        {
+            _eventAggregatorProject.OnFireAfterCycleData -= LoadPhase;
+            _eventAggregatorProject.OnRefreshingData -= LoadPhase;
+        }
+    }
+
+    protected async Task LoadPhase()
+    {
+        try
+        {
+            // Periodendauer Min/Max
+            BlazorCore.Services.SqlClient.ReadModel<CyclePhasesModel?> result_MinMax = new();
+            result_MinMax = await _logicService.LoadCurrentPhase();
+            if (result_MinMax != null && !string.IsNullOrEmpty(result_MinMax.out_err))
+            {
+                string? err = result_MinMax != null ? result_MinMax.out_err : string.Empty;
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState.T("Error"),
+                    message: _appState.T(_appState.T("An unexpected error occurred." + (string.IsNullOrEmpty(err) ? "" : " " + _appState.T("Descrition") + ": " + err)))
+                );
+            }
+
+            if (result_MinMax!.out_list != null)
+            {
+                data = result_MinMax.out_list.FirstOrDefault()!;
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+}

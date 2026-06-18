@@ -1,0 +1,352 @@
+﻿@using p11.UI
+@using Microsoft.AspNetCore.Components.Web
+
+
+<pFemmeExample.Shared.Pages.Common.Help DocumentBody="@Body" Language="@Language" />
+
+@code {
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+    private string? Body = string.Empty;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var language = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (language != null && string.IsNullOrEmpty(language.out_err) && !string.IsNullOrEmpty(language.out_value_str))
+                    Language = language.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (language != null && !string.IsNullOrEmpty(language.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {language.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Body =$@"
+1. Export/Import (Data Management):
+- The menu option <b>Export/Import</b> allows access to saved data via the export function or the loading of existing data into the application via the import function.
+
+2. Export Function:
+- Data can be exported in three different formats: <b>CSV</b> (ideal for spreadsheets like Excel), <b>Json</b>, and <b>XML</b>.
+- The export is divided into individual application areas, including: To-Dos, Tasks, Sharing Users, Parameters, and the User Profile.
+_content/Shared/img/video_Export.gif
+
+3. Import Function:
+- Data is imported by pasting the formatted data into a <b>Textarea</b> on the Export/Import form.
+- The data must be structured line by line.
+- The correct formatting is: <b>To-Do Entry</b>, followed by a colon (':'), followed by the enumerated <b>Tasks</b>, separated by commas.
+- Example for formatting: 'Meeting: Room, Invitations, Reports'.
+_content/Shared/img/video_Import.gif
+
+Note
+A detailed description of the application can be found in our linked user manual
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            case "DE":
+                Body =$@"
+1. Export/Import (Datenverwaltung):
+- Die Menüoption <b>Export/Import</b> ermöglicht den Zugriff auf gespeicherte Daten über die Export-Funktion oder das Laden bestehender Daten in die Anwendung über die Import-Funktion.
+
+2. Export-Funktion:
+- Daten können in drei verschiedenen Formaten exportiert werden: <b>CSV</b> (ideal für Tabellenkalkulationen wie Excel), <b>Json</b> und <b>XML</b>.
+- Der Export ist in einzelne Anwendungsbereiche unterteilt, darunter: To-Dos, Tasks, Sharing Users, Parameters und das User Profile.
+_content/Shared/img/video_Export.gif
+
+3. Import-Funktion:
+- Daten werden importiert, indem die formatierte Daten in ein <b>Textarea</b> auf dem Export/Import-Formular eingefügt werden.
+- Die Daten müssen zeilenweise strukturiert sein.
+- Das korrekte Format ist: <b>To-Do-Eintrag</b>, gefolgt von einem Doppelpunkt (':'), gefolgt von den aufgezählten <b>Tasks</b>, getrennt durch Kommas.
+- Beispiel für das Format: 'Meeting: Raum, Einladungen, Berichte'.
+_content/Shared/img/video_Import.gif
+
+Hinweis
+Eine detaillierte Beschreibung der Anwendung finden Sie in unserem verlinkten Benutzerhandbuch
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Body = $@"
+1. Export/Import (Gestion des données) :
+- L'option de menu <b>Export/Import</b> permet d'accéder aux données enregistrées via la fonction d'export ou le chargement de données existantes dans l'application via la fonction d'import.
+
+2. Fonction Export :
+- Les données peuvent être exportées dans trois formats différents : <b>CSV</b> (idéal pour les tableurs comme Excel), <b>Json</b> et <b>XML</b>.
+- L'export est divisé en domaines d'application individuels, notamment : To-Dos, Tasks, Sharing Users, Parameters et le Profil utilisateur.
+_content/Shared/img/video_Export.gif
+
+3. Fonction Import :
+- Les données sont importées en collant les données formatées dans une <b>Textarea</b> sur le formulaire Export/Import.
+- Les données doivent être structurées ligne par ligne.
+- Le format correct est : <b>Entrée To-Do</b>, suivi d'un deux-points (':'), suivi des <b>Tasks</b> énumérés, séparés par des virgules.
+- Exemple de format : 'Réunion : Salle, Invitations, Rapports'.
+_content/Shared/img/video_Import.gif
+
+Note
+Une description détaillée de l'application se trouve dans notre manuel utilisateur lié
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Body = $@"
+1. Export/Import (Gestione dati):
+- L'opzione di menu <b>Export/Import</b> consente l'accesso ai dati salvati tramite la funzione di esportazione o il caricamento di dati esistenti nell'applicazione tramite la funzione di importazione.
+
+2. Funzione Export:
+- I dati possono essere esportati in tre diversi formati: <b>CSV</b> (ideale per fogli di calcolo come Excel), <b>Json</b> e <b>XML</b>.
+- L'esportazione è divisa in singole aree dell'applicazione, tra cui: To-Dos, Tasks, Sharing Users, Parameters e il Profilo utente.
+_content/Shared/img/video_Export.gif
+
+3. Funzione Import:
+- I dati vengono importati incollando i dati formattati in una <b>Textarea</b> sul modulo Export/Import.
+- I dati devono essere strutturati riga per riga.
+- Il formato corretto è: <b>Voce To-Do</b>, seguito da due punti (':'), seguito dai <b>Tasks</b> elencati, separati da virgole.
+- Esempio di formato: 'Riunione: Sala, Inviti, Rapporti'.
+_content/Shared/img/video_Import.gif
+
+Nota
+Una descrizione dettagliata dell'applicazione si trova nel nostro manuale utente collegato
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Body = $@"
+1. تصدير/استيراد (إدارة البيانات):
+- خيار القائمة <b>تصدير/استيراد</b> يتيح الوصول إلى البيانات المحفوظة عبر وظيفة التصدير أو تحميل البيانات الموجودة في التطبيق عبر وظيفة الاستيراد.
+
+2. وظيفة التصدير:
+- يمكن تصدير البيانات بثلاث صيغ مختلفة: <b>CSV</b> (مثالية لجداول البيانات مثل Excel)، <b>Json</b>، و <b>XML</b>.
+- يتم تقسيم التصدير إلى مجالات التطبيق الفردية، بما في ذلك: المهام (To-Dos)، المهام الفرعية (Tasks)، مستخدمو المشاركة، المعلمات، وملف المستخدم الشخصي.
+_content/Shared/img/video_Export.gif
+
+3. وظيفة الاستيراد:
+- يتم استيراد البيانات بلصق البيانات المنسقة في <b>Textarea</b> على نموذج التصدير/الاستيراد.
+- يجب أن تكون البيانات مرتبة سطرًا بسطر.
+- الصيغة الصحيحة هي: <b>إدخال To-Do</b>، متبوعًا بنقطتين (':')، متبوعًا بالـ <b>Tasks</b> المُعددة، مفصولة بفواصل.
+- مثال على الصيغة: 'اجتماع: غرفة، دعوات، تقارير'.
+_content/Shared/img/video_Import.gif
+
+ملاحظة
+وصف مفصل للتطبيق موجود في دليل المستخدم المرتبط لدينا
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Body = $@"
+1. 导出/导入（数据管理）：
+- 菜单选项 <b>导出/导入</b> 允许通过导出功能访问已保存数据，或通过导入功能将现有数据加载到应用程序中。
+
+2. 导出功能：
+- 数据可以三种不同格式导出：<b>CSV</b>（适合电子表格如 Excel）、<b>Json</b> 和 <b>XML</b>。
+- 导出分为单个应用程序区域，包括：待办事项 (To-Dos)、任务 (Tasks)、共享用户、参数和用户资料。
+_content/Shared/img/video_Export.gif
+
+3. 导入功能：
+- 通过将格式化数据粘贴到导出/导入表单上的 <b>Textarea</b> 中导入数据。
+- 数据必须逐行结构化。
+- 正确格式为：<b>To-Do 条目</b>，后跟冒号 (':')，后跟枚举的 <b>Tasks</b>，用逗号分隔。
+- 格式示例：'会议: 房间, 邀请, 报告'。
+_content/Shared/img/video_Import.gif
+
+注意
+应用的详细描述可在我们链接的用户手册中找到
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Body = $@"
+1. निर्यात/आयात (डेटा प्रबंधन):
+- मेनू विकल्प <b>निर्यात/आयात</b> निर्यात फ़ंक्शन के माध्यम से सहेजे गए डेटा तक पहुंच की अनुमति देता है या आयात फ़ंक्शन के माध्यम से मौजूदा डेटा को एप्लिकेशन में लोड करता है।
+
+2. निर्यात फ़ंक्शन:
+- डेटा तीन अलग-अलग प्रारूपों में निर्यात किया जा सकता है: <b>CSV</b> (एक्सेल जैसे स्प्रेडशीट के लिए आदर्श), <b>Json</b>, और <b>XML</b>।
+- निर्यात व्यक्तिगत एप्लिकेशन क्षेत्रों में विभाजित है, जिसमें शामिल हैं: टू-डूज़, टास्क्स, शेयरिंग यूज़र्स, पैरामीटर्स, और यूज़र प्रोफ़ाइल।
+_content/Shared/img/video_Export.gif
+
+3. आयात फ़ंक्शन:
+- डेटा को निर्यात/आयात फॉर्म पर <b>Textarea</b> में फॉर्मेटेड डेटा पेस्ट करके आयात किया जाता है।
+- डेटा को लाइन दर लाइन संरचित होना चाहिए।
+- सही फॉर्मेट है: <b>To-Do एंट्री</b>, उसके बाद कोलन (':'), उसके बाद गिनाए गए <b>Tasks</b>, अल्पविराम से अलग।
+- फॉर्मेट का उदाहरण: 'मीटिंग: कमरा, निमंत्रण, रिपोर्ट'।
+_content/Shared/img/video_Import.gif
+
+नोट
+एप्लिकेशन का विस्तृत विवरण हमारे लिंक किए गए यूज़र मैनुअल में मिल सकता है
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Body = $@"
+1. Exportar/Importar (Gestión de datos):
+- La opción de menú <b>Exportar/Importar</b> permite acceder a los datos guardados mediante la función de exportación o cargar datos existentes en la aplicación mediante la función de importación.
+
+2. Función de Exportación:
+- Los datos se pueden exportar en tres formatos diferentes: <b>CSV</b> (ideal para hojas de cálculo como Excel), <b>Json</b> y <b>XML</b>.
+- La exportación está dividida en áreas individuales de la aplicación, incluyendo: To-Dos, Tasks, Sharing Users, Parameters y el Perfil de usuario.
+_content/Shared/img/video_Export.gif
+
+3. Función de Importación:
+- Los datos se importan pegando los datos formateados en un <b>Textarea</b> en el formulario Exportar/Importar.
+- Los datos deben estar estructurados línea por línea.
+- El formato correcto es: <b>Entrada To-Do</b>, seguido de dos puntos (':'), seguido de los <b>Tasks</b> enumerados, separados por comas.
+- Ejemplo de formato: 'Reunión: Sala, Invitaciones, Informes'.
+_content/Shared/img/video_Import.gif
+
+Nota
+Una descripción detallada de la aplicación se encuentra en nuestro manual de usuario vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Body = $@"
+1. Ekspor/Impor (Manajemen Data):
+- Opsi menu <b>Ekspor/Impor</b> memungkinkan akses ke data yang disimpan melalui fungsi ekspor atau memuat data yang ada ke dalam aplikasi melalui fungsi impor.
+
+2. Fungsi Ekspor:
+- Data dapat diekspor dalam tiga format berbeda: <b>CSV</b> (ideal untuk spreadsheet seperti Excel), <b>Json</b>, dan <b>XML</b>.
+- Ekspor dibagi menjadi area aplikasi individu, termasuk: To-Dos, Tasks, Sharing Users, Parameters, dan Profil Pengguna.
+_content/Shared/img/video_Export.gif
+
+3. Fungsi Impor:
+- Data diimpor dengan menempelkan data yang diformat ke dalam <b>Textarea</b> pada formulir Ekspor/Impor.
+- Data harus terstruktur baris demi baris.
+- Format yang benar adalah: <b>Entri To-Do</b>, diikuti titik dua (':'), diikuti <b>Tasks</b> yang dienumerasi, dipisahkan koma.
+- Contoh format: 'Pertemuan: Ruangan, Undangan, Laporan'.
+_content/Shared/img/video_Import.gif
+
+Catatan
+Deskripsi rinci aplikasi dapat ditemukan di manual pengguna yang tertaut kami
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Body = $@"
+1. Exportar/Importar (Gerenciamento de dados):
+- A opção de menu <b>Exportar/Importar</b> permite acessar os dados salvos pela função de exportação ou carregar dados existentes no aplicativo pela função de importação.
+
+2. Função de Exportação:
+- Os dados podem ser exportados em três formatos diferentes: <b>CSV</b> (ideal para planilhas como Excel), <b>Json</b> e <b>XML</b>.
+- A exportação é dividida em áreas individuais do aplicativo, incluindo: To-Dos, Tasks, Usuários de Compartilhamento, Parâmetros e o Perfil do usuário.
+_content/Shared/img/video_Export.gif
+
+3. Função de Importação:
+- Os dados são importados colando os dados formatados em uma <b>Textarea</b> no formulário Exportar/Importar.
+- Os dados devem ser estruturados linha por linha.
+- O formato correto é: <b>Entrada To-Do</b>, seguido de dois pontos (':'), seguido das <b>Tasks</b> enumeradas, separadas por vírgulas.
+- Exemplo de formato: 'Reunião: Sala, Convites, Relatórios'.
+_content/Shared/img/video_Import.gif
+
+Nota
+Uma descrição detalhada do aplicativo está disponível em nosso manual do usuário vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Body = $@"
+1. Izvoz/Uvoz (Upravljanje podacima):
+- Opcija menija <b>Izvoz/Uvoz</b> omogućava pristup sačuvanim podacima preko funkcije izvoza ili učitavanje postojećih podataka u aplikaciju preko funkcije uvoza.
+
+2. Funkcija izvoza:
+- Podaci se mogu izvesti u tri različita formata: <b>CSV</b> (idealno za tabelarne programe kao Excel), <b>Json</b> i <b>XML</b>.
+- Izvoz je podeljen na pojedinačne oblasti aplikacije, uključujući: To-Dos, Tasks, Sharing Users, Parameters i Korisnički profil.
+_content/Shared/img/video_Export.gif
+
+3. Funkcija uvoza:
+- Podaci se uvoze lepljenjem formatiranih podataka u <b>Textarea</b> na obrascu Izvoz/Uvoz.
+- Podaci moraju biti strukturisani red po red.
+- Ispravan format je: <b>Unos To-Do</b>, praćen dvotačkom (':'), praćen nabrojanim <b>Tasks</b>, odvojenim zarezima.
+- Primer formata: 'Sastanak: Soba, Pozivnice, Izveštaji'.
+_content/Shared/img/video_Import.gif
+
+Napomena
+Detaljan opis aplikacije nalazi se u našem povezanom korisničkom priručniku
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Body = $@"
+1. Извоз/Увоз (Управљање подацима):
+- Опција менија <b>Извоз/Увоз</b> омогућава приступ сачуваним подацима преко функције извоза или учитавање постојећих података у апликацију преко функције увоза.
+
+2. Функција извоза:
+- Подаци се могу извести у три различита формата: <b>CSV</b> (идеално за табеларне програме као Excel), <b>Json</b> и <b>XML</b>.
+- Извоз је подељен на појединачне области апликације, укључујући: To-Dos, Tasks, Sharing Users, Parameters и Кориснички профил.
+_content/Shared/img/video_Export.gif
+
+3. Функција увоза:
+- Подаци се увозе лепљењем форматираних података у <b>Textarea</b> на обрасцу Извоз/Увоз.
+- Подаци морају бити структурисани ред по ред.
+- Исправан формат је: <b>Унос To-Do</b>, праћен двотачком (':'), праћен набројаним <b>Tasks</b>, одвојеним зарезима.
+- Пример формата: 'Састанак: Соба, Позивнице, Извештаји'.
+_content/Shared/img/video_Import.gif
+
+Напомена
+Детаљан опис апликације налази се у нашем повезаном корисничком приручнику
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+        }
+    }
+
+}
+
+
+

@@ -1,0 +1,293 @@
+﻿@using BlazorCore.Models
+@using BlazorCore.Services.Dam
+@using BlazorCore.Services.Platform
+@using BlazorCore.Services.SqlClient
+@using TestSolution4.Shared.Services.AppState
+@using TestSolution4.Shared.Services.GlobalState
+@using TestSolution4.Shared.Services.Platform
+@inject IDamBase Dam
+@inject IPlatform Platform
+@inject IAppState AppState
+@inject IGlobalState GlobalState
+
+
+<div class="my-3" />
+
+<P11AccordionNative>
+    <Title>
+        <span>@AppState!.T("Storage Engine (RAM memory and local file storage)")</span>
+    </Title>
+    <ChildContent>
+        <div class="container mt-5">
+            <div class="card p-4 mb-4 shadow-sm border-primary">
+                <P11ButtonRadio TValue="LOCAL_STORAGE_TYPE"
+                                Value="GlobalState.ConfigGeneral.LocalStorageType"
+                                Label="Wähle die Speicher-Technologie (GlobalConfig):"
+                                ButtonVariant="@ButtonVariant.Primary"
+                                ButtonSize="@Size.Medium"
+                                ValueChanged="async(LOCAL_STORAGE_TYPE newvalue) => {
+                                    if(newvalue == LOCAL_STORAGE_TYPE.MEMORY)
+                                        await Dam.DeleteData();
+                                    GlobalState.ConfigGeneral.LocalStorageType = newvalue;
+                                    _parameters.Clear();
+                                    if(GlobalState.ConfigGeneral.LocalStorageType == LOCAL_STORAGE_TYPE.JSON_HYBRID)
+                                        await Dam.LoadJsonStorage();
+                                    await LoadData();
+                                }">
+                    <div class="d-flex gap-2">
+                        <P11ButtonRadioOption TValue="LOCAL_STORAGE_TYPE" 
+                                              Value="@LOCAL_STORAGE_TYPE.MEMORY" 
+                                              Text="🧠 RAM (Memory)" 
+                                              IconClass="bi bi-cpu" 
+                                              style="width: 250px;" />
+                
+                        <P11ButtonRadioOption TValue="LOCAL_STORAGE_TYPE" 
+                                              Value="@LOCAL_STORAGE_TYPE.JSON_HYBRID" 
+                                              Text="📂 Disk (JSON Hybrid)" 
+                                              IconClass="bi bi-hdd-network" 
+                                              style="width: 250px;" />
+                    </div>
+                </P11ButtonRadio>
+        
+                <div class="mt-3">
+                    @if (GlobalState.ConfigGeneral.LocalStorageType == LOCAL_STORAGE_TYPE.JSON_HYBRID)
+                    {
+                        <div class="alert alert-info d-flex align-items-center shadow-sm" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <div>
+                                <strong>Modus: JSON_HYBRID.</strong> Deine Daten werden verschlüsselt in <em>%LocalAppData%</em> gesichert und bleiben nach einem Neustart erhalten.
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning d-flex align-items-center shadow-sm" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>
+                                <strong>Modus: MEMORY.</strong> Alle Daten liegen nur im flüchtigen RAM. Nach einem Seiten-Refresh oder App-Neustart sind sie gelöscht.
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card p-4 mb-5 shadow-sm">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <P11Input @bind-Value="_newParameterName"
+                                  Placeholder="z.B. AppTheme"
+                                  Label="Parameter Name" />
+                    </div>
+                    <div class="col-md-5">
+                        <P11Input @bind-Value="_newParameterValue"
+                                  Placeholder="z.B. DarkMode"
+                                  Label="Wert" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <P11Button Text="Speichern" 
+                                   IconClass="bi bi-save"
+                                   OnClick="SaveParameter" 
+                                   CssClass="w-100" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Storage-ID (UnixTS)</th>
+                            <th>Name</th>
+                            <th>Wert</th>
+                            <th class="text-end">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!_parameters.Any())
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4 italic">
+                                    Keine Einträge für @GlobalState.ConfigGeneral.LocalStorageType gefunden.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var param in _parameters)
+                            {
+                                <tr>
+                                    <td><code class="small">@param.UnixTS</code></td>
+                                    <td><strong>@param.ParameterName</strong></td>
+                                    <td>@param.ParameterValue</td>
+                                    <td class="text-end">
+                                        <P11Button Text="Löschen"
+                                                   OnClick="() => DeleteParameter(param)"
+                                                   Color="P11Color.Danger"
+                                                   Size="Size.Small"
+                                                   IconClass="bi bi-trash" />
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @code {
+            private List<AppParameterModel> _parameters = new();
+            private string _newParameterName = "";
+            private string _newParameterValue = "";
+            //LOCAL_STORAGE_TYPE localStorageType = LOCAL_STORAGE_TYPE.MEMORY;
+
+            protected override async Task OnInitializedAsync()
+            {
+                AppState.UpdateUserAccount("$argon2id$v=19$m=65536,t=4,p=2$XLpWAqH1Zjbp0ocYxiA8Gg==$YEqIzMBYn7ec20FVfSl215l34WNBY08t8qfv2FzhKHk=");
+                AppState.UpdateUnixTS("T0008249382151875264382696222072918");
+                AppState.InitializeUnixTSUser(AppState.UnixTS);
+                AppState.InitializeUnixTSDeviceId(Platform!.GetDeviceInfo());
+
+                //localStorageType = _globalState.ConfigGeneral.LocalStorageType;
+                await LoadData();
+            }
+
+            private async Task LoadData()
+            {
+                Dictionary<string, string> db_para = new()
+                {
+                    { "@Case_", "Select>>AppParameter" },
+                    { "@Scope", "demo-test" },
+                    { "@AuthUsers_unixTS", AppState.UnixTS }
+                };
+        
+                var result = await Dam.ReadData<AppParameterModel>(db_para)!;
+                _parameters = result.out_list?.Where(x => x != null).Cast<AppParameterModel>().ToList() ?? new();
+                StateHasChanged();
+            }
+
+            private async Task SaveParameter()
+            {
+                if (string.IsNullOrWhiteSpace(_newParameterName)) return;
+
+                var unixTS = AppState!.GenerateUniqueId();
+
+                Dictionary<string, string> db_para = new()
+                {
+                    { "@Case_", "Save>>AppParameter" },
+                    { "@UnixTS", unixTS },
+                    { "@ParameterName", _newParameterName },
+                    { "@ParameterValue", _newParameterValue },
+                    { "@Scope", "demo-test" },
+                    { "@AuthUsers_unixTS", AppState.UnixTS }
+                };
+
+                await Dam.Save(db_para);
+
+                _newParameterName = "";
+                _newParameterValue = "";
+                await LoadData();
+            }
+
+            private async Task DeleteParameter(AppParameterModel param)
+            {
+                Dictionary<string, string> db_para = new()
+                {
+                    { "@Case_", "Delete>>AppParameter" },
+                    { "@UnixTS", param.UnixTS! },
+                };
+
+                await Dam.ExecQuery(db_para);
+                await LoadData();
+            }
+        }
+    </ChildContent>
+</P11AccordionNative>
+
+<div class="my-3" />
+
+<P11AccordionNative>
+    <Title>
+        <span>@AppState!.T("Media (image selection as file or camera shot)")</span>
+    </Title>
+    <ChildContent>
+        
+        @if(!_useNativeFeatures)
+        {
+            @if (string.IsNullOrEmpty(_imgJpegThumbnail))
+            {
+                <img class="img-thumbnail rounded-circle" style="height: 130px; width: 130px; object-fit: cover;" src="_content/BlazorCore/img/empty.jpg" alt="@AppState!.T("Account image")">
+            }
+            else
+            {
+                <img src="@($"data:{BlazorCore.Utilities.DetectMimeFromBase64(_imgJpegThumbnail!)};base64,{_imgJpegThumbnail}")" class="img-thumbnail rounded-circle" style="height: 130px; width: 130px; object-fit: cover;" />
+            }                
+        }
+
+        <div class="mt-2">
+            <div class="d-flex flex-column">
+                <TestSolution4.Shared.Pages.Common.Media.Media Size="Size.Small"
+                                        ImageQuality="65"
+                                        ShowInlinePreview=false
+                                        PreventPhonePreviewOpen="@_preventPhonePreviewOpen"
+                                        CropToSquare="true"
+                                        ButtonOrientation="ButtonOrientation.Vertical"
+                                        ImageDataUrl="@_imgJpeg"
+                                        ThumbnailDataUrl="@_imgJpegThumbnail"
+                                        ThumbnailSize="64"
+                                        ImageDataUrlChanged="@( (newValue) => { 
+                                            _imgJpeg = newValue; 
+                                            StateHasChanged(); 
+                                        })"
+                                        ThumbnailDataUrlChanged="@((newValue) => { 
+                                            _imgJpegThumbnail = newValue; 
+                                            AppState!.UpdateAliasImg(newValue);
+                                            StateHasChanged(); 
+                                        })"
+                                        OnDelete="async() => { 
+                                            _imgJpeg = string.Empty;
+                                            _imgJpegThumbnail = string.Empty; 
+                                            StateHasChanged();   
+                                        }" />
+
+                @if (!string.IsNullOrEmpty(_imgJpegThumbnail))
+                {
+                    @if(!_useNativeFeatures)
+                    {
+                        <P11Button 
+                            OnClick="async() => { 
+                                _imgJpeg = string.Empty;
+                                _imgJpegThumbnail = string.Empty; 
+                                StateHasChanged();   
+                            }" 
+                            IconClass="bi bi-trash3" 
+                            AriaLabel="@AppState!.T("Delete")" 
+                            Size="Size.Small"
+                            Title="@AppState!.T("Delete image")" 
+                            ButtonVariant="ButtonVariant.Light" />                            
+                    }
+                }
+            </div>
+        </div>
+
+    @code{
+        private bool _preventPhonePreviewOpen = false;
+        private string _imgJpeg = string.Empty;
+        private string _imgJpegThumbnail = string.Empty;
+        private bool _useNativeFeatures = false;
+    }
+    </ChildContent>
+</P11AccordionNative>
+
+@code{
+    protected override void OnInitialized()
+    {
+        if (Platform != null)
+        {
+            var platform = Platform.GetCurrPlatform();
+
+            if(platform == PLATFORMS.ANDROID || platform == PLATFORMS.IOS)
+                _useNativeFeatures = true;
+        }
+    }
+}
+

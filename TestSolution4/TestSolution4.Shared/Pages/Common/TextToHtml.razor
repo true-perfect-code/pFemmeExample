@@ -1,0 +1,131 @@
+﻿@if (Language != null)
+{
+    <div class="card" role="region" aria-labelledby="policy-header" lang="@Language.ToLower()" tabindex="0">
+        @if (!IsHeaderHidden)
+        {
+            <div class="card-header">
+                <h2 id="policy-header">@Header</h2>
+            </div>
+        }
+        <div class="card-body" aria-live="polite" role="article">
+
+            @if (BodyBlocks != null)
+            {
+                @for (int i = 0; i < BodyBlocks.Length; i++)
+                {
+                    // Regel 1: Prüfen, ob Zeile leer
+                    @if (string.IsNullOrEmpty(BodyBlocks[i]))
+                    {
+                        @* <br /> *@
+                    }
+                    else
+                    {
+                        // Regel 2: Prüfen, ob Auflistung
+                        @if (i + 1 < BodyBlocks.Length)
+                        {
+                            @if (!string.IsNullOrEmpty(BodyBlocks[i]) && string.IsNullOrEmpty(BodyBlocks[i + 1]))
+                            {
+                                <h4>@BodyBlocks[i]</h4>
+                            }
+                            else
+                            {
+                                @if (!string.IsNullOrEmpty(BodyBlocks[i]) && BodyBlocks[i + 1].StartsWith("-"))
+                                {
+                                    <div>@BodyBlocks[i]</div>
+
+                                    <ul>
+                                        @{
+                                            i++; // Nächste Zeile (erste Listenelement)
+                                            while (i < BodyBlocks.Length && BodyBlocks[i].StartsWith("-"))
+                                            {
+                                                <li>@BodyBlocks[i].Substring(1).Trim()</li>
+                                                i++;
+                                            }
+                                            i--; // Korrektur für äußere Schleife
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <div>@BodyBlocks[i]</div>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <p>@BodyBlocks[i]</p>
+                        }
+                    }
+                }
+            }
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public string? Header { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Body { get; set; } = string.Empty;
+
+    [Parameter]
+    public string[]? BodyBlocks { get; set; }
+
+    [Parameter]
+    public bool IsHeaderHidden { get; set; } = false;
+
+
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var result = await _platform!.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+                    Language = result.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (result != null && !string.IsNullOrEmpty(result.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {result.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        // Split the text into separate blocks based on empty lines
+        BodyBlocks = Body!.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+    }
+
+}
+

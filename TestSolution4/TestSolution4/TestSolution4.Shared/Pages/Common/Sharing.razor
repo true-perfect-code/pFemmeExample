@@ -1,0 +1,742 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using p11.UI
+@using BlazorCore.Models
+@using BlazorCore.Services.Authentication
+@using BlazorCore.Services.SqlClient
+
+
+
+<div class="card-body">
+
+    <!-- Eingabefeld für neuen User -->
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+        <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+            <legend class="float-none w-auto px-2">@_appState!.T("Add new sharing user")</legend>
+
+            <div class="input-group">
+                <P11Input OnKeyDown="@(async(e) => {
+                        if (e.Key == "Enter")
+                            await OnSearch(); 
+                    })" 
+                    TValue="string" 
+                    @bind-Value="@Alias" 
+                    Label="@_appState!.T("Alias")" 
+                    UseFloatingLabel="true" />
+
+                <P11Button OnClick="OnSearch"
+                            IsDisabled="string.IsNullOrEmpty(Alias)"
+                            IconClass="bi bi-search"
+                            AriaLabel="@_appState!.T("Search")"
+                            Title="@_appState!.T("Search")"
+                            ButtonVariant="ButtonVariant.Light" />
+            </div>
+
+        </fieldset>
+    </P11HoverEffect>
+
+    @if (IsSearchedAlias)
+    {
+        if (item_alias != null)
+        {
+            <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+                <div class="card shadow-sm p-3 mb-4 border-success">
+                    <div class="d-flex align-items-center justify-content-between">
+
+                        <div class="d-flex align-items-center flex-grow-1">
+
+                            <div class="me-3">
+                                @* <img src="@(string.IsNullOrEmpty(item_alias.imgJpegThumbnail) ? "_content/BlazorCore/img/avatar.jpg" : item_alias.imgJpegThumbnail)"
+                                     alt="@(_appState!.T("Avatar von") + " " + item_alias)"
+                                     class="rounded-circle"
+                                     style="width: 50px; height: 50px; object-fit: cover;"> *@
+                                <img src="@(string.IsNullOrEmpty(item_alias.imgJpegThumbnail) ? "_content/BlazorCore/img/avatar.jpg" : $"data:{BlazorCore.Utilities.DetectMimeFromBase64(item_alias.imgJpegThumbnail)};base64,{item_alias.imgJpegThumbnail}")"
+                                     alt="@(_appState!.T("Avatar von") + " " + item_alias)"
+                                     class="rounded-circle"
+                                     style="width: 50px; height: 50px; object-fit: cover;" />
+                            </div>
+
+                            <div>
+                                <span class="d-block text-muted small">@_appState!.T("Found user")</span>
+                                <strong class="h5 mb-0 text-primary">@item_alias.DisplayName</strong>
+                            </div>
+                        </div>
+
+                        <div class="ms-3">
+                            <div class="btn-group" role="group" aria-label="@_appState!.T("Actions for found users")">
+
+                                <P11Button OnClick="OnSaveNewSharingUser"
+                                           IconClass="bi bi-check-lg"
+                                           Size="Size.Medium"
+                                           AriaLabel="@_appState!.T("Accept sharing")"
+                                           Title="@_appState!.T("Accept sharing")"
+                                           ButtonVariant="ButtonVariant.Success" />
+
+                                <P11Button OnClick="OnRejectNewSharingUser"
+                                           IconClass="bi bi-x-lg"
+                                           Size="Size.Medium"
+                                           AriaLabel="@_appState!.T("Reject sharing")"
+                                           Title="@_appState!.T("Reject sharing")"
+                                           ButtonVariant="ButtonVariant.Danger" />
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </P11HoverEffect>
+        }
+        else
+        {
+            <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center mb-4 shadow-sm" role="alert">
+
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+
+                <div class="flex-grow-1">
+                    <strong class="me-1">@_appState!.T("No alias found.")</strong>
+                    @_appState!.T("Ask the person involved if they have stored an alias in the app.")
+                </div>
+
+                <button type="button"
+                        class="btn-close ms-auto"
+                        aria-label="@_appState!.T("Close message")"
+                        @onclick="OnCloseMessage">
+                </button>
+
+            </div>
+        }
+    }
+
+    @* <hr class="my-4"> *@
+
+    <!-- Liste der Sharing-Benutzer -->
+    <P11HoverEffect HoverEffectVariant="HoverEffectVariant.ShadowLift">
+        <fieldset class="mb-4 p-3 border rounded-3 bg-light">
+            <legend class="float-none w-auto px-2">@_appState!.T("Existing sharing users")</legend>
+
+            <p class="text-muted">@_appState!.T("Manage your current sharing relationships")</p>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="w-25">@_appState!.T("Request")</th>
+                            <th scope="col" class="w-25">@_appState!.T("Alias")</th>
+                            <th scope="col" class="w-25">@_appState!.T("Status")</th>
+                            <th scope="col" class="w-25 text-end"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (list != null)
+                        {
+                            foreach (var item in list)
+                            {
+                                <tr>
+                                    <td>
+                                        @switch (item.SharingStatus)
+                                        {
+                                            case (int)SHARING_STATUS.REQUEST:
+                                                if (item.AuthUsers_UnixTS == _appState!.UnixTS)
+                                                {
+                                                    <span class="badge bg-info text-dark fs-6">
+                                                        @_appState.T("To")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <div class="btn-group" role="group">
+                                                        <P11Button OnClick="() => OnAcceptSharingProposal(item)"
+                                                                    IconClass="bi bi-check2"
+                                                                    AriaLabel="@_appState!.T("Accept sharing")"
+                                                                    Size="Size.Medium"
+                                                                    Title="@_appState!.T("Accept")"
+                                                                    ButtonVariant="ButtonVariant.Success" />
+                                                        <P11Button OnClick="() => OnRejectSharingProposal(item)"
+                                                                    IconClass="bi bi-x"
+                                                                    AriaLabel="@_appState!.T("Reject sharing")"
+                                                                    Size="Size.Medium"
+                                                                    Title="@_appState!.T("Reject")"
+                                                                    ButtonVariant="ButtonVariant.Danger" />
+                                                    </div>
+                                                }
+                                                break;
+
+                                            case (int)SHARING_STATUS.ACCEPT:
+                                                if (item.AuthUsers_UnixTS == _appState!.UnixTS)
+                                                {
+                                                    <span class="badge bg-info text-dark fs-6">
+                                                        @_appState.T("To")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-info text-dark fs-6">
+                                                        @_appState.T("From")
+                                                    </span>
+                                                }
+                                                break;
+
+                                            case (int)SHARING_STATUS.REJECT:
+                                                if (item.AuthUsers_UnixTS== _appState!.UnixTS)
+                                                {
+                                                    <span class="badge bg-info text-dark fs-6">
+                                                        @_appState.T("To")
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-info text-dark fs-6">
+                                                        @_appState.T("From")
+                                                    </span>
+                                                }
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @* <img src="@(string.IsNullOrEmpty(item.Int__AliasImgJpegThumbnail) ? "_content/BlazorCore/img/avatar.jpg" : item.Int__AliasImgJpegThumbnail)"
+                                                 alt="@(_appState.T("Avatar von") + " " + item.Int__Alias)"
+                                                 class="rounded-circle me-2"
+                                                 width="40"
+                                                 height="40"> *@
+                                            <img src="@(string.IsNullOrEmpty(item.Int__AliasImgJpegThumbnail) ? "_content/BlazorCore/img/avatar.jpg" : $"data:{BlazorCore.Utilities.DetectMimeFromBase64(item.Int__AliasImgJpegThumbnail)};base64,{item.Int__AliasImgJpegThumbnail}")"
+                                                 alt="@(_appState.T("Avatar von") + " " + item.Int__Alias)"
+                                                 class="rounded-circle me-2"
+                                                 width="40" height="40" />
+                                            <strong>@item.Int__Alias</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @switch (item.SharingStatus)
+                                        {
+                                            case (int)SHARING_STATUS.REQUEST:
+                                                <span class="badge bg-secondary fs-6">
+                                                    @_appState.T("Request")
+                                                </span>
+                                                break;
+
+                                            case (int)SHARING_STATUS.ACCEPT:
+                                                <span class="badge bg-success fs-6">
+                                                    @_appState.T("Accept")
+                                                </span>
+                                                break;
+
+                                            case (int)SHARING_STATUS.REJECT:
+                                                <span class="badge bg-danger fs-6">
+                                                    @_appState.T("Reject")
+                                                </span> 
+                                                break;
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @switch (item.SharingStatus)
+                                        {
+                                            case (int)SHARING_STATUS.REQUEST:
+                                                @if (item.AuthUsers_UnixTS == _appState!.UnixTS)
+                                                {
+                                                    <P11Button OnClick="() => OnDeleteSharingProposal(item)"
+                                                                IconClass="bi bi-trash3"
+                                                                AriaLabel="@_appState!.T("Reject sharing")"
+                                                                Size="Size.Large"
+                                                                Title="@_appState!.T("Reject")"
+                                                                ButtonVariant="ButtonVariant.Light" />
+                                                }
+                                                break;
+
+                                            case (int)SHARING_STATUS.ACCEPT:
+                                                @if (item.AuthUsers_UnixTS == _appState!.UnixTS)
+                                                {
+                                                    <P11Button OnClick="() => OnDeleteSharingProposal(item)"
+                                                                IconClass="bi bi-trash3"
+                                                                AriaLabel="@_appState!.T("Reject sharing")"
+                                                                Size="Size.Large"
+                                                                Title="@_appState!.T("Reject")"
+                                                                ButtonVariant="ButtonVariant.Light" />
+                                                }
+                                                else
+                                                {
+                                                    <P11Button OnClick="() => OnDeleteSharingProposal(item)"
+                                                                IconClass="bi bi-trash3"
+                                                                AriaLabel="@_appState!.T("Reject sharing")"
+                                                                Size="Size.Large"
+                                                                Title="@_appState!.T("Reject")"
+                                                                ButtonVariant="ButtonVariant.Light" />                                                        
+                                                }
+                                                break;
+
+                                            case (int)SHARING_STATUS.REJECT:
+                                                @if (item.AuthUsers_UnixTS != _appState!.UnixTS)
+                                                {
+                                                    <P11Button OnClick="() => OnDeleteSharingProposal(item)"
+                                                                IconClass="bi bi-trash3"
+                                                                AriaLabel="@_appState!.T("Reject sharing")"
+                                                                Size="Size.Large"
+                                                                Title="@_appState!.T("Reject")"
+                                                                ButtonVariant="ButtonVariant.Light" />
+                                                }
+                                                break;
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+
+                        <!-- Platzhalter für leere Zustände -->
+                        <tr id="emptyState" class="d-none">
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <i class="bi bi-people display-4 d-block mb-2"></i>
+                                @_appState!.T("No sharing users available")
+                                <p class="small mt-2">@_appState!.T("Add a new user to start sharing.")</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </fieldset>
+    </P11HoverEffect>
+
+    @if (_appState != null && !_appState!.IsPhone)
+    {
+        <div class="d-flex w-100 gap-4 mt-4">
+            <P11Button Text="@CloseButtonText" OnClick="HandleCancel" ButtonVariant="ButtonVariant.Secondary" CssClass="flex-fill" />
+        </div>
+    }
+</div>
+
+
+@code {
+    [Parameter] 
+    public bool Visible { get; set; } = false;
+
+    [Parameter] 
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter] 
+    public string CssClassModalContent { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnClickCancel { get; set; } 
+
+    [Parameter]
+    public string CloseButtonText { get; set; } = string.Empty;
+
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase _dam { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    private string Alias = string.Empty;
+    private List<SharingUsersModel> list = new();
+    private AuthUsersExtendModel? item_alias = null;
+
+    private bool IsSearchedAlias = false;
+    private bool isOpenHelp = false;
+
+
+    // Methode, die aufgerufen wird, wenn die Parameter gesetzt sind
+    protected override async Task OnParametersSetAsync()
+    {
+        if(_appState != null)
+        {
+            if (string.IsNullOrWhiteSpace(CloseButtonText))
+                CloseButtonText = _appState.T("Close");
+
+            // if (string.IsNullOrWhiteSpace(CloseButtonText))
+            //     CloseButtonText = _appState.T("Close");
+        }
+
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                if(_globalState != null && _appState != null && _globalState.SharingRequests.Contains(_appState.UnixTS))
+                    _globalState.SharingRequests.Remove(_appState.UnixTS);
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    protected async Task LoadData()
+    {
+        try
+        {
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "Select>>SharingUsers" },
+                { "@AuthUsers_UnixTS", _appState!.UnixTS},
+                { BlazorCore.Services.Dam.DB_CMD.NO_LOCAL, string.Empty } // Kein Sharing wenn kein Internet
+            };
+            BlazorCore.Services.SqlClient.ReadModel<SharingUsersModel?> result = await _dam.ReadData<SharingUsersModel>(db_para)!; // Abfrage ausführen
+            if (result != null && result.out_list != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            {
+                await _toastService!.ShowSuccessAsync(_appState.T("Data has been successfully loaded."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 2000);
+                list = result.out_list!; // Liste einlesen
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "Select>>SharingUsers";
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Error"),
+                    message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnCloseModal()
+    {
+        Visible = false; // lokal
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+
+    private async Task OnSearch()
+    {
+        try
+        {
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "SelectByDisplayName>>AuthUsersExtend" },
+                { "@DisplayName", Alias },
+                { BlazorCore.Services.Dam.DB_CMD.NO_LOCAL, string.Empty } // Andere Benutzer sind nur auf dem Cloud, nicht lokal.
+            };
+            BlazorCore.Services.SqlClient.ReadModel<AuthUsersExtendModel?> result = await _dam.ReadData<AuthUsersExtendModel>(db_para)!; // Abfrage ausführen
+            if (result != null && result.out_list != null) // Resultat prüfen
+            {
+                if (result.out_list != null &&  result.out_list.Count > 0)
+                {
+                    // Prüfen, ob Alias legitim (kein eigener Alias angegeben) und/oder Alias bereits in der Liste ist
+                    string tmpAlias = result.out_list.First()!.DisplayName.ToLower();
+
+                    if (_appState!.Alias.ToLower()  == tmpAlias.ToLower()  )
+                    {
+                        await _messageBoxService.ShowOkAsync(
+                            title: _appState!.T("Info"),
+                            message: _appState.T(_appState.T("You cannot add your own alias to the sharing list!")));
+                    }
+                    else
+                    {
+                        if (list.Any(x => x.Int__Alias.ToLower() == tmpAlias ))
+                        {
+                            await _messageBoxService.ShowOkAsync(
+                                title: _appState!.T("Info"),
+                                message: _appState.T(_appState.T("The alias is already in your sharing list.")));
+                        }
+                        else
+                        {
+                            IsSearchedAlias = true;
+                            item_alias = result.out_list.FirstOrDefault()!;  
+                            return;
+                        }
+                    }
+                }
+                else
+                    IsSearchedAlias = true;
+
+                item_alias = null;
+                Alias = string.Empty;
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "SelectByDisplayName>>AuthUsersExtend";
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Error"),
+                    message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnDeleteSharingProposal(SharingUsersModel _item)
+    {
+        try
+        {
+            MessageBoxResult result = new();
+            switch (_item.SharingStatus)
+            {
+                case (int)SHARING_STATUS.REQUEST:
+                    result = await _messageBoxService.ShowYesNoAsync(
+                        title: _appState!.T("Warning"),
+                        message: _appState!.T("Would you like to revoke the sharing request?"),
+                        yestext: @_appState!.T("Yes"),
+                        notext: @_appState!.T("No")
+                    );
+                    break;
+
+                case (int)SHARING_STATUS.ACCEPT:
+                    result = await _messageBoxService.ShowYesNoAsync(
+                        title: _appState!.T("Warning"),
+                        message: _appState!.T("Do you want to delete the data sharing for the selected user (access to shared data will be revoked for the sharing user)?"),
+                        yestext: @_appState!.T("Yes"),
+                        notext: @_appState!.T("No")
+                    );
+                    break;
+
+                case (int)SHARING_STATUS.REJECT:
+                    result = await _messageBoxService.ShowYesNoAsync(
+                        title: _appState!.T("Warning"),
+                        message: _appState!.T("Would you like to revoke the sharing request?"),
+                        yestext: @_appState!.T("Yes"),
+                        notext: @_appState!.T("No")
+                    );
+                    break;
+
+
+            }
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    // Parameter setzen
+                    Dictionary<string, string> db_para = new()
+                    {
+                        { "@Case_", "Delete>>SharingUsers" },
+                        { "@UnixTS", _item.UnixTS!},
+                        { "@AuthUsers_UnixTS", _appState!.UnixTS },
+                        //{ "@AuthUsers_UnixTS", _item.AuthUsers_UnixTS },
+                        //{ "@AuthUsers_ShareTo_UnixTS", _item.AuthUsers_ShareTo_UnixTS },  
+                    };
+                    BlazorCore.Services.SqlClient.ScalarModel result_delete = await _dam.ExecQuery(db_para)!; // Abfrage ausführen
+                    if (result_delete != null && string.IsNullOrEmpty(result_delete.out_err)) // Resultat prüfen
+                    {
+                        await _toastService!.ShowSuccessAsync(_appState!.T("Data has been successfully deleted."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 2000);
+                        // Liste neu laden
+                        await LoadData();
+                    }
+                    else
+                    {
+                        string? err = result_delete != null && !string.IsNullOrEmpty(result_delete.out_err) ? result_delete.out_err : "Delete>>SharingUsers";
+                        await _messageBoxService.ShowOkAsync(
+                            title: _appState!.T("Error"),
+                            message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                        );
+                    }                 
+                    break;
+
+                case MessageBoxResult.No:
+                    break;
+
+                case MessageBoxResult.None:
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnSaveNewSharingUser()
+    {
+        try
+        {
+            if(item_alias != null)
+            {
+                // UnixTS ermitteln
+                string unixTS = _appState!.GenerateUniqueId();
+
+                // Parameter setzen
+                Dictionary<string, string> db_para = new()
+                {
+                    { "@Case_", "Save>>SharingUsers" },
+                    { "@UnixTS", unixTS },
+                    { "@AuthUsers_UnixTS", _appState.UnixTS },
+                    { "@AuthUsers_ShareTo_UnixTS", item_alias.AuthUsers_UnixTS },
+                    { "@SharingStatus", "0" }, // REQUESTED = 0, ACCEPTED = 1, REJECTED = 2
+                };
+                //_dam.SetMigrationFlags(ref db_para, itemClone); // Migartionsflags setzen
+                BlazorCore.Services.SqlClient.ScalarModel result = await _dam.Save(db_para)!; // Abfrage ausführen
+                if (result != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+                {
+                    await _toastService!.ShowSuccessAsync(_appState.T("Data has been successfully saved."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 2000);
+
+                    // Global-State setzen
+                    if(_globalState != null && !_globalState.SharingRequests.Contains(item_alias.AuthUsers_UnixTS))
+                        _globalState.SharingRequests.Add(item_alias.AuthUsers_UnixTS);
+
+                    IsSearchedAlias = false;
+                    item_alias = null;
+                    Alias = string.Empty;
+
+                    // Liste neu laden
+                    await LoadData();
+                }
+                else
+                {
+                    string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "Save>>SharingUsers";
+                    await _messageBoxService.ShowOkAsync(
+                        title: _appState!.T("Error"),
+                        message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                    );
+                }
+            }
+            else
+            {
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Info"),
+                    message: _appState.T(_appState.T("No sharing user selected!")));
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private void OnRejectNewSharingUser()
+    {
+        IsSearchedAlias = false;
+        item_alias = null;
+        Alias = string.Empty;
+
+        StateHasChanged();
+    }
+
+    private void OnCloseMessage()
+    {
+        IsSearchedAlias = false;
+        item_alias = null;
+        Alias = string.Empty;
+    }
+
+    private async Task OnAcceptSharingProposal(SharingUsersModel _item)
+    {
+        try
+        {
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "ChangeSharingStatus>>SharingUsers" },
+                { "@UnixTS", _item.UnixTS },
+                { "@SharingStatus", "1" }, // REQUESTED = 0, ACCEPTED = 1, REJECTED = 2
+            };
+            //_dam.SetMigrationFlags(ref db_para, itemClone); // Migartionsflags setzen
+            BlazorCore.Services.SqlClient.ScalarModel result = await _dam.Save(db_para)!; // Abfrage ausführen
+            if (result != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            {
+                await _toastService!.ShowSuccessAsync(_appState!.T("Data has been successfully saved."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 2000);
+                IsSearchedAlias = false;
+                item_alias = null;
+                Alias = string.Empty;
+                // Liste neu laden
+                await LoadData();
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "ChangeSharingStatus>>SharingUsers";
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Error"),
+                    message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }   
+    }
+
+    private async Task OnRejectSharingProposal(SharingUsersModel _item)
+    {
+        try
+        {
+            // Parameter setzen
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "ChangeSharingStatus>>SharingUsers" },
+                { "@UnixTS", _item.UnixTS },
+                { "@AuthUsers_UnixTS", _item.AuthUsers_UnixTS },
+                { "@SharingStatus", "2" }, // REQUESTED = 0, ACCEPTED = 1, REJECTED = 2
+            };
+            //_dam.SetMigrationFlags(ref db_para, itemClone); // Migartionsflags setzen
+            BlazorCore.Services.SqlClient.ScalarModel result = await _dam.Save(db_para)!; // Abfrage ausführen
+            if (result != null && string.IsNullOrEmpty(result.out_err)) // Resultat prüfen
+            {
+                await _toastService!.ShowSuccessAsync(_appState!.T("Data has been successfully saved."), _appState.T("Success"), position: ToastPosition.BottomEnd, durationMs: 2000);
+
+                IsSearchedAlias = false;
+                item_alias = null;
+                Alias = string.Empty;
+
+                // Liste neu laden
+                await LoadData();
+            }
+            else
+            {
+                string? err = result != null && !string.IsNullOrEmpty(result.out_err) ? result.out_err : "ChangeSharingStatus>>SharingUsers";
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Error"),
+                    message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {err}"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        
+        if (OnClickCancel.HasDelegate)
+        {
+            await OnClickCancel.InvokeAsync();
+        }
+    }
+
+
+}

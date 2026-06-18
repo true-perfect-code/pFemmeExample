@@ -1,0 +1,199 @@
+﻿@using Microsoft.JSInterop
+@using p11.UI
+@using BlazorCore.Pages
+@using BlazorCore.Services.AppState
+@using BlazorCore.Services.SqlClient
+
+
+@if (!string.IsNullOrEmpty(_selectedLanguage))
+{
+    <P11Select TItem="LanguagesModel" TValue="string"
+               Id="fruitSelect"
+               @bind-Value="_selectedLanguage"
+               OnChanged="(val) => OnChangedLanguage(val)"
+               Items="@_languages"
+               ItemValueExpression="p => p.LocaleCodes"
+               ItemTextExpression="p => p.Language"
+               PlaceholderText="@(_appState!.T("Languages"))"
+               AriaLabel="@(_appState.T("Select language"))">
+    </P11Select>
+}
+
+												
+@code {
+    [Inject]
+    private IJSRuntime? _jsRuntime { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase? _globalState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IToastService? _toastService { get; set; }
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxService { get; set; } = default!;
+
+
+    [Parameter] public List<LanguagesModel> Languages { get; set; } = new();
+    //[Parameter] public string? SelectedLanguage { get; set; }
+    [Parameter] public EventCallback<string> SelectedLanguageChanged { get; set; }
+    [Parameter] public int Width { get; set; } = 100;
+    [Parameter] public bool IsWidthInPixel { get; set; } = false;
+    [Parameter] public bool SaveLocalByChangeLanguage { get; set; } = false;
+
+    private List<LanguagesModel>? _languages { get; set; }
+    private string? _selectedLanguage { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (Languages != null && Languages.Count > 0)
+            {
+                _languages = Languages;
+            }
+            else
+            {
+                if (_appState?.Catalog.Languages != null)
+                {
+                    _languages = new();
+                    foreach (var lang in _appState.Catalog.Languages)
+                    {
+                        _languages.Add(new LanguagesModel
+                        {
+                            LocaleCodes = lang.Key,
+                            Language = lang.Value
+                        });
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await _appState!.Error($"[Blazor Language.razor] ERROR OnInitialized: {ex.Message}");
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_selectedLanguage) && _appState?.Catalog.LocalStorage != null)
+            {
+                // Zuerst prüfen, ob AppState gesetzt ist
+                if (_appState != null && _appState.HasSelectedLanguage())
+                    _selectedLanguage = _appState.SelectedLanguage;
+                else
+                {
+                    // Dann Cookie/SecureStorage prüfen
+                    var result = await _platform!.GetAsync(_appState!.Catalog.LocalStorage.language);
+                    if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+                        _selectedLanguage = result.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                    else // ...ansonsten Standardsprache setzen
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {(result != null ? result.out_err : "Unknown: Eula")}"
+                        );
+
+                        _selectedLanguage = _globalState!.ConfigGeneral.DefaultLanguage;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await _appState!.Error($"[Blazor Language.razor] ERROR OnParametersSetAsync: {ex.Message}");
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+    }
+
+    private async Task OnChangedLanguage(string? selectedLanguage)
+    {
+        await _appState!.Log("[Blazor Language.razor] START OnChangedLanguage");
+        try
+        {
+            if (_appState != null && _appState.SelectedLanguage == selectedLanguage)
+                return;
+
+            await _appState!.Log($"[Blazor Language.razor] selectedLanguage: {selectedLanguage}");
+
+            // Prüfen ob arabisch
+            if (selectedLanguage == "AR")
+            {
+                await _jsRuntime!.InvokeVoidAsync("pE_Web.setRtl", true);
+                _appState!.UpdateLtrRtl(LTR_RTL.RTL);
+
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("ملاحظة مهمة"),
+                    message: _appState!.T("هذه النسخة العربية لا تزال قيد التطوير وقد تحتوي على أخطاء، لأن فريقنا لا يضم متحدثين باللغة العربية كلغة أم. يُرجى إبلاغنا بأي مشكلات أو أخطاء – بهذا تساعدنا على التحسين! شكراً لكم.")
+                );
+
+                _appState.RefreshLandingpage();
+            }
+            else
+            {
+                await _jsRuntime!.InvokeVoidAsync("pE_Web.setRtl", false);
+                _appState!.UpdateLtrRtl(LTR_RTL.LTR);
+                _appState.RefreshLandingpage();
+            }           
+
+            await _appState!.Log($"[Blazor Language.razor] SaveLocalByChangeLanguage: {SaveLocalByChangeLanguage}");
+
+            // Cookie/SecurStorage setzen
+            if (SaveLocalByChangeLanguage && _appState!.Catalog.LocalStorage != null)
+            {
+                // Prüfen ob arabisch
+                if (selectedLanguage == "AR")
+                    await _platform!.SetAsync(_appState!.Catalog.LocalStorage.ltrrtl, LTR_RTL.RTL.ToString());
+                else
+                    await _platform!.SetAsync(_appState!.Catalog.LocalStorage.ltrrtl, LTR_RTL.LTR.ToString());
+
+                await _platform!.SetAsync(_appState!.Catalog.LocalStorage.language, selectedLanguage ?? _globalState!.ConfigGeneral.DefaultLanguage);
+            }
+
+            if (_appState != null)
+            {
+                // Selektierte Sprache in der AppState aus der Sprachtabelle laden
+                await _appState.LoadTranslations(routesStateHasChanged: true, selectedLanguage ?? _globalState!.ConfigGeneral.DefaultLanguage);
+            }
+
+            _selectedLanguage = selectedLanguage;
+            _appState!.AccessibilityConfig.SelectedLanguage = selectedLanguage ?? _globalState!.ConfigGeneral.DefaultLanguage;
+
+            // Binding Variable aktualisieren
+            await SelectedLanguageChanged.InvokeAsync(selectedLanguage);
+
+            // MainLayout aktualisieren, damit Sprache richtig angezeigt wird
+            _appState.LanguageHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await _appState!.Error($"[Blazor Language.razor] ERROR OnChangedLanguage: {ex.Message}");
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+        await _appState!.Log("[Blazor Language.razor] END OnChangedLanguage");
+    }
+
+
+}

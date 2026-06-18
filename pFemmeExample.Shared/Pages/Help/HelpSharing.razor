@@ -1,0 +1,459 @@
+﻿@using p11.UI
+@using Microsoft.AspNetCore.Components.Web
+
+
+<pFemmeExample.Shared.Pages.Common.Help DocumentBody="@Body" Language="@Language" />
+
+@code {
+    [Inject]
+    protected BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+
+
+    public string? Language { get; set; }
+    private string? Body = string.Empty;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Task.Delay(30);
+
+        if (string.IsNullOrWhiteSpace(Language) && _appState.Catalog.LocalStorage != null && _platformStorage != null)
+        {
+            // Zuerst prüfen, ob AppState gesetzt ist
+            if (_appState.HasSelectedLanguage())
+                Language = _appState.SelectedLanguage;
+            else
+            {
+                // Dann Cookie/SecureStorage prüfen
+                var language = await _platformStorage.GetAsync(_appState.Catalog.LocalStorage.language);
+                if (language != null && string.IsNullOrEmpty(language.out_err) && !string.IsNullOrEmpty(language.out_value_str))
+                    Language = language.out_value_str; // Sprache aus Cookie/SecurStorage setzen
+                else // ...ansonsten Standardsprache setzen
+                {
+                    if (language != null && !string.IsNullOrEmpty(language.out_err))
+                    {
+                        await _messageBoxService!.ShowOkAsync(
+                            title: _appState?.T("Error") ?? "Error",
+                            message: $"{_appState?.T(_globalState != null ? _globalState != null ? _globalState.ConfigGeneral.ErrorText : "We’re sorry, but an error occurred!" : "We’re sorry, but an error occurred!")} {language.out_err}"
+                        );
+                    }
+
+                    Language = _globalState!.ConfigGeneral.DefaultLanguage;
+                }
+            }
+        }
+
+        switch (Language)
+        {
+            case "EN":
+                Body =$@"
+1. Sharing (Data Sharing):
+- The Sharing form is used to define a base of users with whom data is intended to be shared.
+- Once a user is listed here, they can be selected for a specific To-Do entry under the Sharing option.
+- The selected user automatically receives full access to that To-Do entry (including modification rights), as if it were their own.
+
+2. Searching and Adding Users:
+- Since the app does not store readable personal data (like email addresses), user identification is done exclusively via the <b>Alias Name</b>.
+- The Alias Name must have been previously set up by the respective user in their profile and must be unique.
+- Searching for another user is done via the search field in the Sharing form, using their Alias Name.
+- After a successful search, the user's stored profile picture will be displayed.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Sharing Request:
+- After finding the desired user, a <b>Sharing Request</b> can be sent to them.
+- The other user can accept or reject this request within their app, preventing repeated unwanted applications.
+- Once a sharing request is accepted, data can be shared in both directions.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Sharing Data and Ending Access:
+- Data sharing is not automatic upon request acceptance; you must separately activate sharing for the specific To-Do entry under its Sharing option.
+- A Sharing entry can be deleted unilaterally at any time by either party.
+- By deleting the entry, the previously shared To-Do items will no longer be displayed to the other person.
+_content/Shared/img/video_SharingTodo.gif
+
+Note
+A detailed description of the application can be found in our linked user manual
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            case "DE":
+                Body =$@"
+1. Sharing (Datenfreigabe):
+- Das Sharing-Formular dient dazu, eine Basis von Benutzern zu definieren, mit denen Daten geteilt werden sollen.
+- Sobald ein Benutzer hier aufgelistet ist, kann er für einen bestimmten To-Do-Eintrag unter der Sharing-Option ausgewählt werden.
+- Der ausgewählte Benutzer erhält automatisch vollen Zugriff auf diesen To-Do-Eintrag (inklusive Änderungsrechte), als ob es sein eigener wäre.
+
+2. Suche und Hinzufügen von Benutzern:
+- Da die App keine lesbaren personenbezogenen Daten (wie E-Mail-Adressen) speichert, erfolgt die Benutzeridentifikation ausschließlich über den <b>Alias-Namen</b>.
+- Der Alias-Name muss vom jeweiligen Benutzer zuvor im Profil angelegt worden sein und muss eindeutig sein.
+- Die Suche nach einem anderen Benutzer erfolgt über das Suchfeld im Sharing-Formular mittels seines Alias-Namens.
+- Nach erfolgreicher Suche wird das gespeicherte Profilbild des Benutzers angezeigt.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Sharing-Anfrage:
+- Nachdem der gewünschte Benutzer gefunden wurde, kann ihm eine <b>Sharing-Anfrage</b> gesendet werden.
+- Der andere Benutzer kann diese Anfrage in seiner App annehmen oder ablehnen, um wiederholte unerwünschte Anfragen zu verhindern.
+- Sobald eine Sharing-Anfrage angenommen wurde, können Daten in beide Richtungen geteilt werden.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Daten teilen und Zugriff beenden:
+- Das Teilen von Daten erfolgt nicht automatisch nach Annahme der Anfrage; die Freigabe muss separat für den jeweiligen To-Do-Eintrag unter seiner Sharing-Option aktiviert werden.
+- Ein Sharing-Eintrag kann jederzeit einseitig von einer der beiden Parteien gelöscht werden.
+- Durch Löschen des Eintrags werden die zuvor geteilten To-Do-Einträge dem anderen nicht mehr angezeigt.
+_content/Shared/img/video_SharingTodo.gif
+
+Hinweis
+Eine detaillierte Beschreibung der Anwendung finden Sie in unserem verlinkten Benutzerhandbuch
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "FR":
+                Body = $@"
+1. Partage (Partage de données) :
+- Le formulaire Partage sert à définir une base d'utilisateurs avec lesquels les données sont destinées à être partagées.
+- Dès qu'un utilisateur est listé ici, il peut être sélectionné pour une entrée To-Do spécifique sous l'option Partage.
+- L'utilisateur sélectionné reçoit automatiquement un accès complet à cette entrée To-Do (y compris les droits de modification), comme s'il s'agissait de la sienne.
+
+2. Recherche et ajout d'utilisateurs :
+- Comme l'application ne stocke pas de données personnelles lisibles (comme les adresses e-mail), l'identification des utilisateurs se fait exclusivement via le <b>Nom d'alias</b>.
+- Le Nom d'alias doit avoir été préalablement défini par l'utilisateur concerné dans son profil et doit être unique.
+- La recherche d'un autre utilisateur se fait via le champ de recherche dans le formulaire Partage, en utilisant son Nom d'alias.
+- Après une recherche réussie, l'image de profil stockée de l'utilisateur s'affiche.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Demande de partage :
+- Après avoir trouvé l'utilisateur souhaité, une <b>Demande de partage</b> peut lui être envoyée.
+- L'autre utilisateur peut accepter ou refuser cette demande dans son application, évitant ainsi des demandes répétées non désirées.
+- Une fois une demande de partage acceptée, les données peuvent être partagées dans les deux sens.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Partage de données et fin d'accès :
+- Le partage de données n'est pas automatique après acceptation de la demande ; il faut activer séparément le partage pour l'entrée To-Do concernée sous son option Partage.
+- Une entrée Partage peut être supprimée unilatéralement à tout moment par l'une des deux parties.
+- En supprimant l'entrée, les éléments To-Do précédemment partagés ne seront plus affichés à l'autre personne.
+_content/Shared/img/video_SharingTodo.gif
+
+Note
+Une description détaillée de l'application se trouve dans notre manuel utilisateur lié
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "IT":
+                Body = $@"
+1. Condivisione (Condivisione dati):
+- Il modulo Condivisione serve a definire una base di utenti con cui si intende condividere i dati.
+- Una volta che un utente è elencato qui, può essere selezionato per una specifica voce To-Do sotto l'opzione Condivisione.
+- L'utente selezionato riceve automaticamente accesso completo a quella voce To-Do (inclusi i diritti di modifica), come se fosse la propria.
+
+2. Ricerca e aggiunta di utenti:
+- Poiché l'app non memorizza dati personali leggibili (come indirizzi e-mail), l'identificazione dell'utente avviene esclusivamente tramite il <b>Nome alias</b>.
+- Il Nome alias deve essere stato precedentemente impostato dall'utente rispettivo nel suo profilo e deve essere unico.
+- La ricerca di un altro utente avviene tramite il campo di ricerca nel modulo Condivisione, utilizzando il suo Nome alias.
+- Dopo una ricerca riuscita, viene visualizzata l'immagine del profilo memorizzata dell'utente.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Richiesta di condivisione:
+- Dopo aver trovato l'utente desiderato, è possibile inviargli una <b>Richiesta di condivisione</b>.
+- L'altro utente può accettare o rifiutare questa richiesta nella sua app, impedendo così richieste ripetute indesiderate.
+- Una volta accettata una richiesta di condivisione, i dati possono essere condivisi in entrambe le direzioni.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Condivisione dati e termine dell'accesso:
+- La condivisione dei dati non è automatica dopo l'accettazione della richiesta; deve essere attivata separatamente per la specifica voce To-Do sotto la sua opzione Condivisione.
+- Una voce di Condivisione può essere eliminata unilateralmente in qualsiasi momento da una delle due parti.
+- Eliminando la voce, le voci To-Do precedentemente condivise non saranno più visualizzate all'altra persona.
+_content/Shared/img/video_SharingTodo.gif
+
+Nota
+Una descrizione dettagliata dell'applicazione si trova nel nostro manuale utente collegato
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "AR":
+                Body = $@"
+1. المشاركة (مشاركة البيانات):
+- نموذج المشاركة يُستخدم لتحديد قاعدة من المستخدمين الذين يُراد مشاركة البيانات معهم.
+- بمجرد إدراج مستخدم هنا، يمكن اختياره لإدخال To-Do معين تحت خيار المشاركة.
+- يحصل المستخدم المختار تلقائيًا على وصول كامل إلى إدخال To-Do هذا (بما في ذلك حقوق التعديل)، كأنه ملكه الخاص.
+
+2. البحث وإضافة المستخدمين:
+- بما أن التطبيق لا يخزن بيانات شخصية قابلة للقراءة (مثل عناوين البريد الإلكتروني)، يتم تحديد هوية المستخدم حصريًا عبر <b>اسم المستعار</b>.
+- يجب أن يكون اسم المستعار قد تم إعداده مسبقًا من قبل المستخدم المعني في ملفه الشخصي ويجب أن يكون فريدًا.
+- يتم البحث عن مستخدم آخر عبر حقل البحث في نموذج المشاركة، باستخدام اسم المستعار الخاص به.
+- بعد بحث ناجح، يتم عرض صورة الملف الشخصي المخزنة للمستخدم.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. طلب المشاركة:
+- بعد العثور على المستخدم المطلوب، يمكن إرسال <b>طلب مشاركة</b> إليه.
+- يمكن للمستخدم الآخر قبول أو رفض هذا الطلب داخل تطبيقه، لمنع الطلبات غير المرغوب فيها المتكررة.
+- بمجرد قبول طلب المشاركة، يمكن مشاركة البيانات في كلا الاتجاهين.
+_content/Shared/img/video_SharingAccept.gif
+
+4. مشاركة البيانات وإنهاء الوصول:
+- مشاركة البيانات ليست تلقائية بعد قبول الطلب؛ يجب تفعيل المشاركة بشكل منفصل لإدخال To-Do المعني تحت خيار المشاركة الخاص به.
+- يمكن حذف إدخال المشاركة من جانب واحد في أي وقت من قبل أي من الطرفين.
+- بحذف الإدخال، لن تُعرض إدخالات To-Do المشاركة سابقًا للشخص الآخر.
+_content/Shared/img/video_SharingTodo.gif
+
+ملاحظة
+وصف مفصل للتطبيق موجود في دليل المستخدم المرتبط لدينا
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ZH":
+                Body = $@"
+1. 共享（数据共享）：
+- 共享表单用于定义打算与之共享数据的用户基础。
+- 一旦用户在此列出，即可在共享选项下为特定 To-Do 条目选择他们。
+- 被选用户自动获得对该 To-Do 条目的完全访问权限（包括修改权），如同自己的条目。
+
+2. 搜索和添加用户：
+- 由于应用不存储可读的个人数据（如电子邮件地址），用户识别仅通过 <b>别名</b> 进行。
+- 别名必须由相应用户事先在个人资料中设置，且必须唯一。
+- 通过共享表单中的搜索字段使用他们的别名搜索其他用户。
+- 搜索成功后，将显示用户存储的个人资料图片。
+_content/Shared/img/video_SharingNewUser.gif
+
+3. 共享请求：
+- 找到所需用户后，可以向其发送 <b>共享请求</b>。
+- 另一用户可以在其应用中接受或拒绝此请求，以防止重复的不想要请求。
+- 一旦共享请求被接受，即可双向共享数据。
+_content/Shared/img/video_SharingAccept.gif
+
+4. 共享数据和结束访问：
+- 请求接受后数据共享不是自动的；必须在相应 To-Do 条目的共享选项下单独激活共享。
+- 共享条目可随时由任何一方单方面删除。
+- 删除条目后，先前共享的 To-Do 项目将不再向对方显示。
+_content/Shared/img/video_SharingTodo.gif
+
+注意
+应用的详细描述可在我们链接的用户手册中找到
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "HI":
+                Body = $@"
+1. शेयरिंग (डेटा शेयरिंग):
+- शेयरिंग फॉर्म का उपयोग उन उपयोगकर्ताओं की आधार बनाने के लिए किया जाता है जिनके साथ डेटा शेयर करने का इरादा है।
+- एक बार उपयोगकर्ता यहां लिस्ट हो जाने पर, उन्हें शेयरिंग ऑप्शन के तहत किसी विशिष्ट To-Do एंट्री के लिए चुना जा सकता है।
+- चुना गया उपयोगकर्ता स्वचालित रूप से उस To-Do एंट्री तक पूर्ण पहुंच प्राप्त कर लेता है (संशोधन अधिकार सहित), जैसे कि वह उसका अपना हो।
+
+2. उपयोगकर्ताओं की खोज और जोड़ना:
+- चूंकि ऐप पढ़ने योग्य व्यक्तिगत डेटा (जैसे ईमेल पते) स्टोर नहीं करता, उपयोगकर्ता पहचान केवल <b>उपनाम</b> के माध्यम से होती है।
+- उपनाम को संबंधित उपयोगकर्ता द्वारा पहले प्रोफ़ाइल में सेट किया जाना चाहिए और अद्वितीय होना चाहिए।
+- किसी अन्य उपयोगकर्ता की खोज शेयरिंग फॉर्म में सर्च फ़ील्ड के माध्यम से उनके उपनाम का उपयोग करके की जाती है।
+- सफल खोज के बाद उपयोगकर्ता का स्टोर किया गया प्रोफ़ाइल चित्र दिखाया जाता है।
+_content/Shared/img/video_SharingNewUser.gif
+
+3. शेयरिंग अनुरोध:
+- वांछित उपयोगकर्ता मिलने के बाद, उन्हें <b>शेयरिंग अनुरोध</b> भेजा जा सकता है।
+- दूसरा उपयोगकर्ता अपनी ऐप में इस अनुरोध को स्वीकार या अस्वीकार कर सकता है, जिससे बार-बार अनचाही अनुरोधों को रोका जा सकता है।
+- शेयरिंग अनुरोध स्वीकार होने के बाद डेटा दोनों दिशाओं में शेयर किया जा सकता है।
+_content/Shared/img/video_SharingAccept.gif
+
+4. डेटा शेयर करना और पहुंच समाप्त करना:
+- अनुरोध स्वीकार होने पर डेटा शेयरिंग स्वचालित नहीं होती; विशिष्ट To-Do एंट्री के लिए उसके शेयरिंग ऑप्शन के तहत अलग से सक्रिय करना पड़ता है।
+- शेयरिंग एंट्री को किसी भी समय किसी भी पक्ष द्वारा एकतरफा हटाया जा सकता है।
+- एंट्री हटाने से पहले शेयर किए गए To-Do आइटम दूसरे व्यक्ति को नहीं दिखाए जाएंगे।
+_content/Shared/img/video_SharingTodo.gif
+
+नोट
+एप्लिकेशन का विस्तृत विवरण हमारे लिंक किए गए यूज़र मैनुअल में मिल सकता है
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ES":
+                Body = $@"
+1. Compartir (Compartir datos):
+- El formulario Compartir se utiliza para definir una base de usuarios con los que se pretende compartir datos.
+- Una vez que un usuario está listado aquí, puede seleccionarse para una entrada To-Do específica bajo la opción Compartir.
+- El usuario seleccionado recibe automáticamente acceso completo a esa entrada To-Do (incluidos derechos de modificación), como si fuera propia.
+
+2. Búsqueda y adición de usuarios:
+- Dado que la app no almacena datos personales legibles (como direcciones de correo electrónico), la identificación de usuarios se realiza exclusivamente mediante el <b>Nombre alias</b>.
+- El Nombre alias debe haber sido configurado previamente por el usuario respectivo en su perfil y debe ser único.
+- La búsqueda de otro usuario se realiza mediante el campo de búsqueda en el formulario Compartir, utilizando su Nombre alias.
+- Tras una búsqueda exitosa, se muestra la imagen de perfil almacenada del usuario.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Solicitud de compartir:
+- Tras encontrar al usuario deseado, se le puede enviar una <b>Solicitud de compartir</b>.
+- El otro usuario puede aceptar o rechazar esta solicitud en su app, evitando solicitudes repetidas no deseadas.
+- Una vez aceptada una solicitud de compartir, los datos pueden compartirse en ambas direcciones.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Compartir datos y finalizar acceso:
+- El compartir datos no es automático tras la aceptación de la solicitud; debe activarse por separado para la entrada To-Do específica bajo su opción Compartir.
+- Una entrada de Compartir puede eliminarse unilateralmente en cualquier momento por cualquiera de las partes.
+- Al eliminar la entrada, los elementos To-Do previamente compartidos ya no se mostrarán a la otra persona.
+_content/Shared/img/video_SharingTodo.gif
+
+Nota
+Una descripción detallada de la aplicación se encuentra en nuestro manual de usuario vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "ID":
+                Body = $@"
+1. Berbagi (Berbagi Data):
+- Formulir Berbagi digunakan untuk mendefinisikan basis pengguna dengan siapa data dimaksudkan untuk dibagikan.
+- Setelah pengguna terdaftar di sini, mereka dapat dipilih untuk entri To-Do tertentu di bawah opsi Berbagi.
+- Pengguna yang dipilih secara otomatis mendapatkan akses penuh ke entri To-Do tersebut (termasuk hak modifikasi), seolah-olah milik mereka sendiri.
+
+2. Pencarian dan Penambahan Pengguna:
+- Karena aplikasi tidak menyimpan data pribadi yang dapat dibaca (seperti alamat email), identifikasi pengguna dilakukan secara eksklusif melalui <b>Nama Alias</b>.
+- Nama Alias harus telah diatur sebelumnya oleh pengguna yang bersangkutan di profil mereka dan harus unik.
+- Pencarian pengguna lain dilakukan melalui bidang pencarian di formulir Berbagi, menggunakan Nama Alias mereka.
+- Setelah pencarian berhasil, gambar profil yang disimpan pengguna akan ditampilkan.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Permintaan Berbagi:
+- Setelah menemukan pengguna yang diinginkan, <b>Permintaan Berbagi</b> dapat dikirim kepada mereka.
+- Pengguna lain dapat menerima atau menolak permintaan ini di aplikasi mereka, mencegah permintaan yang tidak diinginkan berulang.
+- Setelah permintaan berbagi diterima, data dapat dibagikan di kedua arah.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Berbagi Data dan Mengakhiri Akses:
+- Berbagi data tidak otomatis setelah penerimaan permintaan; harus diaktifkan secara terpisah untuk entri To-Do tertentu di bawah opsi Berbagi-nya.
+- Entri Berbagi dapat dihapus secara sepihak kapan saja oleh salah satu pihak.
+- Dengan menghapus entri, item To-Do yang sebelumnya dibagikan tidak akan lagi ditampilkan kepada orang lain.
+_content/Shared/img/video_SharingTodo.gif
+
+Catatan
+Deskripsi rinci aplikasi dapat ditemukan di manual pengguna yang tertaut kami
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "PT":
+                Body = $@"
+1. Compartilhamento (Compartilhamento de dados):
+- O formulário Compartilhamento é usado para definir uma base de usuários com quem você pretende compartilhar dados.
+- Assim que um usuário for listado aqui, ele pode ser selecionado para uma entrada To-Do específica na opção Compartilhamento.
+- O usuário selecionado recebe automaticamente acesso completo a essa entrada To-Do (incluindo direitos de edição), como se fosse dele próprio.
+
+2. Pesquisa e adição de usuários:
+- Como o aplicativo não armazena dados pessoais legíveis (como endereços de e-mail), a identificação do usuário é feita exclusivamente pelo <b>Nome de apelido (Alias)</b>.
+- O Nome de apelido deve ter sido configurado previamente pelo usuário respectivo no seu perfil e deve ser único.
+- A pesquisa por outro usuário é feita pelo campo de busca no formulário Compartilhamento, usando o Nome de apelido dele.
+- Após uma pesquisa bem-sucedida, a imagem de perfil salva do usuário é exibida.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Solicitação de compartilhamento:
+- Após encontrar o usuário desejado, você pode enviar uma <b>Solicitação de compartilhamento</b> para ele.
+- O outro usuário pode aceitar ou rejeitar essa solicitação no seu app, evitando solicitações repetidas indesejadas.
+- Após aceitação de uma solicitação de compartilhamento, os dados podem ser compartilhados nas duas direções.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Compartilhamento de dados e fim do acesso:
+- O compartilhamento de dados não é automático após a aceitação da solicitação; deve ser ativado separadamente para a entrada To-Do específica na sua opção Compartilhamento.
+- Uma entrada de Compartilhamento pode ser excluída unilateralmente a qualquer momento por qualquer uma das partes.
+- Ao excluir a entrada, os itens To-Do anteriormente compartilhados deixam de ser exibidos para a outra pessoa.
+_content/Shared/img/video_SharingTodo.gif
+
+Nota
+Uma descrição detalhada do aplicativo está disponível em nosso manual do usuário vinculado
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRL":
+                Body = $@"
+1. Deljenje (Deljenje podataka):
+- Formular za deljenje se koristi za definisanje baze korisnika sa kojima se podaci nameravaju deliti.
+- Čim se korisnik ovde navede, može se izabrati za određeni To-Do unos pod opcijom Deljenje.
+- Izabrani korisnik automatski dobija pun pristup tom To-Do unosu (uključujući prava izmene), kao da je njegov sopstveni.
+
+2. Pretraga i dodavanje korisnika:
+- Pošto aplikacija ne čuva čitljive lične podatke (kao e-mail adrese), identifikacija korisnika vrši se isključivo preko <b>Alias imena</b>.
+- Alias ime mora prethodno biti postavljeno od strane odgovarajućeg korisnika u njegovom profilu i mora biti jedinstveno.
+- Pretraga drugog korisnika vrši se preko polja za pretragu u formularu za deljenje, koristeći njegovo Alias ime.
+- Nakon uspešne pretrage prikazuje se sačuvana profilna slika korisnika.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Zahtev za deljenje:
+- Nakon pronalaženja željenog korisnika može mu se poslati <b>Zahtev za deljenje</b>.
+- Drugi korisnik može prihvatiti ili odbiti ovaj zahtev u svojoj aplikaciji, sprečavajući ponovljene neželjene zahteve.
+- Čim se zahtev za deljenje prihvati, podaci se mogu deliti u oba smera.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Deljenje podataka i prekid pristupa:
+- Deljenje podataka nije automatsko nakon prihvatanja zahteva; mora se posebno aktivirati za određeni To-Do unos pod njegovom opcijom Deljenje.
+- Unos deljenja može se obrisati jednostrano u bilo kom trenutku od strane bilo koje strane.
+- Brisanjem unosa prethodno deljeni To-Do elementi više se ne prikazuju drugoj osobi.
+_content/Shared/img/video_SharingTodo.gif
+
+Napomena
+Detaljan opis aplikacije nalazi se u našem povezanom korisničkom priručniku
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+            ////////////////////////////////////////
+            ////////////////////////////////////////
+            case "SRC":
+                Body = $@"
+1. Дељење (Дељење података):
+- Формулар за дељење се користи за дефинисање базе корисника са којима се подаци намеравају делити.
+- Чим се корисник овде наведе, може се изабрати за одређени To-Do унос под опцијом Дељење.
+- Изабрани корисник аутоматски добија пун приступ том To-Do уносу (укључујући права измене), као да је његов сопствени.
+
+2. Претрага и додавање корисника:
+- Пошто апликација не чува читљиве личне податке (као e-mail адресе), идентификација корисника врши се искључиво преко <b>Алијас имена</b>.
+- Алијас име мора претходно бити постављено од стране одговарајућег корисника у његовом профилу и мора бити јединствено.
+- Претрага другог корисника врши се преко поља за претрагу у формулару за дељење, користећи његово Алијас име.
+- Након успешне претраге приказује се сачувана профилна слика корисника.
+_content/Shared/img/video_SharingNewUser.gif
+
+3. Захтев за дељење:
+- Након проналажења жељеног корисника може му се послати <b>Захтев за дељење</b>.
+- Други корисник може прихватити или одбити овај захтев у својој апликацији, спречавајући понављане нежељене захтеве.
+- Чим се захтев за дељење прихвати, подаци се могу делити у оба смера.
+_content/Shared/img/video_SharingAccept.gif
+
+4. Дељење података и прекид приступа:
+- Дељење података није аутоматско након прихватања захтева; мора се посебно активирати за одређени To-Do унос под његовом опцијом Дељење.
+- Унос дељења може се обрисати једнострано у било ком тренутку од стране било које стране.
+- Брисањем уноса претходно дељени To-Do елементи више се не приказују другој особи.
+_content/Shared/img/video_SharingTodo.gif
+
+Напомена
+Детаљан опис апликације налази се у нашем повезаном корисничком приручнику
+https://true-perfect-code.ch/_doc/PROJECTAPPLICATIONNAME/PROJECTAPPLICATIONNAMEUserGuide_{_appState.SelectedLanguage}.pdf
+";
+                break;
+        }
+    }
+
+}
+
+

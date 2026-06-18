@@ -1,0 +1,244 @@
+﻿@using BlazorCore.Services.EventAggregator
+@using BlazorCore.Services.AppState
+@using BlazorCore.Services.GlobalState
+@using Microsoft.AspNetCore.Components.Authorization
+@using p11.UI.Services
+@using BlazorCore.Services.Platform
+@inherits LayoutComponentBase
+@inject IGlobalStateBase _globalState
+@inject IAppStateBase _appState
+@inject IEventAggregator _eventAggregator
+@inject IThemeService ThemeService
+@inject NavigationManager? _navigationManager
+@inject p11.UI.Services.IToastService? _toastService
+@inject IPlatformBase _platform
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject p11.UI.Services.IEventStateService? _eventState
+
+@implements IDisposable
+
+<main>
+    <article>
+        @Body
+    </article>
+</main>
+
+@code {
+    private DotNetObjectReference<MainLayout>? _dotNetRef;
+    private DateTime? _lastBackPressTime;
+    private bool _isNative;
+    private BlazorCore.Services.Platform.PLATFORMS _currentPlatform;
+    private NativeDevice device;
+
+    /// <summary>
+    /// Initializes the layout and identifies the current hosting platform.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        _currentPlatform = _platform!.GetCurrPlatform();
+
+        // Map platform to P11 native device type (required for swipe gesture handling)
+        device = _currentPlatform == BlazorCore.Services.Platform.PLATFORMS.ANDROID
+            ? NativeDevice.ANDROID
+            : (_currentPlatform == BlazorCore.Services.Platform.PLATFORMS.IOS
+                ? NativeDevice.IPHONE
+                : NativeDevice.WEB);
+
+        // Determine if running inside Capacitor (native mobile environment)
+        _isNative = (_currentPlatform == BlazorCore.Services.Platform.PLATFORMS.ANDROID ||
+                     _currentPlatform == BlazorCore.Services.Platform.PLATFORMS.IOS);
+
+        _appState.OnChange += HandleStateChange;
+
+        // Subscribe to P11 modal events
+        if (_eventState != null)
+        {
+            // Triggered by P11 when any modal opens or closes
+            _eventState.OnStackChanged += HandleModalStackChanged;
+
+            // Triggered by P11 when modal stack is empty and client should navigate back (iOS swipe)
+            _eventState!.OnGlobalBackNavigationRequested += HandleIOSGlobalBack;
+        }
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        // Apply platform-specific CSS variables for native feel
+        var bottom = 0;
+        switch (device)
+        {
+            case NativeDevice.ANDROID:
+                // Extra spacing for iOS home indicator (e.g. top = 14, bottom = 20)
+                // No additional bottom spacing needed for Android
+                break;
+            case NativeDevice.IPHONE:
+                bottom = 20; // Extra spacing for iOS home indicator (e.g. top = 14, bottom = 20)
+                break;
+        }
+        ThemeService.SetScopedVariables(":root", new Dictionary<string, string> {
+            { "--p11-height-footer-fix", $"{bottom}px" }, // e.g. also { "--p11-safe-area-top", $"{top}px" },
+        });
+
+        _appState.Log($"[MainLayout OnAfterRenderAsync] _currentPlatform: {_currentPlatform.ToString()}, is native: {_isNative}");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // WPF workaround: P11 service might not be fully injected yet
+                if (_eventState is EventStateService concrete)
+                {
+                    concrete.SetNavigationManager(Navigation);
+                }
+
+                // Disable debug mode for production (ensures consistent behavior)
+                await _eventState!.SetDebugModeAsync(false);
+
+                // Initialize P11 with current device type (iOS/Android/Web)
+                await _eventState!.InitializeAsync(device);
+
+                await _appState.Log("[MainLayout OnAfterRenderAsync] First render: P11 & Native Bridge registering.");
+
+                // Register Capacitor bridge for Android back button handling
+                await _platform!.RegisterNativeNavigationAsync(_dotNetRef!);
+                await _appState.Log("[MainLayout OnAfterRenderAsync] First render completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                await _appState.Error($"[MainLayout OnAfterRenderAsync] CRITICAL: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Synchronizes the local modal state when the global modal stack changes.
+    /// </summary>
+    private async void HandleModalStackChanged()
+    {
+        try
+        {
+            await _appState.Log("[MainLayout HandleModalStackChanged] Modal stack changed.");
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            // Fallback: log to console if appState fails
+            Console.Error.WriteLine($"[MainLayout] HandleModalStackChanged error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Entry point for Android Back Button (via Capacitor).
+    /// Handles Modal closing, Navigation, and Exit-Protection.
+    /// </summary>
+    /// <param name="canGoBack">Information from Capacitor/Browser history.</param>
+    [JSInvokable("HandleNativeBack")]
+    public async Task HandleNativeBack(bool canGoBack)
+    {
+        if (_eventState == null)
+        {
+            await _appState.Error("[MainLayout HandleNativeBack] _eventState is null, cannot handle back button.");
+            return;
+        }
+
+        await Task.Delay(150);
+    
+        bool wasModalClosed = await _eventState.TryCloseTopLayerAsync();
+        await _appState.Log($"[MainLayout HandleNativeBack] Modal closed: {wasModalClosed}");
+
+        if (wasModalClosed)
+        {
+            _lastBackPressTime = null;
+            return;
+        }
+
+        await ProcessGlobalBackLogic(canGoBack);
+    }
+
+    private async Task ProcessGlobalBackLogic(bool canGoBack)
+    {
+        bool isRootPage = _appState.IsRootPageLoaded;
+
+        await _appState.Log($"[MainLayout ProcessGlobalBackLogic] Is root page: {isRootPage}");
+
+        if (!isRootPage)
+        {
+            // Not on root page → navigate back
+            if (canGoBack)
+            {
+                await _platform!.NavigateBackAsync();
+            }
+            else
+            {
+                // Fallback: no history available → go to root directly
+                _navigationManager!.NavigateTo("/");
+            }
+            _lastBackPressTime = null; // Reset exit protection timer
+        }
+        else
+        {
+            // On root page → double-tap to exit (native behavior)
+            var currentTime = DateTime.Now;
+        
+            if (_lastBackPressTime.HasValue && (currentTime - _lastBackPressTime.Value).TotalMilliseconds < 2000)
+            {
+                // Second tap within 2 seconds → exit app
+                await _platform!.ExitAppAsync();
+            }
+            else
+            {
+                // First tap → show toast and wait for second tap
+                _lastBackPressTime = currentTime;
+                await _toastService!.ShowInfoAsync(
+                    _appState.T("Press back again to exit the app."),
+                    _appState.T("Exit")
+                );
+            }
+        }
+    }
+
+    private async Task HandleIOSGlobalBack()
+    {
+        try
+        {
+            await _appState.Log("[MainLayout HandleIOSGlobalBack] P11 event OnGlobalBackNavigationRequested received");
+            await ProcessGlobalBackLogic(true);
+        }
+        catch (Exception ex)
+        {
+            await _appState.Error($"[MainLayout HandleIOSGlobalBack] Failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Performs cleanup of event subscriptions and managed resources.
+    /// </summary>
+    public void Dispose()
+    {
+        _appState.Log("[MainLayout Dispose] Cleaning up event subscriptions.");
+
+        try
+        {
+            _appState.OnChange -= HandleStateChange;
+
+            if (_eventState != null)
+            {
+                _eventState.OnStackChanged -= HandleModalStackChanged;
+                _eventState.OnGlobalBackNavigationRequested -= HandleIOSGlobalBack;
+            }
+
+            _dotNetRef?.Dispose();
+            _dotNetRef = null;
+        }
+        catch (Exception ex)
+        {
+            _appState.Error($"[MainLayout Dispose] ERROR: {ex.Message}");
+        }
+    }
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+}

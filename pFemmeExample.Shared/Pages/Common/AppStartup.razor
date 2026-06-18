@@ -1,0 +1,785 @@
+﻿@implements IDisposable
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.JSInterop
+@using Shared.Global
+@using p11.UI
+@using BlazorCore.Services.AppState
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceProvider ServiceProvider
+
+@if (_appState != null && _jsReady)
+{
+    @switch (_appState.AppLoadingStatus)
+    {
+        case APP_LOADING_STATUS.Unknown:
+        case APP_LOADING_STATUS.SPLASHSCREEN:
+        case APP_LOADING_STATUS.LOADING:
+        case APP_LOADING_STATUS.FAILED_2FA:
+        default:
+            <style>
+                body, html {
+                    background: #f5d9bc;
+                }
+            </style>
+            <!-- Landingpage immer anzeigen -->
+            <AuthorizeView>
+                <Authorized Context="context" >
+                    <!-- Loading spinner displayed during app initialization -->
+                    <div class="d-flex justify-content-center align-items-center vh-100">
+                        <div class="text-center">
+                            <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">@_appState.T("Loading...")</span>
+                            </div>
+                            <div class="mt-3 text-secondary fw-semibold">
+                                @_appState?.T("Reloading application...")
+                            </div>
+                        </div>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <!-- Conditional Style for Fade-In -->
+                    <style>
+                        .tpc-landing-container {
+                            opacity: 0;
+                            transition: opacity 1.6s ease-in-out;
+                            visibility: hidden;
+                        }
+
+                            .tpc-landing-container.tpc-ready {
+                                opacity: 1;
+                                visibility: visible;
+                                background: #f5d9bc;
+                            }
+                    </style>
+                    @* WEBSITE *@
+                    <div class="tpc-landing-container @_fadeClass">
+                        <pFemmeExample.Shared.Pages.Landing IsShowingSpinner="true" />
+                    </div>
+
+                </NotAuthorized>
+            </AuthorizeView>
+            break;
+    }
+
+    <!-- Toast and message box services -->
+    <P11Toast />
+    <P11MessageBox />
+
+    <!-- Logout component (hidden, triggered programmatically) -->
+    <pFemmeExample.Shared.Pages.Common.Authentication.AuthenticationLogout @ref="_logoutComponent"
+                                                                             IsButtonHidden="true"
+                                                                             UseNativeFeatures="@(_appState.IsNativeApp ?? false)" />
+
+    <!-- Accessibility controls - visible only during initialization -->
+    @if (_appState.AccessibilityConfig.InitializeAccessibility)
+    {
+        <P11FontFamily Fonts="@_appState.Catalog.Fonts" @bind-Value="_appState.AccessibilityConfig.SelectedFontFamily" Hide="_appState.AccessibilityConfig.InitializeAccessibility" />
+        <P11FontSize @bind-Value="_appState.AccessibilityConfig.SelectedFontSize" Hide="_appState.AccessibilityConfig.InitializeAccessibility" />
+        <P11FontWeight @bind-Value="_appState.AccessibilityConfig.SelectedFontWeight" Hide="_appState.AccessibilityConfig.InitializeAccessibility" />
+        <P11FontSpacing @bind-Value="_appState.AccessibilityConfig.SelectedSpacingValue" Hide="_appState.AccessibilityConfig.InitializeAccessibility" />
+        <P11FontLineheight @bind-Value="_appState.AccessibilityConfig.SelectedLineHeightValue" Hide="_appState.AccessibilityConfig.InitializeAccessibility" />
+    }
+}
+
+@code {
+    [Inject] private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+    [Inject] private BlazorCore.Services.GlobalState.IGlobalStateInitializer _globalStateInitializer { get; set; } = default!;
+    [Inject] private BlazorCore.Services.AppInitializer.IAppInitializerBase? _appInitializer { get; set; }
+    [Inject] private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+    [Inject] private BlazorCore.Services.AppState.IAppStateBase? _appState { get; set; }
+    [Inject] private BlazorCore.Services.Platform.IPlatformBase? _platform { get; set; }
+    [Inject] private BlazorCore.Services.Platform.IPlatformStorageBase? _platformStorage { get; set; }
+    [Inject] private BlazorCore.Services.LocalStorage.ILocalStorage? _localStorage { get; set; }
+    [Inject] private BlazorCore.Services.LocalJsonFile.ILocalJsonFile? _localJsonFile { get; set; }
+    [Inject] private BlazorCore.Services.LocalQueryExecutor.ILocalQueryExecutor? _localQueryExecutor { get; set; }
+    [Inject] private p11.UI.Services.IMessageBoxService? _messageBoxService { get; set; }
+    [Inject] private BlazorCore.Services.Dam.IDamBase? _dam { get; set; }
+    [Inject] private p11.UI.Services.IToastService? _toastService { get; set; }
+    [Inject] private BlazorCore.Services.Authentication.IAuthenticationBase? _authentication { get; set; }
+    [Inject] private NavigationManager? _navigationManager { get; set; }
+    [Inject] private IJSRuntime? _jsRuntime { get; set; }
+
+    [Parameter] public System.Reflection.Assembly? Assembly { get; set; }
+
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private bool _isDisposed = false;
+    private bool _started = false;
+    private bool _termsEulaRejected = false;
+    private Authentication.AuthenticationLogout? _logoutComponent;
+
+    private HubConnection? _hubConnection;
+
+    private bool _jsReady;
+    private DotNetObjectReference<AppStartup>? _dotNetRef;
+    private string _fadeClass = "";
+    private BlazorCore.Services.Platform.PLATFORMS _currPlatform;
+
+
+    [JSInvokable]
+    public void OnWebViewReady()
+    {
+        _jsReady = true;
+    }
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to route state change events (e.g., language switching, loading states)
+        if (_appState != null)
+            _eventAggregator.OnRoutesStateHasChanged += HandleStateChange;
+
+        // Prepare accessibility features (screen readers, keyboard navigation, etc.)
+        _appState!.AccessibilityConfig.InitializeAccessibility = true;
+
+        if (_platform != null)
+        {
+            _currPlatform = _platform.GetCurrPlatform();
+
+            // Raise inspection mode for Windows Client if enabled in configuration
+            if (_currPlatform == BlazorCore.Services.Platform.PLATFORMS.WINDOWS_CLIENT)
+            {
+                if (Shared.Global.Configuration.ConfigGeneral.IsInspectionEnabled)
+                    BlazorCore.HostBridge.RaiseInspectionChanged(Shared.Global.Configuration.ConfigGeneral.IsInspectionEnabled);
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !RendererInfo.IsInteractive || _started || _appState == null)
+            return;
+
+        _started = true;
+
+        await Task.Delay(50);
+        _fadeClass = "tpc-ready";
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        // 1. Hybrid protection: Allow WebView2 bridge to initialize
+        await Task.Delay(100);
+
+        // 2. Register callback with retry logic
+        try
+        {
+            await _appState.Log("[AppStartup OnAfterRenderAsync] START");
+
+            bool registered = false;
+            int retryCount = 0;
+
+            while (!registered && retryCount < 5)
+            {
+                try
+                {
+                    await _jsRuntime!.InvokeVoidAsync("pE_Web.registerWebViewReadyCallback", _dotNetRef);
+                    registered = true;
+                }
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    await _appState!.Log($"[AppStartup OnAfterRenderAsync] JS callback registration failed (retry {retryCount}/5): {ex.Message}");
+                    // Wait a little longer with each failed attempt (100 ms, 200 ms, 300 ms...)
+                    await Task.Delay(100 * retryCount);
+                }
+            }
+
+            if (!registered)
+            {
+                await _appState!.Log("[AppStartup OnAfterRenderAsync]JS-Ready Callback failed after retries, forcing ready...");
+                _jsReady = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            await _appState!.Error($"[AppStartup OnAfterRenderAsync] Critical JS Error: {ex.Message}");
+            _jsReady = true;
+        }
+
+        // 3. Wait for JS signal (OnWebViewReady)
+        var timeout = DateTime.UtcNow.AddSeconds(5);
+        while (!_jsReady)
+        {
+            if (DateTime.UtcNow > timeout)
+            {
+                // Fallback: If JS doesn't respond, continue anyway
+                // or throw an exception, depending on how critical pE_Web is to you
+                break;
+            }
+            await Task.Delay(16);
+        }
+
+        // 4. Platform & Global Init
+        try
+        {
+            if (_platform != null && _platform.GetCurrPlatform() != BlazorCore.Services.Platform.PLATFORMS.WASM)
+            {
+                await _platform.InitializeJSAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            //System.Diagnostics.Debug.WriteLine($"Platform Init Error: {ex.Message}");
+            await _appState!.Error($"[AppStartup OnAfterRenderAsync] Platform Init Error: {ex.Message}");
+        }
+
+        _appState.GlobalInit(Shared.Global.Catalog.Sections, Shared.Global.Data.Dataset);
+        _globalState.GlobalInit(Shared.Global.Configuration.ConfigGeneral, Shared.Global.Configuration.ConfigWebapi, Shared.Global.Catalog.Sections);
+
+        //ProjectTypeInitializer.Initialize();
+
+        try
+        {
+            await _jsRuntime!.InvokeVoidAsync("pE_Common.setDebugMode", _globalState.ConfigGeneral.IsDebugEnabled);
+        }
+        catch (Exception ex)
+        {
+            //System.Diagnostics.Debug.WriteLine($"[Blazor AppStartup.razor] Failed to sync Debug Mode: {ex.Message}");
+            await _appState!.Error($"[AppStartup OnAfterRenderAsync]Failed to sync Debug Mode: {ex.Message}");
+        }
+
+        await _appState.Log("[AppStartup OnAfterRenderAsync] END");
+
+        // Start the actual app logic
+        _ = InvokeAsync(InitializeAppSafe);
+    }
+
+    private async Task InitializeAppSafe()
+    {
+        if (_isDisposed || _appState == null) return;
+
+        await _appState.Log("[AppStartup InitializeAppSafe] START");
+
+        try
+        {
+            _appState!.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.LOADING);
+            StateHasChanged();
+
+            // NOTE: 700ms delay was added as a safety buffer for Capacitor/WPF WebView2 initialization.
+            // Testing showed WPF works without it. Capacitor status unknown (no test environment).
+            // If you experience JS bridge issues on Capacitor, re-enable this delay.
+            // await Task.Delay(700);
+
+            await _appState.Log("[AppStartup InitializeAppSafe] END");
+
+            await InitializeApp();
+        }
+        catch (Exception ex)
+        {
+            await HandleGlobalError(ex);
+        }
+    }
+
+    private async Task InitializeApp()
+    {
+        // Exit if disposed, lock not acquired, or required services missing
+        if (_isDisposed || !await _initLock.WaitAsync(0) || Assembly== null || _appState == null || _platform == null) 
+            return;
+
+        await _appState.Log("[AppStartup InitializeApp] START");
+
+        try
+        {
+            // Global initialization (ConnectionString, Translation, etc.)
+            if (_globalStateInitializer != null)
+                await _globalStateInitializer.InitializeAsync();
+
+            // Check if cloud connection exists
+            await InitializeCloudMonitorAsync();
+
+            // Platform
+            await _appState.UpdateIsNativeApp();
+            _appState.UpdateIsPhoneOrDesktop();
+            _appState.UpdateNativeDeviceType(null);
+            await _appState.Log("[AppStartup InitializeApp] Init platform");
+
+            // Storage Location
+            await InitializeStorage();
+            await _appState.Log("[AppStartup InitializeApp] Init storage");
+
+            // Core application initialization
+            bool resInitialize = await _appInitializer!.AppInitializeAsync(
+                Assembly,
+                loadLanguages: true,
+                loadTranslation: true,
+                initCss: true,
+                initAccessibility: true);
+            if (!resInitialize)
+            {
+                await HandleInitializationFailure();
+            }
+            else
+            {
+                // JS Interop (only when interactive and stable)
+                if (RendererInfo.IsInteractive && _jsRuntime != null)
+                    await _jsRuntime.InvokeVoidAsync("pE_Web.setRtl", _appState.LtrRtl == BlazorCore.Services.AppState.LTR_RTL.RTL);
+
+                // EULA check for authenticated users
+                if (_appState!.IsAuthenticated)
+                {
+
+                    await ProcessEulaCheck();
+                }
+
+                // Successful completion
+                if (!_termsEulaRejected)
+                {
+                    // Overrides detected device for debuging (if set in pFemmeExample.Shared.Global.Configuration.ConfigGeneral.SetDefaultDevice)
+                    _appState.UpdateNativeDeviceType(_globalState.ConfigGeneral.SetDefaultDevice);
+
+                    _appState.UpdateAppLoadingStatus(BlazorCore.Services.AppState.APP_LOADING_STATUS.READY);
+                    _appState!.AccessibilityConfig.InitializeAccessibility = false;
+                    _eventAggregator.RoutesStateHasChanged();
+
+                    await _appState.Log("[AppStartup InitializeApp] Routes state changed to READY");
+                }
+            }
+        }
+        finally
+        {
+            _initLock.Release();
+        }
+
+        await _appState.Log("[AppStartup InitializeApp] END");
+    }
+
+    private async Task InitializeStorage()
+    {
+        if (_appState == null 
+            || _localStorage == null  
+            || _localQueryExecutor == null
+            || _localJsonFile == null)
+            return;
+
+        await _appState.Log("[AppStartup InitializeStorage] START");
+
+        await _appState!.LoadStorageLocation();
+
+        // Initialize Memory-JsonHybrid storage for supported platforms
+        // --- MSSQL ---
+        // Initialize SqlClient for MSSQL-based platforms (Windows Server)
+        if (_currPlatform == BlazorCore.Services.Platform.PLATFORMS.WINDOWS_SERVER)
+        {
+            await InitSqlClient();
+        }
+        else
+        {
+            if (_appState.StorageLocation != STORAGE_LOCATION.CLOUD)
+            {
+                var user = _appState.HasUserAccount() ? _appState.UserAccount : _appState.UnixTS;
+                if(!string.IsNullOrEmpty(user))
+                {
+                    // Initialize storage
+                    switch (_globalState.ConfigGeneral.LocalStorageType)
+                    {
+                        // --- SQLITE ---
+                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.LOCAL_DB_AUTO:
+                            // -> pFemme verwendet Json-Storage
+                            break;
+
+                        // --- JSON ---
+                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.JSON_HYBRID:
+                        // --- MEMORY ---
+                        case BlazorCore.Services.Dam.LOCAL_STORAGE_TYPE.MEMORY:
+                            pFemmeExample.Shared.Db.LocalDbQueryRegistry.Register(_localQueryExecutor, _localStorage, _localJsonFile, _appState);
+                            await _localStorage.InitializeAsync(user);
+                            break;
+                    }
+                }
+            }
+        }
+        await _appState.Log("[AppStartup InitializeStorage] END");
+    }
+
+    private async Task HandleInitializationFailure()
+    {
+        if (_appState == null || _appState.Catalog.LocalStorage == null || _platformStorage == null) return;
+
+        await _appState.Log("[AppStartup HandleInitializationFailure] START");
+
+        // Check if running on native platform (WPF, Capacitor, MAUI)
+        if ((_appState!.IsNativeApp.HasValue && _appState.IsNativeApp.Value))
+        {
+            MessageBoxResult resultStorageLocation = await _messageBoxService!.ShowYesNoAsync(
+                title: _appState!.T("Cloud token is invalid"),
+                message: _appState!.T("The cloud token is no longer valid. You must log in again! Alternatively, you can change the storage location to „local“ if you do not want to log in to the cloud. How would you like to log in?"),
+                yestext: _appState!.T("Cloud/Local"),
+                notext: _appState!.T("Local")
+            );
+
+            switch (resultStorageLocation)
+            {
+                case MessageBoxResult.Yes:
+                case MessageBoxResult.None:
+                    // Yes, None (user closed dialog), or any other result -> default to Cloud/Local
+                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation,
+                         ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL).ToString());
+                    // Allow Capacitor bridge to breathe (critical for older mobile devices)
+                    await Task.Delay(_globalState.ConfigGeneral.TaskDelay_Capacitor);
+                    break;
+
+                case MessageBoxResult.No:
+                    // Set Cookie/SecureStorage to Local
+                    await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation,
+                         ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.LOCAL).ToString());
+                    // Allow Capacitor bridge to breathe (critical for older mobile devices)
+                    await Task.Delay(_globalState.ConfigGeneral.TaskDelay_Capacitor);
+                    break;
+            }
+        }
+        else // Web
+        {
+            await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storagelocation,
+                ((int)BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD).ToString());
+            // Allow Capacitor bridge to breathe (critical for older mobile devices)
+            await Task.Delay(_globalState.ConfigGeneral.TaskDelay_Capacitor);
+        }
+
+        // Allow Capacitor bridge to breathe (critical for older mobile devices)
+        await Task.Delay(_globalState.ConfigGeneral.TaskDelay_Capacitor);
+
+        // Trigger logout flow (reuses AuthenticationLogout component)
+        if (_logoutComponent != null) 
+        {
+            StateHasChanged();
+            await _logoutComponent.TriggerLogoutAsync();
+        }
+
+        await _appState.Log("[AppStartup HandleInitializationFailure] END");
+    }
+
+    private async Task InitSqlClient()
+    {
+        var sqlClient = ServiceProvider.GetService<BlazorCore.Services.SqlClient.ISqlClientBase>();
+        if(sqlClient != null)
+        {
+            await sqlClient.InitializeAsync(_globalState);
+            if (sqlClient.isConnected)
+                await sqlClient.MapApplTbls();
+        }
+    }
+
+    protected virtual async Task InitStoreUrl()
+    {
+        if (_messageBoxService == null 
+            || _appState == null 
+            || _appState.Catalog.DownloadApp == null 
+            || _appState.Catalog.LocalStorage == null
+            || _platformStorage == null)
+            return;
+
+        await _appState.Log("[AppStartup InitStoreUrl] START");
+
+        try
+        {
+            // Check if the store URL exists locally
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "ExistsStoreUrl>>AppParameter" },
+                { BlazorCore.Services.Dam.DB_CMD.NO_CLOUD, BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString() }
+            };
+
+            BlazorCore.Services.SqlClient.ScalarModel resultscalar = await _dam!.Scalar(db_para)!; 
+
+            // Allow Capacitor bridge to breathe (critical for older mobile devices)
+            await Task.Delay(_globalState.ConfigGeneral.TaskDelay_Capacitor);
+
+            if (resultscalar != null && string.IsNullOrEmpty(resultscalar.out_err)) // Resultat prüfen
+            {
+                if (!resultscalar.out_value_bool)
+                {
+                    // Retrieve store URLs from the server
+                    db_para = new()
+                {
+                    { "@Case_", "SelectStoreUrl>>AppParameter" },
+                    { BlazorCore.Services.Dam.DB_CMD.NO_LOCAL, BlazorCore.Services.Dam.DB_CMD.NO_LOCAL.ToString() }
+                };
+
+                    switch (_appState.StorageLocation)
+                    {
+                        case STORAGE_LOCATION.LOCAL:
+                            db_para[BlazorCore.Services.Dam.DB_CMD.NO_CLOUD] = BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString();
+                            break;
+
+                        case STORAGE_LOCATION.CLOUD:
+                            db_para[BlazorCore.Services.Dam.DB_CMD.NO_LOCAL] = BlazorCore.Services.Dam.DB_CMD.NO_LOCAL.ToString();
+                            break;
+
+                        //case STORAGE_LOCATION.Unknown:
+                        //    break;
+
+                        default:
+                            break;
+                    }
+
+                    BlazorCore.Services.SqlClient.ReadModel<BlazorCore.Models.AppParameterModel?> resultUrls = await _dam.ReadData<BlazorCore.Models.AppParameterModel>(db_para)!;
+                    if (resultUrls != null && resultUrls.out_list != null)
+                    {
+                        BlazorCore.Services.GlobalState.DownloadAppModel _downloadApp = new();
+
+                        foreach (var item in resultUrls.out_list)
+                        {
+                            // Save individual URLs locally
+                            db_para = new()
+                            {
+                                { "@Case_", "Save>>AppParameter" },
+                                { "@UnixTS", (resultUrls.out_list.IndexOf(item) + 1).ToString() }, // UnixTS record => unique/ID
+                                { "@AuthUsers_UnixTS", "0" }, // AuthUsers-UnixTS => _appState.UnixTS
+                                { "@Scope", "app" },
+                                { "@Details", item!.Details! },
+                                { "@ParameterName", item.ParameterName! },
+                                { "@ParameterValue", item.ParameterValue! },
+                                { "@LastUpdateUnixTS", "0" },
+                                { BlazorCore.Services.Dam.DB_CMD.NO_CLOUD, BlazorCore.Services.Dam.DB_CMD.NO_CLOUD.ToString() }
+                            };
+                            BlazorCore.Services.SqlClient.ScalarModel resultUrl = await _dam!.Save(db_para)!;
+                            if (resultUrl != null && !string.IsNullOrEmpty(resultUrl.out_err))
+                            {
+                                await _messageBoxService.ShowOkAsync(
+                                    title: _appState.T("Error"),
+                                    message: _appState.T("An unexpected error has occurred. Description:") + " " + resultUrl.out_err
+                                );
+                            }
+
+                            // Refresh URLs (for cookies)
+                            if (_appState.Catalog.DownloadApp.Any(x => x.Id == item!.ParameterName!))
+                            {
+                                _appState.Catalog.DownloadApp.Where(x => x.Id == item!.ParameterName!).FirstOrDefault()!.Url = item.ParameterValue!;
+                                _appState.Catalog.DownloadApp.Where(x => x.Id == item!.ParameterName!).FirstOrDefault()!.Icon = item.Details!;
+                            }
+                        }
+
+                        // Also store URLs in cookies (if storage mode is local and the user is not logged in)
+                        string json = System.Text.Json.JsonSerializer.Serialize(
+                            _appState.Catalog.DownloadApp,
+                            BlazorCore.JsonContext.Default.ListDownloadAppModel);
+
+                        // Delete cookie
+                        await _platformStorage.RemoveAsync(_appState.Catalog.LocalStorage.storeurls);
+
+                        // Create a new cookie
+                        await _platformStorage.SetAsync(_appState.Catalog.LocalStorage.storeurls, json);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await _appState.Error($"[AppStartup InitStoreUrl] ERROR: {ex.Message}");
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Error"),
+                message: $"{_appState.T(_globalState.ConfigGeneral.ErrorText)} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}"
+            );
+        }
+        await _appState.Log("[AppStartup InitStoreUrl] END");
+    }
+
+    private async Task ProcessEulaCheck()
+    {
+        // Check if user has already accepted Terms & Conditions / EULA
+        if (await IsAcceptedTermsEula() || _appState == null)
+            return;
+
+        await _appState.Log("[AppStartup ProcessEulaCheck] START");
+
+        // Show Terms/EULA dialog to user
+        bool resultterms = await _messageBoxService!.ShowAsync<Authentication.AuthenticationTermsEula, bool>(
+            new
+            {
+                Visible = true,
+                IsAcceptButtonHidden = false,
+                IsInitiallyOpen = true
+            },
+            title: _appState!.T("Terms/Conditions/EULA")
+        );
+
+        if (resultterms)
+        {
+            // Save acceptance to database
+            Dictionary<string, string> db_para = new()
+            {
+                { "@Case_", "UpdateTermsAccepted>>AuthUsers" },
+                { "@UnixTS", _appState!.UnixTS },
+            };
+            BlazorCore.Services.SqlClient.ScalarModel result = await _dam!.Save(db_para)!;
+
+            if (!string.IsNullOrEmpty(result?.out_err))
+            {
+                // Log error but continue - user already accepted, but we couldn't save
+                await _appState!.Log($"Failed to save EULA acceptance: {result.out_err}");
+                await _messageBoxService.ShowOkAsync(
+                    title: _appState!.T("Warning"),
+                    message: _appState.T("Your acceptance was saved locally but could not be synchronized. You may need to accept again next time.")
+                );
+            }
+        }
+        else
+        {
+            // User rejected – block app usage
+            _termsEulaRejected = true;
+
+            await _messageBoxService.ShowOkAsync(
+                title: _appState!.T("Terms/Conditions/EULA rejected"),
+                message: _appState.T("The terms-conditions and EULA were not accepted, so it is not possible to use the software."),
+                oktext: _appState!.T("Ok")
+            );
+
+            if (_logoutComponent != null)
+            {
+                await _logoutComponent.TriggerLogoutAsync();
+            }
+        }
+        await _appState.Log("[AppStartup ProcessEulaCheck] END");
+    }
+
+    private async Task<bool> IsAcceptedTermsEula()
+    {
+        // Only check EULA acceptance if cloud connection is available
+        // Without internet, we assume acceptance (no way to verify)
+        if (_platform == null || !_appState!.IsCloudConnected)
+            return true;
+
+        await _appState.Log("[AppStartup IsAcceptedTermsEula] START");
+
+        var db_para = new Dictionary<string, string>
+        {
+            { "@Case_", "SelectTermsAccepted>>AuthUsers" },
+            { "@AuthUsers_UnixTS", _appState!.UnixTS }
+        };
+
+        var result = await _dam!.Scalar(db_para);
+        // Check if query succeeded and returned a valid boolean value
+        if (result != null && string.IsNullOrEmpty(result.out_err) && !string.IsNullOrEmpty(result.out_value_str))
+        {
+            await _appState.Log($"[AppStartup IsAcceptedTermsEula] END Result={result.out_value_bool}");
+            return result.out_value_bool;
+        }
+        else
+        {
+            await _appState.Log("[AppStartup IsAcceptedTermsEula] END Result=false"); 
+            return false;
+        }
+    }
+
+    private async Task HandleGlobalError(Exception ex)
+    {
+        if (_isDisposed || _appState == null) return;
+
+        await _appState.Log("[AppStartup HandleGlobalError] START");
+
+        try
+        {
+            await _messageBoxService!.ShowOkAsync(
+                _appState?.T("Error") ?? "Error",
+                $"{_appState?.T(_globalState.ConfigGeneral.ErrorText)} {BlazorCore.ErrorHelper.GetErrorContext(ex.Message)}");
+        }
+        catch (Exception innerEx)
+        {
+            // Fallback: Log error if message box service fails
+            await _appState!.Error($"[AppStartup HandleGlobalError] CRITICAL: Failed to show error dialog: {innerEx.Message}. Original error: {ex.Message}");
+        }
+        await _appState.Log("[AppStartup HandleGlobalError] END");
+    }
+
+    public async Task InitializeCloudMonitorAsync()
+    {
+        // 1. Zuerst prüfen, ob Cloud erreichbar ist (mit kurzem Timeout)
+        bool isCloudAvailable = await IsCloudAvailableAsync();
+
+        if (!isCloudAvailable)
+        {
+            _appState!.UpdateIsCloudConnected(false);
+            return; // Kein SignalR-Versuch im Offline-Modus
+        }
+
+        // JS fallback: monitors browser/webview online/offline status (navigator.onLine)
+        if (_jsRuntime != null)
+        {
+            await _jsRuntime.InvokeVoidAsync("pE_Web.cloudConnectivity.init", DotNetObjectReference.Create(this));
+        }
+
+        // SignalR: monitors actual API server reachability
+        if (_hubConnection != null || _isDisposed)
+            return;
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(_globalState.ConfigWebapi.url_AuthHub)
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.Closed += _ =>
+        {
+            _appState!.UpdateIsCloudConnected(false);
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnecting += _ =>
+        {
+            _appState!.UpdateIsCloudConnected(false);
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnected += _ =>
+        {
+            _appState!.UpdateIsCloudConnected(true);
+            return Task.CompletedTask;
+        };
+
+        try
+        {
+            await _hubConnection.StartAsync();
+            _appState!.UpdateIsCloudConnected(
+                _hubConnection.State == HubConnectionState.Connected);
+        }
+        catch (Exception ex)
+        {
+            _appState!.UpdateIsCloudConnected(false);
+            await _appState!.Log($"SignalR connection failed: {ex.Message}");
+        }
+    }
+
+    public async Task<bool> IsCloudAvailableAsync()
+    {
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(3); // Kurzer Timeout
+            var response = await httpClient.GetAsync("https://api.pFemmeExample.de/api/unauthorizedconnection");
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    [JSInvokable]
+    public void OnBrowserInternetChanged(bool isOnline)
+    {
+        // Fallback logic: browser offline overrides cloud status
+        if (!isOnline)
+        {
+            _appState!.UpdateIsCloudConnected(false);
+            return;
+        }
+
+        // Browser online: let SignalR determine actual cloud connectivity
+        // Do NOT force cloud status here
+    }
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _isDisposed = true;
+
+        // Unsubscribe from app state events to prevent memory leaks
+        if (_appState != null)
+            _eventAggregator.OnRoutesStateHasChanged -= HandleStateChange;
+    
+        // Release async lock
+        _initLock.Dispose();
+    
+        // Release JS interop reference
+        _dotNetRef?.Dispose();
+    }
+}

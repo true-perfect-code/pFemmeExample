@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Remove="wwwroot\app.css" />
+		<Content Remove="wwwroot\appvardefault.css" />
+		<Content Remove="wwwroot\appvarmono.css" />
+		<Content Remove="wwwroot\languages\app.json" />
+		<Content Remove="wwwroot\img\mask_hero1.svg~RF28726a68.TMP" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="wwwroot\app.css" />
+		<EmbeddedResource Include="wwwroot\appvardefault.css" />
+		<EmbeddedResource Include="wwwroot\appvarmono.css" />
+		<EmbeddedResource Include="wwwroot\languages\app.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<SupportedPlatform Include="browser" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Markdig" Version="1.3.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Models\" />
+		<Folder Include="Db\" />
+		<Folder Include="Pages\Common\Authentication\" />
+		<Folder Include="Pages\Common\AppState\" />
+		<Folder Include="Pages\Common\Platform\" />
+		<Folder Include="Pages\Common\Otp\" />
+		<Folder Include="Pages\Components\" />
+		<Folder Include="Services\LocalNotification\" />
+		<Folder Include="wwwroot\fonts\AtkinsonHyperlegible\" />
+		<Folder Include="wwwroot\fonts\Lexend\" />
+		<Folder Include="wwwroot\fonts\Comfortaa\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\BlazorCore\BlazorCore.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Update="wwwroot\img\landing-contact.jpeg">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\img\landing-gallery.jpeg">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\img\landing-hero.jpeg">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\js\ReconnectModal.js">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+</Project>

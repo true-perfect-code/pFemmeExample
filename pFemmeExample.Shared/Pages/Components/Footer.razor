@@ -1,0 +1,210 @@
+﻿@* Footer.razor - Untere Navigationsleiste mit 5 Icon-Buttons *@
+@implements IDisposable
+@inject NavigationManager? _navigationManager
+
+<div class="sticky-footer w-100" style="z-index: 1030;">
+
+    <!-- EBENE 1: DIE SCHWEBENDEN RUNDEN BUTTONS (Halb über dem Panel) -->
+    <div class="container d-flex justify-content-center" style="pointer-events: none;">
+        <div class="d-flex justify-content-around align-items-center shadow-sm px-3 border mb-2"
+             style="background: #caa696; border-radius: var(--tpc-btn-border-radius); pointer-events: auto; min-width: 320px; max-width: 650px; transform: translateY(50%); z-index: 2;">
+
+            <style>
+                .tpc-panel-buttons{
+                    background: none;
+                    border: none;
+                }
+                    .tpc-panel-buttons:hover {
+                        background-color: #e8d5c4;
+                        border-color: #e8d5c4;
+                    }
+
+                .sticky-footer{
+                    position: sticky;
+                    left: 0;
+                    right: 0;
+                    z-index: 1000;
+                    bottom: var(--p11-bottom-fix);
+                    min-height: calc(var(--p11-safe-area-bottom) + var(--p11-height-footer-fix));
+                }
+            </style>
+            <!-- 1. Account Button -->
+            <P11Button id="accountButton" ButtonVariant="ButtonVariant.Light"
+                       IconClass="bi bi-arrow-clockwise fs-3 mt-1"
+                       CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                       Title="@_appState.T("Refresh")"
+                       AriaLabel="@_appState.T("Refresh")"
+                       OnClick="@OnRefreshClicked" />
+
+            <!-- 2. Sync Button -->
+            @if (_appState.StorageLocation == BlazorCore.Services.AppState.STORAGE_LOCATION.CLOUD_LOCAL)
+            {
+                <P11Button id="syncButton" ButtonVariant="ButtonVariant.Light"
+                           IconClass="bi bi-arrow-down-up fs-3 mt-1"
+                           CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                           Title="@_appState.T("Synchronize")"
+                           AriaLabel="@_appState.T("Synchronize cloud and local data")"
+                           OnClick="@OnSyncClicked" />
+            }
+
+            <!-- 3. Account Button -->
+            <P11Button id="accountButton" ButtonVariant="ButtonVariant.Light"
+                       IconClass="bi bi-person-circle fs-3 mt-1"
+                       CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                       Title="@_appState.T("Account")"
+                       AriaLabel="@_appState.T("Account")"
+                       OnClick="@OnAccountClicked" />
+
+            <!-- 4. Settings Button -->
+            <P11Button id="settingsButton" ButtonVariant="ButtonVariant.Light"
+                       IconClass="bi bi-gear fs-3 mt-1"
+                       CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                       Title="@_appState.T("Settings")"
+                       AriaLabel="@_appState.T("Settings")"
+                       OnClick="@OnSettingsClicked" />
+
+            <!-- 5. Info Button -->
+            @* <P11Button id="infoButton" ButtonVariant="ButtonVariant.Light"
+                       IconClass="bi bi-info-circle fs-3 mt-1"
+                       CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                       AriaLabel="Weitere Einzelheiten über die Periode anzeigen"
+                       OnClick="@OnInfoClicked" /> *@
+
+            <!-- 5. Calendar Button -->
+            <P11Button id="calendarButton" ButtonVariant="ButtonVariant.Light"
+                       IconClass="bi bi-calendar-plus fs-3 mt-1"
+                       CssClass="rounded-circle d-flex align-items-center justify-content-center tpc-panel-buttons"
+                       Title="@_appState.T("Enter data")"
+                       AriaLabel="@_appState.T("Enter data")"
+                       OnClick="@OnCalendarClicked" />
+        </div>
+    </div>
+
+    <!-- EBENE 2: DAS INFO-PANEL (Hintergrund-Leiste mit Status & Logo) -->
+    <div class="border-top text-muted p-1 bg-body shadow-sm tpc-card-secondary" style="padding-top: 0.75rem !important; z-index: 1;">
+        <div class="container-fluid d-flex justify-content-between align-items-center pt-2">
+
+            <!-- Links: Statusanzeigen -->
+            <div class="d-flex justify-content-start gap-3 small">
+                <pFemmeExample.Shared.Pages.Common.Platform.ConnectivityStatus />
+                <pFemmeExample.Shared.Pages.Common.Platform.StorageLocation />
+            </div>
+
+            <!-- About Button -->
+            <div class="d-flex align-items-center gap-1">
+
+                <!-- Privacy policy Button -->
+                <div class="d-flex align-items-center gap-1">
+                    <P11Button AriaLabel="@_appState.T("Privacy policy")"
+                               ButtonVariant="ButtonVariant.Link"
+                               IconClass="bi bi-shield-check fs-5"
+                               CssClass="fs-6"
+                               OnClick="@(() => _navigationManager!.NavigateTo("/privacy"))" />
+                </div>
+
+                <!-- Terms Button -->
+                <div class="d-flex align-items-center gap-1">
+                    <P11Button AriaLabel="@_appState.T("Terms")"
+                               ButtonVariant="ButtonVariant.Link"
+                               IconClass="bi bi-file-earmark-ruled fs-5"
+                               CssClass="fs-6"
+                               OnClick="@(() => _navigationManager!.NavigateTo("/terms"))" />
+                </div>
+
+                <!-- Imprint Button -->
+                <div class="d-flex align-items-center gap-1">
+                    <P11Button AriaLabel="@_appState.T("Imprint")"
+                               ButtonVariant="ButtonVariant.Link"
+                               IconClass="bi bi-buildings fs-5"
+                               CssClass="fs-6"
+                               OnClick="@(() => _navigationManager!.NavigateTo("/imprint"))" />
+                </div>
+
+                <!-- Cookie Button -->
+                <div class="d-flex align-items-center gap-1">
+                    <P11Button AriaLabel="@_appState.T("Cookies")"
+                               ButtonVariant="ButtonVariant.Link"
+                               IconClass="bi bi-cookie fs-5"
+                               CssClass="fs-6"
+                               OnClick="() => _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.Cookies, true)" />
+                </div>
+
+                <!-- About Button -->
+                <P11Button Text="?"
+                           ButtonVariant="ButtonVariant.Link"
+                           CssClass="p-0 fs-5"
+                           OnClick="() => _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.About, true)" />
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject]
+    private p11.UI.Services.IMessageBoxService _messageBoxResult { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.EventAggregator.IEventAggregator _eventAggregator { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.AppState.IAppStateBase _appState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.GlobalState.IGlobalStateBase _globalState { get; set; } = default!;
+
+    [Inject]
+    private BlazorCore.Services.Platform.IPlatformBase _platform { get; set; } = default!;
+
+    [Inject]
+    private Services.EventAggregatorProject.IEventAggregatorProject _eventAggregatorProject { get; set; } = default!;
+
+    private BlazorCore.Services.Platform.PLATFORMS _currPlatform;
+
+    private void HandleStateChange() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged += HandleStateChange;
+
+        _currPlatform = _platform.GetCurrPlatform();
+    }
+    public void Dispose()
+    {
+        if (_eventAggregator != null)
+            _eventAggregator.OnLanguageHasChanged -= HandleStateChange;
+    }
+
+    private void OnRefreshClicked()
+    {
+         _eventAggregatorProject.RefreshingData();
+    }
+
+    // Inline Event Handler
+    private async Task OnSyncClicked()
+    {
+        await _eventAggregatorProject.ChangeModalNativeAsync(Services.EventAggregatorProject.ModalNativeProjectType.Synchronization, true);
+    }
+
+    private void OnAccountClicked()
+    {
+        _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.Account, true);
+    }
+
+    private void OnSettingsClicked()
+    {
+        _eventAggregator.ChangeModalNativeAsync(BlazorCore.Services.EventAggregator.ModalNativeType.Settings, true);
+    }
+
+    private void OnInfoClicked()
+    {
+
+        _eventAggregatorProject.ChangeModalNativeAsync(Services.EventAggregatorProject.ModalNativeProjectType.CyclesInfo, true);
+    }
+
+    private void OnCalendarClicked()
+    {
+        _eventAggregatorProject.ChangeModalNativeAsync(Services.EventAggregatorProject.ModalNativeProjectType.CyclesCal, true);
+    }
+}
