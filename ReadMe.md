@@ -27,7 +27,7 @@ Dieses Repository zeigt, wie wir **eine einzige Codebasis** für **alle Plattfor
 | **Windows (Store)** | Blazor Hybrid + WPF | [Microsoft Store](https://apps.microsoft.com/detail/9mwtr7n65hgz) |
 | **Windows (Portable)** | Blazor Hybrid + WPF | [portable.pfemme.de](https://portable.pfemme.de/) |
 | **Android** | Blazor WASM + Capacitor | [Google Play](https://play.google.com/store/apps/details?id=ch.trueperfectcode.pfemme) |
-| **iOS / macOS** | Blazor WASM + Capacitor / MAUI | *In Vorbereitung* |
+| **iOS / macOS** | Blazor WASM + Capacitor | *In Vorbereitung* |
 
 **Unser Architektur-Ansatz:**  
 Clean/Onion-Architektur mit Dependency Injection – derselbe Code für UI, Business-Logik und Datenzugriff läuft überall. Die Präsentationsschicht wird je nach Plattform ausgetauscht, während der Core vollständig wiederverwendet wird.
