@@ -54,18 +54,22 @@ Clean/Onion-Architektur mit Dependency Injection – derselbe Code für UI, Busi
 
 ---
 
-## 📌 Über dieses Repository
+## 📌 Zweck dieses Repositorys
 
 Dieses Repository enthält eine **bereinigte und abgespeckte Version** unserer produktiven pFemme-App.  
-Unser Ziel ist es, **IT-Agenturen und Entwicklern** einen transparenten Einblick in unsere Arbeitsweise zu geben:
+Es richtet sich **ausschließlich an IT-Agenturen und IT-Vermittler**, die eine verlässliche Einschätzung unserer Arbeitsqualität suchen – bevor sie uns für ein Projekt in Betracht ziehen.
 
-- **Auf welchem Level** wir programmieren (Clean Code, Architekturmuster)
-- **Wie** wir programmieren (Testbarkeit, Wartbarkeit, Dokumentation)
-- **Auf welchem Technologielevel** wir uns bewegen (aktueller .NET-Stack, Cross-Plattform, Azure-Integration)
+In der Praxis versprechen viele Outsourcing-Teams viel, aber die tatsächliche Code-Qualität bleibt oft eine Blackbox. Dieses Repository schafft Transparenz:
+
+- **Architektonische Sauberkeit:** Clean/Onion-Architektur, klare Trennung von Core, Infrastructure und Presentation
+- **Testbarkeit:** Abhängigkeiten sind über Interfaces injectet, Unit-Tests mit xUnit und bUnit sind integriert
+- **Code-Stil & Wartbarkeit:** Konsistente Benennung, Dokumentation im Code, Einhaltung von .NET-Standards
+- **Modernste Technologien:** .NET 10, Blazor (Server/WASM/Hybrid), Azure-Integration (OpenAI, AI Search)
+- **Cross-Plattform-Ansatz:** Eine Codebasis – deployt als Web, PWA, Windows-App, Android/iOS (in Vorbereitung)
+- **Offline-First & Sync:** Lokale Datenspeicherung (SQLite) mit synchronisierter Cloud-Anbindung
 
 Die gezeigte Codebasis ist **nicht vollständig lauffähig** – sie dient als **Showcase** für unsere Architektur- und Entwicklungsstandards.  
-Für eine vollständige Produktiv-Umgebung besuchen Sie bitte unsere Live-Demos:
-
+Für eine vollständige Produktiv-Umgebung besuchen Sie bitte die weiter oben verlinkten Live-Demos.
 - **Web:** [pfemme.de](https://pfemme.de/)
 - **PWA:** [pwa.pfemme.de](https://pwa.pfemme.de/)
 - **Windows Store:** [Microsoft Store](https://apps.microsoft.com/detail/9mwtr7n65hgz)
