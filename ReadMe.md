@@ -40,10 +40,9 @@ Clean/Onion-Architektur mit Dependency Injection – derselbe Code für UI, Busi
 |---------|-------------|
 | **Core & Backend** | .NET 10, C#, ASP.NET Core, Minimal APIs |
 | **Web-UI** | Blazor Server + Blazor WASM (PWA) |
-| **Mobile-UI** | Blazor WASM + Capacitor (iOS/Android) |
+| **Mobile-UI** | Blazor WASM + Capacitor (iOS/Android/iMac mit ARM) |
 | **Desktop-UI (Windows)** | Blazor Hybrid + WPF |
-| **Desktop-UI (macOS)** | Blazor Hybrid + MAUI / Capacitor (in Vorbereitung) |
-| **Datenbank** | Microsoft SQL Server (Azure SQL / Managed SQL / SQLite für Offline) |
+| **Datenbank** | Microsoft SQL Server (Azure SQL / Managed SQL / lokale Json-Files für Offline) |
 | **Authentifizierung** | Individuell (E-Mail/Passwort) + Google, Microsoft, Apple |
 | **KI & Analysen** | Azure OpenAI (RAG), Azure AI Search |
 | **Hosting** | Azure App Services / IONOS / beliebig |
