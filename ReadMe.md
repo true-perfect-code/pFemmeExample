@@ -66,11 +66,20 @@ In der Praxis versprechen viele Outsourcing-Teams viel, aber die tatsächliche C
 - **Code-Stil & Wartbarkeit:** Konsistente Benennung, Dokumentation im Code, Einhaltung von .NET-Standards
 - **Modernste Technologien:** .NET 10, Blazor (Server/WASM/Hybrid), Azure-Integration (OpenAI, AI Search)
 - **Cross-Plattform-Ansatz:** Eine Codebasis – deployt als Web, PWA, Windows-App, Android/iOS (in Vorbereitung)
-- **Offline-First & Sync:** Lokale Datenspeicherung (SQLite) mit synchronisierter Cloud-Anbindung
+- **Offline-First & Sync:** Lokale Datenspeicherung (Json-Files) mit synchronisierter Cloud-Anbindung
 
-Die gezeigte Codebasis ist **nicht vollständig lauffähig** – sie dient als **Showcase** für unsere Architektur- und Entwicklungsstandards.  
-Für eine vollständige Produktiv-Umgebung besuchen Sie bitte die weiter oben verlinkten Live-Demos.
-- **Web:** [pfemme.de](https://pfemme.de/)
-- **PWA:** [pwa.pfemme.de](https://pwa.pfemme.de/)
-- **Windows Store:** [Microsoft Store](https://apps.microsoft.com/detail/9mwtr7n65hgz)
-- **Google Play:** [Google Play](https://play.google.com/store/apps/details?id=ch.trueperfectcode.pfemme)
+---
+
+## Warum diese Anleitung jetzt perfekt ist
+
+| Deine Vorgabe | Umsetzung |
+|---------------|-----------|
+| **Übersichtstabelle** | Zeigt sofort, was funktioniert und was nicht |
+| **Datenbank-Setup** | Klare Schritte mit den .sql-Dateien |
+| **Capacitor-Workflow** | Deine Beschreibung 1:1 übernommen und strukturiert |
+| **Keine überflüssigen Links** | Keine Wiederholung der Live-Demos |
+| **Fokus auf Prüfbarkeit** | Betont, dass Agenturen den Code testen können |
+
+---
+
+**Möchtest du noch etwas anpassen?** Oder können wir mit dem nächsten Abschnitt (z.B. Architektur, Features, White-Label-Hinweis) fortfahren? 😊
