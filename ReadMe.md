@@ -67,3 +67,68 @@ In der Praxis versprechen viele Outsourcing-Teams viel, aber die tatsächliche C
 - **Modernste Technologien:** .NET 10, Blazor (Server/WASM/Hybrid), Azure-Integration (OpenAI, AI Search)
 - **Cross-Plattform-Ansatz:** Eine Codebasis – deployt als Web, PWA, Windows-App, Android/iOS (in Vorbereitung)
 - **Offline-First & Sync:** Lokale Datenspeicherung (Json-Files) mit synchronisierter Cloud-Anbindung
+
+## 🛠️ Installation & Setup
+
+> **Wichtig für IT-Agenturen:** Dieses Repository ist als **Showcase** gedacht, nicht als vollständige Produktiv-Umgebung. Die folgenden Anleitungen ermöglichen es Ihnen, die Codebasis lokal zu prüfen und zu testen.
+
+---
+
+### 📦 Übersicht der Projekte
+
+| Projekt | Beschreibung | Sofort startbar? |
+|---------|--------------|------------------|
+| **pFemmeExample (Blazor Server)** | Haupt-Webanwendung | ⚠️ Eingeschränkt (nur Landingpage, Login ohne Cloud-DB nicht möglich) |
+| **pFemmeExample.WASM** | Blazor WebAssembly (PWA) | ✅ Ja (mit lokaler Speicherung) |
+| **pFemmeExample.Wpf** | Windows-Desktop-App (Blazor Hybrid) | ✅ Ja (mit lokaler Speicherung) |
+| **pFemmeExample.Capa** | Mobile/Desktop (Capacitor) | ✅ Ja (mit lokaler Speicherung) |
+| **pFemmeExample.Webapi** | Backend-API | ✅ Ja (für Cloud-Betrieb) |
+
+---
+
+### 🗄️ Datenbank einrichten (für Blazor Server & WebAPI)
+
+Die **Blazor Server**- und **WebAPI**-Projekte benötigen eine Microsoft SQL Server-Datenbank (lokal oder in der Cloud).
+
+1. **Tabellen erstellen:**  
+   Führen Sie die Datei `CREATE_TABLES.sql` aus (im Ordner `Shared/DB`). Diese erstellt die vollständige pFemme-Datenbank mit einem Klick.
+
+2. **Gespeicherte Prozeduren erstellen:**  
+   Führen Sie die Datei `CRUD.sql` aus (gleicher Ordner). Diese erstellt alle notwendigen CRUD-Operationen.
+
+3. **Verbindung herstellen:**  
+   Die Konfiguration der Datenbankverbindung ist in der Datei `ReadMe.md` im selben Ordner (`Shared/DB`) beschrieben.
+
+> **Hinweis:** Für die lokale Prüfung der **WASM**-, **WPF**- und **Capacitor**-Projekte ist **keine** Cloud-Datenbank erforderlich – diese nutzen eine lokale Speicherung (SQLite).
+
+---
+
+### 🚀 Einzelne Projekte starten
+
+#### 1. Blazor Server (`pFemmeExample`)
+- **Funktion:** Startet die Web-App – Sie sehen die Landingpage, aber Login/Registrierung funktionieren **nicht** ohne konfigurierte Cloud-DB.
+- **Zweck:** Zeigt die UI-Komponenten, Architektur und Code-Struktur.
+
+#### 2. Blazor WebAssembly (`pFemmeExample.WASM`)
+- **Funktion:** Voll funktionsfähige PWA mit lokaler Speicherung (SQLite).
+- **Start:** Einfach das Projekt in Visual Studio starten – Registrierung, Login und Datenerfassung sind sofort möglich.
+
+#### 3. WPF Desktop (`pFemmeExample.Wpf`)
+- **Funktion:** Windows-Desktop-App mit Blazor Hybrid.
+- **Start:** Projekt in Visual Studio starten – läuft als native Windows-Anwendung mit voller Funktionalität.
+
+#### 4. Capacitor Mobile/Desktop (`pFemmeExample.Capa`)
+- **Funktion:** Erstellt native Apps für Android, iOS und macOS (ARM) aus der Blazor WASM-Codebasis.
+- **Workflow:**
+
+   **Einmaliges Setup:**
+   ```bash
+   npm init -y
+   npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios
+   npm install @capacitor/filesystem @capacitor/device @capacitor/app \
+     @capacitor-community/secure-storage-plugin @capacitor-community/sqlite \
+     @capacitor/camera @capacitor/clipboard @capacitor/browser @capacitor/share \
+     @capacitor/local-notifications
+   npx cap init pFemme ch.trueperfectcode.pfemme --web-dir publish/wwwroot
+   npx cap add android
+   npx cap add ios
