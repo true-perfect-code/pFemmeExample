@@ -118,17 +118,48 @@ Die **Blazor Server**- und **WebAPI**-Projekte benötigen eine Microsoft SQL Ser
 - **Start:** Projekt in Visual Studio starten – läuft als native Windows-Anwendung mit voller Funktionalität.
 
 #### 4. Capacitor Mobile/Desktop (`pFemmeExample.Capa`)
+
 - **Funktion:** Erstellt native Apps für Android, iOS und macOS (ARM) aus der Blazor WASM-Codebasis.
+
 - **Workflow:**
 
-   **Einmaliges Setup:**
-   ```bash
-   npm init -y
-   npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios
-   npm install @capacitor/filesystem @capacitor/device @capacitor/app \
-     @capacitor-community/secure-storage-plugin @capacitor-community/Json-Files \
-     @capacitor/camera @capacitor/clipboard @capacitor/browser @capacitor/share \
-     @capacitor/local-notifications
-   npx cap init pFemme ch.trueperfectcode.pfemme --web-dir publish/wwwroot
-   npx cap add android
-   npx cap add ios
+  **Einmaliges Setup:**
+  ```bash
+  npm init -y
+  npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios
+  npm install @capacitor/filesystem @capacitor/device @capacitor/app \
+    @capacitor-community/secure-storage-plugin @capacitor-community/sqlite \
+    @capacitor/camera @capacitor/clipboard @capacitor/browser @capacitor/share \
+    @capacitor/local-notifications
+  npx cap init pFemme ch.trueperfectcode.pfemme --web-dir publish/wwwroot
+  npx cap add android
+  npx cap add ios
+  ```
+
+  **Routine-Workflow (nach Code-Änderungen):**
+
+  1. **Publish:** Veröffentlichen Sie die Blazor-App via Visual Studio in das Verzeichnis `..\publish\`.
+
+  2. **Sync:** Im Terminal (Root) ausführen, um Web-Assets und native Plugins zu verknüpfen:
+     ```bash
+     npx cap sync
+     ```
+
+  3. **Starten:**
+     - **Android:** `npx cap open android` (In Android Studio: Gradle-Sync, Clean & Rebuild).
+     - **iOS:** `npx cap open ios` (In Xcode ausführen).
+
+  **Plugin-Mapping (cap.js):**  
+  Stellen Sie sicher, dass die Zuweisung im Code robust erfolgt:
+  ```javascript
+  this.Filesystem = plugins.Filesystem || null;
+  this.Device = plugins.Device || null;
+  this.App = plugins.App || null;
+  this.SecureStoragePlugin = plugins.SecureStoragePlugin || null;
+  this.CapacitorSQLite = plugins.CapacitorSQLite || null;
+  this.Camera = plugins.Camera || null;
+  this.Clipboard = plugins.Clipboard || null;
+  this.Browser = plugins.Browser || null;
+  this.Share = plugins.Share || null;
+  this.LocalNotifications = plugins.LocalNotifications || null;
+  ```
