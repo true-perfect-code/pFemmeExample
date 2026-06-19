@@ -99,7 +99,7 @@ Die **Blazor Server**- und **WebAPI**-Projekte benötigen eine Microsoft SQL Ser
 3. **Verbindung herstellen:**  
    Die Konfiguration der Datenbankverbindung ist in der Datei `ReadMe.md` im selben Ordner (`Shared/DB`) beschrieben.
 
-> **Hinweis:** Für die lokale Prüfung der **WASM**-, **WPF**- und **Capacitor**-Projekte ist **keine** Cloud-Datenbank erforderlich – diese nutzen eine lokale Speicherung (SQLite).
+> **Hinweis:** Für die lokale Prüfung der **WASM**-, **WPF**- und **Capacitor**-Projekte ist **keine** Cloud-Datenbank erforderlich – diese nutzen eine lokale Speicherung (Json-Files).
 
 ---
 
@@ -110,7 +110,7 @@ Die **Blazor Server**- und **WebAPI**-Projekte benötigen eine Microsoft SQL Ser
 - **Zweck:** Zeigt die UI-Komponenten, Architektur und Code-Struktur.
 
 #### 2. Blazor WebAssembly (`pFemmeExample.WASM`)
-- **Funktion:** Voll funktionsfähige PWA mit lokaler Speicherung (SQLite).
+- **Funktion:** Voll funktionsfähige PWA mit lokaler Speicherung (Json-Files).
 - **Start:** Einfach das Projekt in Visual Studio starten – Registrierung, Login und Datenerfassung sind sofort möglich.
 
 #### 3. WPF Desktop (`pFemmeExample.Wpf`)
@@ -126,7 +126,7 @@ Die **Blazor Server**- und **WebAPI**-Projekte benötigen eine Microsoft SQL Ser
    npm init -y
    npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios
    npm install @capacitor/filesystem @capacitor/device @capacitor/app \
-     @capacitor-community/secure-storage-plugin @capacitor-community/sqlite \
+     @capacitor-community/secure-storage-plugin @capacitor-community/Json-Files \
      @capacitor/camera @capacitor/clipboard @capacitor/browser @capacitor/share \
      @capacitor/local-notifications
    npx cap init pFemme ch.trueperfectcode.pfemme --web-dir publish/wwwroot
