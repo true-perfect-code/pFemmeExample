@@ -148,18 +148,4 @@ Die **Blazor Server**- und **WebAPI**-Projekte benötigen eine Microsoft SQL Ser
   3. **Starten:**
      - **Android:** `npx cap open android` (In Android Studio: Gradle-Sync, Clean & Rebuild).
      - **iOS:** `npx cap open ios` (In Xcode ausführen).
-
-  **Plugin-Mapping (cap.js):**  
-  Stellen Sie sicher, dass die Zuweisung im Code robust erfolgt:
-  ```javascript
-  this.Filesystem = plugins.Filesystem || null;
-  this.Device = plugins.Device || null;
-  this.App = plugins.App || null;
-  this.SecureStoragePlugin = plugins.SecureStoragePlugin || null;
-  this.CapacitorSQLite = plugins.CapacitorSQLite || null;
-  this.Camera = plugins.Camera || null;
-  this.Clipboard = plugins.Clipboard || null;
-  this.Browser = plugins.Browser || null;
-  this.Share = plugins.Share || null;
-  this.LocalNotifications = plugins.LocalNotifications || null;
   ```
