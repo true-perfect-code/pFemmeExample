@@ -105,11 +105,11 @@ Die **Blazor Server**- und **WebAPI**-Projekte benötigen eine Microsoft SQL Ser
 
 ### 🚀 Einzelne Projekte starten
 
-#### 1. Blazor Server (`pFemmeExample`)
+#### 1. Blazor Server (`pFemmeExample.Web`)
 - **Funktion:** Startet die Web-App – Sie sehen die Landingpage, aber Login/Registrierung funktionieren **nicht** ohne konfigurierte Cloud-DB.
 - **Zweck:** Zeigt die UI-Komponenten, Architektur und Code-Struktur.
 
-#### 2. Blazor WebAssembly (`pFemmeExample.WASM`)
+#### 2. Blazor WebAssembly (`pFemmeExample.Pwa`)
 - **Funktion:** Voll funktionsfähige PWA mit lokaler Speicherung (Json-Files).
 - **Start:** Einfach das Projekt in Visual Studio starten – Registrierung, Login und Datenerfassung sind sofort möglich.
 
