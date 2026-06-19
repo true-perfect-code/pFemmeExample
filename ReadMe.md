@@ -6,6 +6,8 @@ Der Inhalt dieses Repositorys ist urheberrechtlich geschützt. Jegliche Nutzung,
 
 Dieses Projekt wird ausschließlich zu Präsentations- und Bewerbungszwecken zur Verfügung gestellt. Eine kommerzielle oder private Nutzung des Quellcodes ist nicht gestattet.
 
+---
+
 # pFemme Example – Perioden-Tracking für Frauenarztpraxen
 
 [![.NET](https://img.shields.io/badge/.NET-10-blueviolet)](https://dotnet.microsoft.com/)
@@ -49,3 +51,22 @@ Clean/Onion-Architektur mit Dependency Injection – derselbe Code für UI, Busi
 | **Barrierefreiheit** | WCAG 2.1 AA, dynamischer Sprachwechsel, Schriftgrößenanpassung |
 | **Testing** | xUnit, bUnit |
 | **CI/CD** | GitHub Actions |
+
+---
+
+## 📌 Über dieses Repository
+
+Dieses Repository enthält eine **bereinigte und abgespeckte Version** unserer produktiven pFemme-App.  
+Unser Ziel ist es, **IT-Agenturen und Entwicklern** einen transparenten Einblick in unsere Arbeitsweise zu geben:
+
+- **Auf welchem Level** wir programmieren (Clean Code, Architekturmuster)
+- **Wie** wir programmieren (Testbarkeit, Wartbarkeit, Dokumentation)
+- **Auf welchem Technologielevel** wir uns bewegen (aktueller .NET-Stack, Cross-Plattform, Azure-Integration)
+
+Die gezeigte Codebasis ist **nicht vollständig lauffähig** – sie dient als **Showcase** für unsere Architektur- und Entwicklungsstandards.  
+Für eine vollständige Produktiv-Umgebung besuchen Sie bitte unsere Live-Demos:
+
+- **Web:** [pfemme.de](https://pfemme.de/)
+- **PWA:** [pwa.pfemme.de](https://pwa.pfemme.de/)
+- **Windows Store:** [Microsoft Store](https://apps.microsoft.com/detail/9mwtr7n65hgz)
+- **Google Play:** [Google Play](https://play.google.com/store/apps/details?id=ch.trueperfectcode.pfemme)
